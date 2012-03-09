@@ -305,7 +305,7 @@ def r_field():
     from stats.misc.random_field.random_field_1D import RandomField
     rf = RandomField(xgrid = np.linspace(0, 1000, 500))
     rf.distribution = 'Weibull'    
-    rf.lacor = 0.01
+    rf.lacor = 3.0
     rf.shape = 10.
     rf.scale = 5.
     rf.loc = 0.0
@@ -316,6 +316,20 @@ def r_field():
     y = rf.random_field
     plt.plot(x,y, color = 'black', lw = 2, label = 'lacor = %.1f' %rf.lacor)
     plt.legend(loc = 'best')
+    plt.xticks(fontsize = 20)
+    plt.yticks(fontsize = 20)
+    plt.show()
+
+def lacor():
+    from stats.misc.random_field.random_field_1D import RandomField
+    rf = RandomField()
+    x = np.linspace(0,30, 200)
+    y = rf.acor(x,10.)
+    yy = rf.acor(x,3.0)
+    plt.plot(x, y, color = 'black', lw = 2)
+    plt.plot(x, yy, color = 'black', lw = 2)
+    plt.xticks(fontsize = 20)
+    plt.yticks(fontsize = 20)
     plt.show()
 
 # three phases of filament crack bridge
@@ -336,4 +350,6 @@ def r_field():
 #Puw()
 # random field
 r_field()
+# autocorrelation function
+#lacor()
 
