@@ -140,6 +140,6 @@ def carbon():
     p.legend(loc = 'best')
     p.title('carbon 1600 tex')
 
-carbon()
-#glass()
+#carbon()
+glass()
 p.show()
