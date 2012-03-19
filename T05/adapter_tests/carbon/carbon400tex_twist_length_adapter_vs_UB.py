@@ -14,7 +14,7 @@ from enthought.mayavi import mlab as m
 from matplotlib import pyplot as plt
 
 # DATA
-lengths = np.array([35., 50., 130., 250., 500.])
+lengths = np.array([35., 70., 130., 250., 500.])
 twists = np.array([0.,10.,20.,30.,40.])
 
 # Adapter tests
@@ -33,19 +33,23 @@ A_strength = np.array([A35, A70, A130, A250, A500])
 A_COV = np.array([A35cv, A70cv, A130cv, A250cv, A500cv])
 
 # Umlenkbolzen tests 
-B35 = np.array([108.6,100.,100.,100., 110.9])
-B35cv = np.array([3.71, 2., 2., 2., 3.21])
-B70 = np.array([100.,100.,100.,100., 100.])
-B70cv = np.array([2., 2., 2., 2., 2.])
-B130 = np.array([99.4,100.,108.4, 100., 111.2])
-B130cv = np.array([2.36, 2., 4.79, 2., 3.65])
-B250 = np.array([100.,100.,100.,100., 100.])
-B250cv = np.array([2., 2., 2., 2., 2.])
-B500 = np.array([87.1,100.,100.,100., 111.9])
-B500cv = np.array([6.13, 2., 2., 2., 3.08])
+B35 = np.array([108.6,114.1,113.1,112.4, 110.9])
+B35cv = np.array([3.71, 2.93, 4.09, 3.22, 3.21])
+B70 = np.array([107.5,111.8,114.0,114.2, 113.7])
+B70cv = np.array([2.99, 3.04, 3.04, 3.92, 2.84])
+B130 = np.array([99.4,110.3,108.4, 112.5, 111.2])
+B130cv = np.array([2.36, 3.75, 4.79, 3.13, 3.65])
+B250 = np.array([94.2,106.8,111.8,112.7, 113.4])
+B250cv = np.array([4.24, 5.15, 2.98, 2.32, 2.66])
+B500 = np.array([87.1,102.1,111.4,113.6, 111.9])
+B500cv = np.array([6.13, 4.12, 2.19, 3.41, 3.08])
 
 B_strength = np.array([B35, B70, B130, B250, B500])
 B_COV = np.array([B35cv, B70cv, B130cv, B250cv, B500cv])
+
+# percentage of strength difference
+
+percent_strength = A_strength / B_strength - 1.0
 
 def plot_results(strength_arr, COV_arr):
     '''contains plotting methods'''
@@ -156,5 +160,6 @@ def plot_results(strength_arr, COV_arr):
 
 plot_results(B_strength, B_COV)
 plot_results(A_strength, A_COV)
+#plot_results(percent_strength, A_COV)
 plt.show()
 m.show()
