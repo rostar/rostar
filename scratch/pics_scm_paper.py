@@ -97,8 +97,8 @@ def SP():
     #plt.legend( loc = 'best' )
     plt.xlabel('$\mathrm{position} \, x \mathrm{[mm]}$', fontsize = 30)
     plt.ylabel('$\mathrm{force} \, P_\mathrm{f} \mathrm{[N]}$', fontsize = 30)
-    #plt.ylim(0, 0.5)
-    #plt.show()
+    plt.ylim(0, 0.5)
+    plt.show()
 
 def random_samples_Pw(n):
     w = np.linspace(0, 1.7, 300)
@@ -139,7 +139,7 @@ def random_samples_Pw(n):
 
 def random_samples_profiles(n):
     w = np.linspace(0, .5, 2)
-    x = np.linspace(-50., 20., 8)
+    x = np.linspace(-50., 20., 100)
     P = CBEMClampedFiberSP()
     spirrid = SPIRRID(q = P,
                       sampling_type = 'LHS',
@@ -147,11 +147,11 @@ def random_samples_profiles(n):
                                     x = x),
                       tvars = dict(Ll = Ll,
                                    Lr = Lr,
-                                   tau = RV('uniform', 0.2, .0001),
-                                   l = l,#RV('uniform', 2.0, 15.0),
+                                   tau = RV('uniform', 0.0, .2),
+                                   l = RV('uniform', 5.0, 15.0),
                                    A_r = Af,
                                    E_r = Ef,
-                                   theta = theta, #RV('uniform', 0.0, .02),
+                                   theta = RV('uniform', 0.0, .02),
                                    xi = xi,#RV('weibull_min', scale = 0.0179, shape = 5, n_int = 10),
                                    phi = phi,
                                    E_m = Em,
@@ -162,9 +162,9 @@ def random_samples_profiles(n):
 
     for i in range(n):
         if i == n - 1:
-            plt.plot(x, P(0.5, x, *spirrid.get_samples(n)[:, i]),
+            plt.plot(x, P(0.0, x, *spirrid.get_samples(n)[:, i]),
                       color = 'black', label = 'random filament response')
-        plt.plot(x, P(0.5, x, *spirrid.get_samples(n)[:, i]), color = 'black')
+        plt.plot(x, P(0.0, x, *spirrid.get_samples(n)[:, i]), color = 'black')
     plt.plot(x, spirrid.mu_q_arr[1, :], lw = 4, color = 'black', ls = '--',
               label = 'normalized yarn repsonse')
     #plt.xlabel( '$\mathrm{position}{[mm]}$', fontsize = 24 )
@@ -172,8 +172,8 @@ def random_samples_profiles(n):
     #plt.title( '$\mathrm{yarn \, crack \, bridge}$' , fontsize = 20 )
     plt.xticks(fontsize = 20)
     plt.yticks(fontsize = 20)
-    plt.legend(loc = 'best')
-    #plt.ylim(0, 0.5)
+    plt.legend(loc = 'lower right')
+    plt.ylim(0, 0.35)
     plt.show()
 
 def mlab_plot():
@@ -332,6 +332,53 @@ def lacor():
     plt.yticks(fontsize = 20)
     plt.show()
 
+def cracks():
+    from quaducom.meso.ctt.scm_numerical.ctt2 import CTT
+    from stats.spirrid.spirrid import FunctionRandomization
+    from stats.misc.random_field.random_field_1D import RandomField
+    
+    rf = CBEMClampedFiberSP()
+    rand = FunctionRandomization(q = rf,
+         evars = dict(w = np.linspace(0, .5, 40),
+                       x = np.linspace(-20., 20., 101),
+                       Ll = np.linspace(0.01, 20., 14),
+                       Lr = np.linspace(0.01, 20., 14)),
+         tvars = dict(tau = RV('uniform', loc = 0.5, scale = 0.2),
+                      l = RV('uniform', loc = 0.0, scale = 2.0), A_r = 5.31e-4, E_r = 72e3, theta = 0.0,
+                       xi = 1e20, phi = 1.0, E_m = 30e3, A_m = 50., Nf = 1700.),
+                                n_int = 10)
+
+    rand_field = RandomField( lacor = 1.0, xgrid = np.linspace(0, 60, 500),
+                        nsim = 1, loc = 0.0, shape = 6.0, scale = 5.0,
+                        non_negative_check = True, distribution = 'Weibull')
+    
+    ctt = CTT(length = 60., nx = 300,
+          random_field = rand_field,
+          cb_randomization = rand, cb_type = 'mean',
+          force_min = 0.1, force_max = 400, n_force = 500)
+    ctt.evaluate()
+    plt.figure()
+    plt.plot(ctt.x_arr, ctt.matrix_strength[-1,:], lw = 1, color = 'black')
+    plt.plot(ctt.x_arr, ctt.sigma_m[200,:], lw = 2, color = 'black')
+    plt.xticks(fontsize = 20)
+    plt.yticks(fontsize = 20)
+    plt.ylim(0,8)
+    plt.show()
+    plt.figure()
+    plt.plot(ctt.x_arr, ctt.matrix_strength[-1,:], lw = 1, color = 'black')
+    plt.plot(ctt.x_arr, ctt.sigma_m[250,:], lw = 2, color = 'black')
+    plt.xticks(fontsize = 20)
+    plt.yticks(fontsize = 20)
+    plt.ylim(0,8)
+    plt.show()
+    plt.figure()
+    plt.plot(ctt.x_arr, ctt.matrix_strength[-1,:], lw = 1, color = 'black')
+    plt.plot(ctt.x_arr, ctt.sigma_m[450,:], lw = 2, color = 'black')
+    plt.xticks(fontsize = 20)
+    plt.yticks(fontsize = 20)
+    plt.ylim(0,8)
+    plt.show()  
+
 # three phases of filament crack bridge
 #Pw()
 # force profile along a filament
@@ -349,7 +396,8 @@ def lacor():
 # PO vs CB
 #Puw()
 # random field
-r_field()
+#r_field()
 # autocorrelation function
 #lacor()
-
+# cracking profiles
+cracks()
