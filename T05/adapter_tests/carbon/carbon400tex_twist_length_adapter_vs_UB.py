@@ -47,6 +47,8 @@ B500cv = np.array([6.13, 2., 2., 2., 3.08])
 B_strength = np.array([B35, B70, B130, B250, B500])
 B_COV = np.array([B35cv, B70cv, B130cv, B250cv, B500cv])
 
+Rel_strength = A_strength / B_strength - 1.0
+
 def plot_results(strength_arr, COV_arr):
     '''contains plotting methods'''
 
@@ -156,5 +158,7 @@ def plot_results(strength_arr, COV_arr):
 
 plot_results(B_strength, B_COV)
 plot_results(A_strength, A_COV)
+#plot_results(Rel_strength, A_COV)
+
 plt.show()
 m.show()
