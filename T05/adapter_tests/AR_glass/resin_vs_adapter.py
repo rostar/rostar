@@ -25,15 +25,18 @@ lengths = [50., 70, 100, 150, 200, 250, 350, 500]
 com_f = [579.36, 570.41, 578.92, 572.17, 580.79, 567.55, 574.63, 550.96]
 com_cv = [2.74, 2.78, 4.31, 3.57, 4.47, 4.20, 4.63, 5.32]
 
+
+
 from matplotlib import pyplot as plt
 import numpy as np
+print (np.array(fh) - np.array(fa))/np.array(fa)
 
 harz = True
 adapter = True
 # results from the same coil with adapter - samples taken directly from the coil
-vergleich = True
+vergleich = False
 # results from former tests with adapter - with optimized params for the material
-vergleich2 = True
+vergleich2 = False
 loglog = False
 # if False, stress is plotted
 force = False
@@ -44,21 +47,21 @@ if force == False:
     fs = np.array(fs) / 0.445
     com_f = np.array(com_f) / 0.445
 
-if harz == True:
-    if loglog == True:
-        plt.loglog(l, fh, 'bo')
-    else:
-        plt.plot(l, fh, 'bo')
-    plt.errorbar(l, fh, color = 'blue', yerr = np.array(fh) / 100. * cvh,
-                 lw = 2, label = 'Harz rand. [20], 9.1.TT')
-
 if adapter == True:
     if loglog == True:
         plt.loglog(l, fa, 'ro')
     else:
         plt.plot(l, fa, 'ro')
     plt.errorbar(l, fa, color = 'red', yerr = np.array(fa) / 100. * cva,
-                 lw = 2, label = 'S4U AOP rand. [20], 9.1.TT')
+                 lw = 2, label = 'new tensile device')
+
+if harz == True:
+    if loglog == True:
+        plt.loglog(l, fh, 'bo')
+    else:
+        plt.plot(l, fh, 'bo')
+    plt.errorbar(l, fh, color = 'blue', yerr = np.array(fh) / 100. * cvh,
+                 lw = 2, label = 'resin embeded')
 
 if vergleich == True:
     if loglog == True:
@@ -80,11 +83,13 @@ if vergleich2 == True:
 plt.grid()
 plt.xlim(0, 600)
 plt.ylim(0)
-plt.legend(loc = 'best')
-plt.title('AR-Glas 1200 tex')
-plt.xlabel('Laenge [mm]')
+plt.xticks(fontsize = 20)
+plt.yticks(fontsize = 20)
+plt.legend(loc = 'lower right')
+plt.title('AR-glass 1200 tex', fontsize = 20)
+plt.xlabel('gauge length [mm]', fontsize = 20)
 if force == True:
     plt.ylabel('Kraft [N]')
 else:
-    plt.ylabel('Spannung [MPa]')
+    plt.ylabel('stress [MPa]', fontsize = 20)
 plt.show()
