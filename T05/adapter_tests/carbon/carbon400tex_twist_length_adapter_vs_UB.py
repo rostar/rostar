@@ -48,161 +48,163 @@ B_strength = np.array([B35, B70, B130, B250, B500]) * 16./0.89
 B_COV = np.array([B35cv, B70cv, B130cv, B250cv, B500cv])
 Rel_strength = A_strength / B_strength - 1.0
 
-#plt.plot(lengths, A_strength[:,0],
-#                lw = 2, color = 'black', label = 'Adapter')
-#plt.errorbar(x = lengths, y = A_strength[:,0],
-#       yerr = A_COV[:,0] * A_strength[:,0]/100., color = 'black')
-#plt.plot(lengths, B_strength[:,0],
-#                lw = 2, color = 'black', ls = 'dashed', label = 'Umlenkbolzen')
-#plt.errorbar(x = lengths, y = B_strength[:,0],
-#       yerr = B_COV[:,0] * B_strength[:,0]/100., color = 'black', ls = 'dashed')
-
-#plt.plot(lengths, A_strength[:,1],
-#                lw = 2, color = 'red', label = '10 twists')
-#
-#plt.plot(lengths, B_strength[:,1],
-#                lw = 2, color = 'red', ls = 'dashed')
-#
-#
-#plt.plot(lengths, A_strength[:,2],
-#                lw = 2, color = 'green', label = '20 twists')
-#
-#plt.plot(lengths, B_strength[:,2],
-#                lw = 2, color = 'green', ls = 'dashed')
-#
-#plt.plot(lengths, A_strength[:,3],
-#                lw = 2, color = 'blue', label = '30 twists')
-#
-#plt.plot(lengths, B_strength[:,3],
-#                lw = 2, color = 'blue', ls = 'dashed')
-
-plt.plot(lengths, A_strength[:,4],
-                lw = 2, color = 'black', label = 'Adapter')
-plt.errorbar(x = lengths, y = A_strength[:,4],
-       yerr = A_COV[:,4] * A_strength[:,4]/100., color = 'black')
-plt.plot(lengths, B_strength[:,4],
-                lw = 2, color = 'black', ls = 'dashed', label = 'Umlenkbolzen')
-plt.errorbar(x = lengths, y = B_strength[:,4],
-       yerr = B_COV[:,4] * B_strength[:,4]/100., color = 'black', ls = 'dashed')
-
-
-plt.title('carbon 400tex')
-plt.ylim(1400, 2300)
-plt.xlim(0,520)
-plt.ylabel('strength [MPa]')
-plt.xlabel('length [mm]')
-plt.legend(loc = 'best')
-
-def plot_results(strength_arr, COV_arr):
-    '''contains plotting methods'''
-
-    stdev = strength_arr * COV_arr / 100. 
-
-    def twist():
-        '''plots strength depending on twist'''
-        plt.figure()
-        plt.errorbar(x = twists, y = strength_arr[0], \
-               yerr = stdev[0], color = 'red')
-        plt.plot(twists, strength_arr[0], color = 'red', lw = 2,
-                 label = 'l = 35 mm')
-        plt.errorbar(x = twists, y = strength_arr[1], \
-               yerr = stdev[1], color = 'blue')
-        plt.plot(twists, strength_arr[1], color = 'blue',lw = 2,
-                 label = 'l = 70 mm')
-        plt.errorbar(x = twists, y = strength_arr[2], \
-               yerr = stdev[2], color = 'green')
-        plt.plot(twists, strength_arr[2], color = 'green', lw = 2,
-                 label = 'l = 130 mm')
-        plt.errorbar(x = twists, y = strength_arr[3], \
-               yerr = stdev[3], color = 'black')
-        plt.plot(twists, strength_arr[3], color = 'black', lw = 2,
-                 label = 'l = 250 mm')
-        plt.errorbar(x = twists, y = strength_arr[4], \
-               yerr = stdev[4], color = 'brown')
-        plt.plot(twists, strength_arr[4], color = 'brown', lw = 2,
-                 label = 'l = 500 mm')
+if __name__ == '__main__':
         
-        plt.title('carbon 400tex UMLENKBOLZEN')
-        plt.xlim(-10, 50)
-        plt.ylim(1000,2500)
-        plt.ylabel('strength MPa')
-        plt.xlabel('twist [t/m]')
-        plt.legend(loc = 'best')
-
-    def length():
-        '''plots strength depending on length'''
-        #plt.figure()
-        plt.semilogx(lengths, strength_arr[:,0],
-                        lw = 2, color = 'red', label = 'twist 0')
-        plt.errorbar(x = lengths, y = strength_arr[:,0],
-               yerr = stdev[:,0], color = 'red')
-        plt.plot(lengths, strength_arr[:,1],
-                        lw = 2, color = 'blue', label = 'twist 10')
-        plt.errorbar(x = lengths, y = strength_arr[:,1],
-               yerr = stdev[:,1], color = 'blue')
-        plt.plot(lengths, strength_arr[:,2],
-                        lw = 2, color = 'green', label = 'twist 20')
-        plt.errorbar(x = lengths, y = strength_arr[:,2],
-               yerr = stdev[:,2], color = 'green')
-        plt.plot(lengths, strength_arr[:,3],
-                        lw = 2, color = 'black', label = 'twist 30')
-        plt.errorbar(x = lengths, y = strength_arr[:,3],
-               yerr = stdev[:,3], color = 'black')
-        plt.plot(lengths, strength_arr[:,4],
-                        lw = 2, color = 'brown', label = 'twist 40')
-        plt.errorbar(x = lengths, y = strength_arr[:,4],
-               yerr = stdev[:,4], color = 'brown')
-        plt.title('carbon 400tex UMLENKBOLZEN')
-        plt.ylim(1000, 2500)
-        plt.xlim(0,520)
-        plt.ylabel('strength MPa')
-        plt.xlabel('length [mm]')
-        plt.legend(loc = 'best')
+    #plt.plot(lengths, A_strength[:,0],
+    #                lw = 2, color = 'black', label = 'Adapter')
+    #plt.errorbar(x = lengths, y = A_strength[:,0],
+    #       yerr = A_COV[:,0] * A_strength[:,0]/100., color = 'black')
+    #plt.plot(lengths, B_strength[:,0],
+    #                lw = 2, color = 'black', ls = 'dashed', label = 'Umlenkbolzen')
+    #plt.errorbar(x = lengths, y = B_strength[:,0],
+    #       yerr = B_COV[:,0] * B_strength[:,0]/100., color = 'black', ls = 'dashed')
     
-    def plot_3d(cov, smooth):
+    #plt.plot(lengths, A_strength[:,1],
+    #                lw = 2, color = 'red', label = '10 twists')
+    #
+    #plt.plot(lengths, B_strength[:,1],
+    #                lw = 2, color = 'red', ls = 'dashed')
+    #
+    #
+    #plt.plot(lengths, A_strength[:,2],
+    #                lw = 2, color = 'green', label = '20 twists')
+    #
+    #plt.plot(lengths, B_strength[:,2],
+    #                lw = 2, color = 'green', ls = 'dashed')
+    #
+    #plt.plot(lengths, A_strength[:,3],
+    #                lw = 2, color = 'blue', label = '30 twists')
+    #
+    #plt.plot(lengths, B_strength[:,3],
+    #                lw = 2, color = 'blue', ls = 'dashed')
+    
+    plt.plot(lengths, A_strength[:,4],
+                    lw = 2, color = 'black', label = 'Adapter')
+    plt.errorbar(x = lengths, y = A_strength[:,4],
+           yerr = A_COV[:,4] * A_strength[:,4]/100., color = 'black')
+    plt.plot(lengths, B_strength[:,4],
+                    lw = 2, color = 'black', ls = 'dashed', label = 'Umlenkbolzen')
+    plt.errorbar(x = lengths, y = B_strength[:,4],
+           yerr = B_COV[:,4] * B_strength[:,4]/100., color = 'black', ls = 'dashed')
+    
+    
+    plt.title('carbon 400tex')
+    plt.ylim(1400, 2300)
+    plt.xlim(0,520)
+    plt.ylabel('strength [MPa]')
+    plt.xlabel('length [mm]')
+    plt.legend(loc = 'best')
+    
+    def plot_results(strength_arr, COV_arr):
+        '''contains plotting methods'''
+    
+        stdev = strength_arr * COV_arr / 100. 
+    
+        def twist():
+            '''plots strength depending on twist'''
+            plt.figure()
+            plt.errorbar(x = twists, y = strength_arr[0], \
+                   yerr = stdev[0], color = 'red')
+            plt.plot(twists, strength_arr[0], color = 'red', lw = 2,
+                     label = 'l = 35 mm')
+            plt.errorbar(x = twists, y = strength_arr[1], \
+                   yerr = stdev[1], color = 'blue')
+            plt.plot(twists, strength_arr[1], color = 'blue',lw = 2,
+                     label = 'l = 70 mm')
+            plt.errorbar(x = twists, y = strength_arr[2], \
+                   yerr = stdev[2], color = 'green')
+            plt.plot(twists, strength_arr[2], color = 'green', lw = 2,
+                     label = 'l = 130 mm')
+            plt.errorbar(x = twists, y = strength_arr[3], \
+                   yerr = stdev[3], color = 'black')
+            plt.plot(twists, strength_arr[3], color = 'black', lw = 2,
+                     label = 'l = 250 mm')
+            plt.errorbar(x = twists, y = strength_arr[4], \
+                   yerr = stdev[4], color = 'brown')
+            plt.plot(twists, strength_arr[4], color = 'brown', lw = 2,
+                     label = 'l = 500 mm')
+            
+            plt.title('carbon 400tex UMLENKBOLZEN')
+            plt.xlim(-10, 50)
+            plt.ylim(1000,2500)
+            plt.ylabel('strength MPa')
+            plt.xlabel('twist [t/m]')
+            plt.legend(loc = 'best')
+    
+        def length():
+            '''plots strength depending on length'''
+            #plt.figure()
+            plt.semilogx(lengths, strength_arr[:,0],
+                            lw = 2, color = 'red', label = 'twist 0')
+            plt.errorbar(x = lengths, y = strength_arr[:,0],
+                   yerr = stdev[:,0], color = 'red')
+            plt.plot(lengths, strength_arr[:,1],
+                            lw = 2, color = 'blue', label = 'twist 10')
+            plt.errorbar(x = lengths, y = strength_arr[:,1],
+                   yerr = stdev[:,1], color = 'blue')
+            plt.plot(lengths, strength_arr[:,2],
+                            lw = 2, color = 'green', label = 'twist 20')
+            plt.errorbar(x = lengths, y = strength_arr[:,2],
+                   yerr = stdev[:,2], color = 'green')
+            plt.plot(lengths, strength_arr[:,3],
+                            lw = 2, color = 'black', label = 'twist 30')
+            plt.errorbar(x = lengths, y = strength_arr[:,3],
+                   yerr = stdev[:,3], color = 'black')
+            plt.plot(lengths, strength_arr[:,4],
+                            lw = 2, color = 'brown', label = 'twist 40')
+            plt.errorbar(x = lengths, y = strength_arr[:,4],
+                   yerr = stdev[:,4], color = 'brown')
+            plt.title('carbon 400tex UMLENKBOLZEN')
+            plt.ylim(1000, 2500)
+            plt.xlim(0,520)
+            plt.ylabel('strength MPa')
+            plt.xlabel('length [mm]')
+            plt.legend(loc = 'best')
         
-        if smooth == True:
-            sm_lengths = np.linspace(lengths[0],lengths[-1], 200)
-            sm_twists = np.linspace(twists[0],twists[-1],200)
-            strength_spl = Spl(lengths, twists, strength_arr)
-            sm_variables = make_ogrid([np.array(sm_lengths),
-                                         np.array(sm_twists)])
-            sm_strength = strength_spl(sm_variables[0],
-                                       sm_variables[1])/np.max(strength_arr)
+        def plot_3d(cov, smooth):
             
-            m.surf(sm_variables[0]/np.max(sm_variables[0]),
-                   sm_variables[1]/np.max(sm_variables[1]),
-                   sm_strength)
-            
-            if cov == True:
-                stdev_spl = Spl(lengths, twists, stdev)
-                sm_stdev = stdev_spl(sm_variables[0],
-                                     sm_variables[1])/np.max(strength_arr)
+            if smooth == True:
+                sm_lengths = np.linspace(lengths[0],lengths[-1], 200)
+                sm_twists = np.linspace(twists[0],twists[-1],200)
+                strength_spl = Spl(lengths, twists, strength_arr)
+                sm_variables = make_ogrid([np.array(sm_lengths),
+                                             np.array(sm_twists)])
+                sm_strength = strength_spl(sm_variables[0],
+                                           sm_variables[1])/np.max(strength_arr)
+                
                 m.surf(sm_variables[0]/np.max(sm_variables[0]),
                        sm_variables[1]/np.max(sm_variables[1]),
-                       sm_strength + sm_stdev, color = (0,0,0), opacity = .3)
-                m.surf(sm_variables[0]/np.max(sm_variables[0]),
-                       sm_variables[1]/np.max(sm_variables[1]),
-                       sm_strength + sm_stdev, color = (0,0,0), opacity = .3)
-            
-        else:
-            variables = make_ogrid([np.array(lengths), np.array(twists)])
-            m.surf(variables[0], variables[1], strength_arr)
-            
-            if cov == True:
-                m.surf(variables[0], variables[1],
-                       strength_arr + stdev, color = (0,0,0), opacity = .3)
-                m.surf(variables[0], variables[1],
-                       strength_arr - stdev, color = (0,0,0), opacity = .3)
-
-    # SETTINGS
-    #twist()
-    #length()
-    plot_3d(cov = False, smooth = False)
-
-#plot_results(B_strength, B_COV)
-#plot_results(A_strength, A_COV)
-#plot_results(Rel_strength, A_COV)
-
-plt.show()
-m.show()
+                       sm_strength)
+                
+                if cov == True:
+                    stdev_spl = Spl(lengths, twists, stdev)
+                    sm_stdev = stdev_spl(sm_variables[0],
+                                         sm_variables[1])/np.max(strength_arr)
+                    m.surf(sm_variables[0]/np.max(sm_variables[0]),
+                           sm_variables[1]/np.max(sm_variables[1]),
+                           sm_strength + sm_stdev, color = (0,0,0), opacity = .3)
+                    m.surf(sm_variables[0]/np.max(sm_variables[0]),
+                           sm_variables[1]/np.max(sm_variables[1]),
+                           sm_strength + sm_stdev, color = (0,0,0), opacity = .3)
+                
+            else:
+                variables = make_ogrid([np.array(lengths), np.array(twists)])
+                m.surf(variables[0], variables[1], strength_arr)
+                
+                if cov == True:
+                    m.surf(variables[0], variables[1],
+                           strength_arr + stdev, color = (0,0,0), opacity = .3)
+                    m.surf(variables[0], variables[1],
+                           strength_arr - stdev, color = (0,0,0), opacity = .3)
+    
+        # SETTINGS
+        #twist()
+        #length()
+        plot_3d(cov = False, smooth = False)
+    
+    #plot_results(B_strength, B_COV)
+    #plot_results(A_strength, A_COV)
+    #plot_results(Rel_strength, A_COV)
+    
+    plt.show()
+    m.show()
