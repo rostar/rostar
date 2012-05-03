@@ -76,22 +76,20 @@ Rel_strength = A_strength / B_strength - 1.0
 #plt.plot(lengths, B_strength[:,3],
 #                lw = 2, color = 'blue', ls = 'dashed')
 
-#plt.plot(lengths, A_strength[:,4],
-#                lw = 2, color = 'black', label = 'Adapter')
-#plt.errorbar(x = lengths, y = A_strength[:,4],
-#       yerr = A_COV[:,4] * A_strength[:,4]/100., color = 'black')
-#plt.plot(lengths, B_strength[:,4],
-#                lw = 2, color = 'black', ls = 'dashed', label = 'Umlenkbolzen')
-#plt.errorbar(x = lengths, y = B_strength[:,4],
-#       yerr = B_COV[:,4] * B_strength[:,4]/100., color = 'black', ls = 'dashed')
+plt.plot(lengths, A_strength[:,4],
+                lw = 2, color = 'black', label = 'Adapter')
+plt.errorbar(x = lengths, y = A_strength[:,4],
+       yerr = A_COV[:,4] * A_strength[:,4]/100., color = 'black')
+plt.plot(lengths, B_strength[:,4],
+                lw = 2, color = 'black', ls = 'dashed', label = 'Umlenkbolzen')
+plt.errorbar(x = lengths, y = B_strength[:,4],
+       yerr = B_COV[:,4] * B_strength[:,4]/100., color = 'black', ls = 'dashed')
 
-for i,twist in enumerate(twists):
-    plt.plot(lengths, A_COV[i], lw = 2, label = 'twist ' + str(twist))
 
-plt.title('COV Adapter')
-#plt.ylim(1400, 2300)
+plt.title('carbon 400tex')
+plt.ylim(1400, 2300)
 plt.xlim(0,520)
-plt.ylabel('COV')
+plt.ylabel('strength [MPa]')
 plt.xlabel('length [mm]')
 plt.legend(loc = 'best')
 
