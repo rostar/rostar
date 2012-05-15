@@ -273,12 +273,12 @@ if __name__ == '__main__':
         at.cov = [3.44, 5.07, 5.75, 9.94, 8.98, 8.30, 7.28, 9.16]
         at.se_plot()
 
-    #glas2400params()
+    glas2400params()
     #glas2400se()
     #glas1200params()
     #glas1200se()
 
-    carbon1600params()
+    #carbon1600params()
     #carbon1600se()
-    carbon800params()
+    #carbon800params()
     #carbon800se()

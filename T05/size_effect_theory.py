@@ -158,9 +158,9 @@ if __name__ == '__main__':
         plt.legend( loc = 'lower right' )
 
 
-    weibull()
-    normal()
-    #fil()
+    #weibull()
+    #normal()
+    fil()
     #size_effect()
     plt.show()
 

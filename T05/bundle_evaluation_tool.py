@@ -1,7 +1,12 @@
 '''
 Created on Jun 17, 2010
 
-@author: rostislav
+BundleEvaluationTool defines the statistical and length dependent properties
+and dependencies between filament and yarn. Given yarn or filament tests at
+various lengths, the tool can evaluate SE curves for both; the strength distribution
+for the filaments and l-d curves for yarns.
+
+@author: Rostislav Rypl
 '''
 
 from enthought.traits.api import HasTraits, Array, Float
@@ -11,10 +16,10 @@ from numpy import linspace, array, max, sqrt, min
 from matplotlib import pyplot as plt
 from scipy.stats import weibull_min
 from math import e, pi
-from T05.adapter_tests.carbon.carbon400tex_twist_length_adapter_vs_UB import lengths, A_strength
+from T05.adapter_tests.carbon.carbon400tex_twist_length_adapter_vs_UB import lengths, A_strength, B_strength
 
 
-class ParamsExtraction( HasTraits ):
+class BundleEvaluationTool( HasTraits ):
 
     # tested parameters    
     tested_l = Array
@@ -46,7 +51,7 @@ class ParamsExtraction( HasTraits ):
     def bundle_reduction(self):
         out = self.weibull_params()
         shape = out[0][1]
-        return (shape**(1./shape)*e**(1./shape)*gamma(1.+1./shape))**(-1)
+        return 1./(shape**(1./shape)*e**(1./shape)*gamma(1.+1./shape))**(-1)
 
 
 if __name__ == '__main__':
@@ -55,9 +60,9 @@ if __name__ == '__main__':
 ######### PLOTTING ##############
 #################################
     
-    pe = ParamsExtraction( tested_l = array( [2.5, 5.0] ), 
-                          tested_fu = array( [0.17, 0.155] )/((7.8e-3/2.)**2*pi),
-                          E = 72e3,
+    pe = BundleEvaluationTool( tested_l = array( [70., 130.] ), 
+                          tested_fu = array( [116.4, 107.7] )* 16./0.89,#/((7.8e-3/2.)**2*pi),
+                          E = 130e3,
                           l_bundle = 35.0,
                           d = 7.8e-3 )
 
@@ -72,7 +77,7 @@ if __name__ == '__main__':
         shapeErr = sqrt( covar[0][0] )
         scaleErr = sqrt( covar[1][1] )
     
-        x = linspace( .1, 550., 1000 )
+        x = linspace( .2, 550., 1000 )
         y = pe.powerlaw( x, scale, shape )
         
         plt.subplot( 2, 1, 1 )
@@ -98,15 +103,16 @@ if __name__ == '__main__':
         plt.loglog( x, y*br, color = 'blue', label = 'bundle-theory' )
         plt.loglog( pe.tested_l, pe.tested_fu, 'ro', label = 'filament measurements' )
         plt.loglog( lengths, A_strength[:,0], 'bo', label = 'bundle measurements' )
+        plt.loglog( lengths, B_strength[:,0], 'ko', label = 'UB' )
         plt.xlabel( 'log length' )
         plt.ylabel( 'log strength' )
-        plt.xlim( x[0] - ( x[-1] - x[0] ) * 0.01, x[-1] + ( x[-1] - x[0] ) * 0.05 )
-        plt.ylim( y[-1]*br + ( y[-1]*br - y[0]*br ) * 0.05, y[0] - ( y[-1] - y[0] ) * 0.05 )
+        #plt.xlim( x[0] - ( x[-1] - x[0] ) * 0.01, x[-1] + ( x[-1] - x[0] ) * 0.05 )
+        #plt.ylim( y[-1]*br + ( y[-1]*br - y[0]*br ) * 0.05, y[0] - ( y[-1] - y[0] ) * 0.05 )
         plt.legend(loc = 'best')
         
     def bundle_ld():
         plt.figure()
-        eps = linspace( 0, 0.06, 100 )
+        eps = linspace( 0, 0.04, 100 )
         sigma = pe.values( eps )
         plt.plot( eps, sigma, linewidth = 2 )
         plt.title( 'stress-strain of an asymptotic bundle of length %.1f' %pe.l_bundle )
