@@ -8,13 +8,13 @@ includes:   hypothesis testing, p-value evaluation,
 
 general
 assumptions: 1) independent populations
-             2) normal distribution
+             2) (close to) normal distribution
 
 choices
 regarding
-stdev:       1) equal stdev: equal (similar) standard deviation
-             2) different stdev: generally different standard deviation
-             3) known stdev: the standard deviation is known exactly
+stdev:       1) equal stdev: t-test, equal (similar) standard deviation
+             2) different stdev: t-test, generally different standard deviation
+             3) known stdev: Z-test, the standard deviation is known exactly
                 (to be defined globally in sigma1 and sigma2)
 
 @author: rostar
@@ -24,15 +24,17 @@ from enthought.traits.api import HasTraits, Array, Property, Float, cached_prope
 import numpy as np
 from scipy.stats import t, norm
 
-class TwoSampleT(HasTraits):
-    ''' t-test: tests the null hypothesis (mu1 = mu2) against an alternative
+class TwoSampleMeanTest(HasTraits):
+    ''' t-test and Z-test: tests the null hypothesis (mu1 = mu2) against an alternative
         hypothesis (mu1 > or < or != mu2) at a defined level of significance
-        alpha (type I error) = P(H0 rejected|H0 true)
-        additionally gives informations about p-values and confidence intervals
+        alpha (type I error) = P(H0 rejected|H0 true) additionally gives informations
+        about p-values and confidence intervals
+        TODO: test mean against a threshold value
     '''
     
     data1 = Array
     data2 = Array
+    mean_0 = Float
     
     y1 = Property(depends_on = 'data1')
     @cached_property
@@ -152,7 +154,7 @@ class TwoSampleT(HasTraits):
    
 if __name__ == '__main__':
     
-    means = TwoSampleT()
+    means = TwoSampleMeanTest()
     means.data1 = np.array([460., 415,486,488,493,443,512,512,569,487,
                               458,426,454,387,464,524,551,521,462,579])
     means.data2 = np.array([542.,503,578,533,572,537,543,538,582,563,
