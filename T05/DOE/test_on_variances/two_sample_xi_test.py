@@ -96,7 +96,6 @@ class TwoSampleVarianceTest(HasTraits):
         f0 = self.S1**2/self.S2**2
         n1, n2 = self.n1, self.n2
         # hypothesis testing
-        print f.ppf(1 - alpha/2., n1 - 1, n2 - 1), f.ppf(alpha/2., n1 - 1, n2 - 1), f0
         H1a = f.ppf(1 - alpha/2., n1 - 1, n2 - 1) < f0 or f.ppf(alpha/2., n1 - 1, n2 - 1) > f0
         H1b = f.ppf(alpha/2., n1 - 1, n2 - 1) < f0
         H1c = f.ppf(1 - alpha/2., n1 - 1, n2 - 1) > f0
@@ -108,7 +107,7 @@ class TwoSampleVarianceTest(HasTraits):
         # confidence intervals: the minimum level of significance
         # alpha for which the null hypothesis is rejected 
         c1 = self.S1**2/self.S1**2 * f.ppf(alpha/2., n2 - 1, n1 - 1)     
-        c2 = self.S1**2/self.S1**2 * f.ppf(1 - alpha/2., n2 - 1, n1 - 1)   
+        c2 = self.S1**2/self.S1**2 * f.ppf(1 - alpha/2., n2 - 1, n1 - 1)     
         return H1a, H1b, H1c, p1a, p1b, p1c, (c1,c2)
         
     # evaluate the hypothesis testing   
@@ -147,5 +146,5 @@ if __name__ == '__main__':
                               572,541,541,561,526,535,474,536,568,503])
     means.sigma1 = np.sqrt(np.var(means.data1))
     means.sigma2 = np.sqrt(np.var(means.data2))
-    means.evaluate(alpha = 0.1, compare = 'variance')
+    means.evaluate(alpha = 0.05, compare = 'variance')
     
