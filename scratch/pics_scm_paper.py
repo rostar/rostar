@@ -11,7 +11,7 @@ from scipy.stats import uniform, norm, weibull_min
 from stats.spirrid.spirrid import SPIRRID
 from stats.spirrid.rv import RV
 from stats.spirrid import make_ogrid
-from enthought.mayavi import mlab as m
+#from etsproxy.mayavi import mlab as m
 
 tau = .2
 Af = 5.31e-4
@@ -43,7 +43,7 @@ def Pw():
         P2 = (T * L ** 2 + 2 * u * Kr) / 2. / (L + l)
         return P2
 
-    def recall(w, tau, l, A_r, E_r, E_m, A_m, theta, xi, phi, Ll, Lr, Nf):
+    def recall(w, tau, l, A_f, E_f, E_m, A_m, theta, xi, phi, Ll, Lr, Nf):
         Lmin = np.minimum(Ll, Lr)
         Lmax = np.maximum(Ll, Lr)
         Lmin = np.maximum(Lmin - l / 2., 0)
@@ -52,10 +52,10 @@ def Pw():
         l = l * (1 + theta)
         w = w - theta * l
         w = H(w) * w
-        o = np.sqrt(4. * A_r * Nf * pi)
+        o = np.sqrt(4. * A_f * Nf * pi)
         T = tau * phi * o
         Km = A_m * E_m
-        Kr = A_r * E_r
+        Kr = A_f * E_f
         l0 = l / 2.
         q0 = crackbridge(w, l0, T, Kr, Km, Lmin, Lmax)
         w0 = T * Lmin * ((2 * l0 + Lmin) * (Kr + Km) + Kr * Lmax) / (Km * Kr)
@@ -111,8 +111,8 @@ def random_samples_Pw(n):
                                    Lr = 20.,
                                    tau = RV('uniform', 0.05, .15),
                                    l = RV('uniform', 5.0, 10.0),
-                                   A_r = Af,
-                                   E_r = Ef,
+                                   A_f = Af,
+                                   E_f = Ef,
                                    theta = RV('uniform', 0.0, .02),
                                    xi = RV('weibull_min', scale = 0.017, shape = 5, n_int = 10),
                                    phi = phi,
@@ -149,8 +149,8 @@ def random_samples_profiles(n):
                                    Lr = Lr,
                                    tau = RV('uniform', 0.0, .2),
                                    l = RV('uniform', 5.0, 15.0),
-                                   A_r = Af,
-                                   E_r = Ef,
+                                   A_f = Af,
+                                   E_f = Ef,
                                    theta = RV('uniform', 0.0, .02),
                                    xi = xi,#RV('weibull_min', scale = 0.0179, shape = 5, n_int = 10),
                                    phi = phi,
@@ -188,8 +188,8 @@ def mlab_plot():
                                    Lr = 20.,
                                    tau = RV('uniform', 0.05, .15),
                                    l = RV('uniform', 2.0, 15.0),
-                                   A_r = Af,
-                                   E_r = Ef,
+                                   A_f = Af,
+                                   E_f = Ef,
                                    theta = 0.01, #RV('uniform', 0.0, .02),
                                    xi = RV('weibull_min', scale = 0.0179, shape = 5, n_int = 10),
                                    phi = phi,
@@ -344,7 +344,7 @@ def cracks():
                        Ll = np.linspace(0.01, 20., 14),
                        Lr = np.linspace(0.01, 20., 14)),
          tvars = dict(tau = RV('uniform', loc = 0.5, scale = 0.2),
-                      l = RV('uniform', loc = 0.0, scale = 2.0), A_r = 5.31e-4, E_r = 72e3, theta = 0.0,
+                      l = RV('uniform', loc = 0.0, scale = 2.0), A_f = 5.31e-4, E_f = 72e3, theta = 0.0,
                        xi = 1e20, phi = 1.0, E_m = 30e3, A_m = 50., Nf = 1700.),
                                 n_int = 10)
 
@@ -384,7 +384,7 @@ def cracks():
 # force profile along a filament
 #SP()
 # "random" samples of a filament and average response l-d curves
-#random_samples_Pw(4)
+random_samples_Pw(4)
 # "random" samples of a filament and average response profiles
 #random_samples_profiles(4)
 # 3D plot
@@ -400,4 +400,4 @@ def cracks():
 # autocorrelation function
 #lacor()
 # cracking profiles
-cracks()
+#cracks()
