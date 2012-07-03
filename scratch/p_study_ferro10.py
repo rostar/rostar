@@ -21,17 +21,17 @@ Vf = 0.0103
 tau = RV('uniform', loc = 0.02, scale = .2) # 0.5
 Ef = 200e3
 Em = 25e3
-l = RV( 'uniform', scale = 10., loc = 0. )
+l = 0.0#RV( 'uniform', scale = 10., loc = 0. )
 theta = 0.0
 xi = 0.01#RV( 'weibull_min', scale = 0.01, shape = 5 ) # 0.017
 phi = 1.
-w = np.linspace(0.0, .1, 51)
-x = np.linspace(-50., 50., 51)
-Ll = np.linspace(0.5,30,5)
-Lr = np.linspace(0.5,30,5)
+w = np.linspace(0.0, .1, 71)
+x = np.linspace(-30., 30., 71)
+Ll = np.linspace(0.5,30,8)
+Lr = np.linspace(0.5,30,8)
 
 length = 600.
-nx = 600
+nx = 1000
 random_field = RandomField(seed = False,
                            lacor = 4.,
                             xgrid = np.linspace(0., length, 600),
@@ -73,14 +73,21 @@ scm = SCM(length = length,
           load_n_sigma_c = 100
           )
 
-def plot(label):
+label = ['discrete', 'random (COV = 23%%)', 'random (COV = 52%%)']
+def plot(i):
     eps, sigma = scm.eps_sigma
-    plt.plot(eps, sigma, lw = 2, label = label)
-    plt.legend(loc = 'best')
+    mask = np.isnan(eps) == False
+    eps = eps[mask]
+    sigma = sigma[mask]
+    print i, sigma[-1]
+    sigma[-1] = 0.0
+    plt.plot(eps, sigma, color = 'black', lw = 2, label = label[i])
     plt.xlabel('composite strain [-]')
     plt.ylabel('composite stress [MPa]')
 
-tau_lst = [0.1, 3.0]
+tau_lst = [0.5,
+           RV('uniform', loc = 0.3, scale = .4),
+           RV('uniform', loc = 0.1, scale = .8)]
 for i,t in enumerate(tau_lst):
     scm = SCM(length = length,
           nx = nx,
@@ -93,7 +100,7 @@ for i,t in enumerate(tau_lst):
           )
     scm.cb_randomization.tvars['tau'] = t
     scm.evaluate()
-    plot(str(i))
-plt.show()
+    plot(i)
 
+plt.show()
 
