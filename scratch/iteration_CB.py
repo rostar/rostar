@@ -137,18 +137,13 @@ class CBIter(RF):
                     var = var.reshape(shape)
                     shape_len = len(var.shape)
                 reshaped.append(var)
-            q_init = reshaped.pop()
+            q_init = np.array(reshaped.pop(), dtype='float64')
             x_shape = np.ones(shape_len)
             x_shape[-1] = len(self.x_arr)
             x_arr = self.x_arr.reshape(x_shape)
             reshaped.insert(1, x_arr)
-            a = reshaped[2]
-            b = q_init
-            print 'shapes', a.shape, b.shape
-            init_guess = np.ones_like(a) * 2500.
-            init_guess = np.ones_like(b) * 2500.
             reshaped.insert(0, q_init.shape)
-            q = fsolve(self.residuum, init_guess.flatten(), args=(tuple(reshaped)))
+            q = fsolve(self.residuum, q_init.flatten(), args=(tuple(reshaped)))
             q = q.reshape(q_init.shape)
             return q
 
