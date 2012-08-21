@@ -13,7 +13,7 @@
 # Created on Jun 14, 2010 by: rch
 
 from etsproxy.traits.api import \
-    Float, Str, implements
+    Float, Str, implements, List
 
 import numpy as np
 
@@ -154,23 +154,24 @@ class CBEMClampedFiberStressVfw(RF):
         q = q0 + q1 + q2
 
         # include breaking strain
-        damage = np.sum(H(Kf * xi - q)) / float(len((q * xi).flatten()))
-        q = q * H(damage - V_f / 0.1)
-        return q / V_f * Kf/Kc
+        self.damage.append(1.0 - np.sum(H(Kf * xi - q)) / float(len((q * xi).flatten())))
+        return q * np.ones_like(xi)
+
+    damage = List
 
 if __name__ == '__main__':
 
     r = 0.00345
-    V_f = 0.0103
-    t = .17
+    V_f = 0.103
+    t = .1
     Ef = 200e3
     Em = 25e3
-    l = 1.
-    theta = 0.1
+    l = 0.
+    theta = 0.0
     xi = 0.017
     phi = 1.
-    Ll = 40.
-    Lr = 20.
+    Ll = 100.
+    Lr = 100.
     
     def Pw():
         plt.figure()
