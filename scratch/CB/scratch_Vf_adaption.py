@@ -13,11 +13,11 @@ if __name__ == '__main__':
     #----------------------------------------------------
     # controled by BC points and without residual stress
     # ---------------------------------------------------
-    
+
     # filaments
     r = 0.00345
     V_f = 0.03
-    tau = 0.5#RV('uniform', loc=0.05, scale=2.)
+    tau = 0.5 #RV('uniform', loc=0.2, scale=1.)
     E_f = 200e3
     E_m = 25e3
     l = 0.0
@@ -27,7 +27,9 @@ if __name__ == '__main__':
     Lr = 100.
     xi = RV('weibull_min', shape=5., scale=.02)
 
-    w = np.linspace(0, .7, 400)
+    ctrl_damage = np.linspace(0.0, 0.999, 50)
+    w = np.linspace(0, .7, 200)
+    n_int = 100
 
     def no_res_stress_CB():
         cb = CBEMClampedFiberStressVf()
@@ -36,24 +38,18 @@ if __name__ == '__main__':
              evars=dict(w=w),
              tvars=dict(tau=tau, l=l, E_f=E_f, theta=theta, xi=xi, phi=phi,
                         E_m=E_m, r=r, V_f=V_f, Ll=Ll, Lr=Lr),
-             n_int=300)
+             n_int=n_int)
 
-        w_adapt = []
-        q_adapt = []
-        damage = 0.0
         vf = V_f
-        for i in range(200):
+        for D in ctrl_damage:
             s.q = CBEMClampedFiberStressVf()
             s.tvars['V_f'] = vf
             mu = s.mu_q_arr
-            damag = s.q.damage[1:]
-            damage = np.array(damag)[np.array(damag) > damage][0]
-            if damage == 1.0:
-                print 'kaputt'
-                break
+            damage_arr = s.q.damage[1:]
+            damage = np.array(damage_arr)[np.array(damage_arr) > D][0]
             vf = V_f * (1.0 - damage)
-            plt.plot(w[:np.argwhere(damag == damage)[0]],
-                     mu[:np.argwhere(damag == damage)[0]] / V_f,
+            plt.plot(w[:np.argwhere(damage_arr == damage)[0]],
+                     mu[:np.argwhere(damage_arr == damage)[0]] / V_f,
                      color='blue')
 
     #-----------------------------------------------
@@ -67,24 +63,18 @@ if __name__ == '__main__':
              evars=dict(w=w),
              tvars=dict(tau=tau, l=l, E_f=E_f, theta=theta, xi=xi, phi=phi,
                         E_m=E_m, r=r, V_f=V_f, Ll=Ll, Lr=Lr),
-             n_int=300)
+             n_int=n_int)
 
-        w_adapt = []
-        q_adapt = []
-        damage = 0.0
         vf = V_f
-        for i in range(200):
+        for D in ctrl_damage:
             s.q = CBEMClampedFiberStressVfw()
             s.tvars['V_f'] = vf
             mu = s.mu_q_arr
-            damag = s.q.damage[1:]
-            damage = np.array(damag)[np.array(damag) > damage][0]
-            if damage == 1.0:
-                print 'kaputt'
-                break
+            damage_arr = s.q.damage[1:]
+            damage = np.array(damage_arr)[np.array(damage_arr) > D][0]
             vf = V_f * (1.0 - damage)
-            plt.plot(w[:np.argwhere(damag == damage)[0]],
-                     mu[:np.argwhere(damag == damage)[0]] / V_f,
+            plt.plot(w[:np.argwhere(damage_arr == damage)[0]],
+                     mu[:np.argwhere(damage_arr == damage)[0]] / V_f,
                      color='red')
 
     def no_adaption():
@@ -94,11 +84,11 @@ if __name__ == '__main__':
              evars=dict(w=w),
              tvars=dict(tau=tau, l=l, E_f=E_f, theta=theta, xi=xi, phi=phi,
                         E_m=E_m, r=r, V_f=V_f, Ll=Ll, Lr=Lr),
-             n_int=1000)
+             n_int=500)
         plt.plot(w, s.mu_q_arr, lw=2, color='black', label='no adaption')
 
 no_res_stress_CB()
 no_res_stress_w()
 no_adaption()
-plt.legend()
+plt.legend(loc='best')
 plt.show()
