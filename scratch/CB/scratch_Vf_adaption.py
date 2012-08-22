@@ -27,8 +27,8 @@ if __name__ == '__main__':
     Lr = 100.
     xi = RV('weibull_min', shape=5., scale=.02)
 
-    ctrl_damage = np.linspace(0.0, 0.999, 50)
-    w = np.linspace(0, .7, 200)
+    ctrl_damage = np.linspace(0.0, 0.999, 100)
+    w = np.linspace(0, .7, 300)
     n_int = 100
 
     def no_res_stress_CB():
@@ -44,6 +44,7 @@ if __name__ == '__main__':
         for D in ctrl_damage:
             s.q = CBEMClampedFiberStressVf()
             s.tvars['V_f'] = vf
+            s.tvars['V_f'] *= 1.0000001
             mu = s.mu_q_arr
             damage_arr = s.q.damage[1:]
             damage = np.array(damage_arr)[np.array(damage_arr) > D][0]
@@ -69,6 +70,7 @@ if __name__ == '__main__':
         for D in ctrl_damage:
             s.q = CBEMClampedFiberStressVfw()
             s.tvars['V_f'] = vf
+            s.tvars['V_f'] *= 1.0000001
             mu = s.mu_q_arr
             damage_arr = s.q.damage[1:]
             damage = np.array(damage_arr)[np.array(damage_arr) > D][0]
@@ -84,7 +86,7 @@ if __name__ == '__main__':
              evars=dict(w=w),
              tvars=dict(tau=tau, l=l, E_f=E_f, theta=theta, xi=xi, phi=phi,
                         E_m=E_m, r=r, V_f=V_f, Ll=Ll, Lr=Lr),
-             n_int=500)
+             n_int=1000)
         plt.plot(w, s.mu_q_arr, lw=2, color='black', label='no adaption')
 
 no_res_stress_CB()
