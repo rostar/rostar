@@ -8,77 +8,61 @@ from etsproxy.traits.api import HasTraits
 from stats.spirrid.spirrid import SPIRRID
 from stats.spirrid.rv import RV
 from quaducom.micro.resp_func.cb_emtrx_clamped_fiber_stress import \
-    CBEMClampedFiberStress
+    CBEMClampedFiberStress, CBEMClampedFiberStressSP
 from quaducom.micro.resp_func.cb_emtrx_clamped_fiber_stress_residual import \
-    CBEMClampedFiberStressResidual
+    CBEMClampedFiberStressResidualSP
 import numpy as np
 from matplotlib import pyplot as plt
 import time
 
+# filaments
 r = 0.00345
-V_f = 0.0103
-tau = RV('uniform', loc=0.02, scale=.2)
+V_f = 0.1
+tau = RV('uniform', loc=.01, scale=.2)
 E_f = 200e3
 E_m = 25e3
-l = RV('uniform', scale=20., loc=2.)
+l = 0.0
 theta = 0.0
-xi = RV('weibull_min', scale=0.02, shape=5)
 phi = 1.
-Ll = 40.
-Lr = 20.
-s0 = 0.02
+Ll = 50.
+Lr = 50.
+xi = RV('weibull_min', shape=5., scale=0.01)
 m = 5.0
-w = np.linspace(0, 2.5, 200)
-Pf = RV('uniform', loc=0., scale=1.0)
+s0 = 100.
+Pf = 0.5
 
+x = np.linspace(-Ll, Lr, 200)
+w = 0.2
 
-tt = time.clock()
-rf = CBEMClampedFiberStress()
-spirrid1 = SPIRRID(q=rf,
-               sampling_type='PGrid',
-               evars=dict(w=w),
-          tvars=dict(Ll=Ll,
-                       Lr=Lr,
-                       tau=tau,
-                        l=l,
-                        E_f=E_f,
-                        theta=theta,
-                        xi=xi,
-                        phi=phi,
-                        E_m=E_m,
-                        r=r,
-                        V_f=V_f,
-                             ),
-                   n_int=30)
+def get_qmax():
+    cb = CBEMClampedFiberStress()
+    sq = SPIRRID(q=cb,
+         sampling_type='PGrid',
+         evars=dict(w=np.array([w, 0.05])),
+         tvars=dict(tau=tau, l=l, E_f=E_f, theta=theta, xi=xi, phi=phi,
+                    E_m=E_m, r=r, V_f=V_f, Ll=Ll, Lr=Lr),
+         n_int=200)
+    return sq.mu_q_arr[0]
+qmax = get_qmax()
 
-plt.plot(w, spirrid1.mu_q_arr, lw=2, label='breakage in crack')
-print time.clock() - tt
+cb = CBEMClampedFiberStressSP()
+s = SPIRRID(q=cb,
+     sampling_type='PGrid',
+     evars=dict(x=x),
+     tvars=dict(w=w, tau=tau, l=l, E_f=E_f, theta=theta, xi=xi, phi=phi,
+                E_m=E_m, r=r, V_f=V_f, Ll=Ll, Lr=Lr),
+     n_int=200)
 
-tt = time.clock()
-rf = CBEMClampedFiberStressResidual()
-
-spirrid2 = SPIRRID(q=rf,
-               sampling_type='PGrid',
-                evars=dict(w=w),
-          tvars=dict(Ll=Ll,
-                       Lr=Lr,
-                       tau=tau,
-                        l=l,
-                        E_f=E_f,
-                        theta=theta,
-                        Pf=Pf,
-                        phi=phi,
-                        E_m=E_m,
-                        r=r,
-                        V_f=V_f,
-                        m=m,
-                        s0=s0
-                             ),
-                   n_int=30)
-plt.plot(w, spirrid2.mu_q_arr, lw=2, label='residual')
-
-print time.clock() - tt
-plt.xlabel('crack opening w [mm]')
-plt.ylabel('filament stress $\sigma_f$ [MPa]')
-plt.legend()
+load = qmax * V_f
+eps_m = (load - s.mu_q_arr * V_f) / (1. - V_f) / E_m
+eps_f = s.mu_q_arr / E_f
+plt.plot(x, eps_f, color='red', label='fiber', lw = 2)
+plt.plot(x, eps_m, color='blue', label='mtrx', lw = 2)
+print 'global w = ', np.trapz(eps_f - eps_m, x), 'mm'
+for i in range(20):
+    args = list(s.get_samples(1).flatten())
+    args.insert(1, x)
+    epsfi = cb(*args) / E_f
+    plt.plot(x, epsfi, color='grey')
+    print 'w(',i,') = ', np.trapz(np.maximum(epsfi, eps_m) - eps_m, x) 
 plt.show()

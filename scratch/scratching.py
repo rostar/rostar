@@ -28,7 +28,7 @@ from iteration_CB2 import CBIter2
 if __name__ == '__main__':
     # filaments
     r = 0.00345
-    V_f = 0.103
+    V_f = 0.0103
     tau = RV('uniform', loc=0.05, scale=2.)
     E_f = 200e3
     E_m = 25e3
@@ -80,7 +80,7 @@ if __name__ == '__main__':
         w_err = np.array(w_err)
         w_means.append(w_err.mean())
         w_stdevs.append(w_err.std())
-        
+
         iters = 5
 
         for j in range(iters):
