@@ -11,7 +11,7 @@ from scipy.stats import uniform, norm, weibull_min
 from stats.spirrid.spirrid import SPIRRID
 from stats.spirrid.rv import RV
 from stats.spirrid import make_ogrid
-#from etsproxy.mayavi import mlab as m
+from etsproxy.mayavi import mlab as m
 
 tau = .2
 Af = 5.31e-4
