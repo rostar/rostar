@@ -20,7 +20,7 @@ stdev:       1) equal stdev: t-test, equal (similar) standard deviation
 @author: rostar
 '''
 
-from enthought.traits.api import HasTraits, Array, Property, Float, cached_property
+from etsproxy.traits.api import HasTraits, Array, Property, Float, cached_property
 import numpy as np
 from scipy.stats import t, norm
 

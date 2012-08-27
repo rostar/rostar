@@ -20,7 +20,7 @@ the test:    1) testing the variance sigma against a threshold sigma_0
 @author: rostar
 '''
 
-from enthought.traits.api import HasTraits, Array, Property, Float, cached_property
+from etsproxy.traits.api import HasTraits, Array, Property, Float, cached_property
 import numpy as np
 from scipy.stats import chi2, f
 

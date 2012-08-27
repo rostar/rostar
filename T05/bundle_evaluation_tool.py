@@ -9,15 +9,16 @@ for the filaments and l-d curves for yarns.
 @author: Rostislav Rypl
 '''
 
-from enthought.traits.api import HasTraits, Array, Float, Property, cached_property
+from etsproxy.traits.api import HasTraits, Array, Float, Property, cached_property
 from scipy.special import gamma
 from scipy.optimize import leastsq
-from numpy import linspace, array, max, sqrt, min
+import numpy as np
 from matplotlib import pyplot as plt
 from scipy.stats import weibull_min
 from math import e, pi
 from T05.adapter_tests.carbon.carbon400tex_twist_length_adapter_vs_UB import lengths as A_lengths, A_strength, B_strength
-
+from T05.adapter_tests.AR_glass.resin_vs_adapter import l, fh, fa
+import matplotlib
 
 class BundleEvaluationTool( HasTraits ):
 
@@ -63,13 +64,27 @@ if __name__ == '__main__':
 #################################
     
     # predicting the SE curve for a bundle from filament data
-    filament_tests = False
+    filament_tests = True
+    fil_lengths_carbon = np.array([25.,50.])
+    fil_strengths_carbon = np.array( [3557., 3243.] )
+    Ecarbon = 130e3
+    fil_lengths_glass = np.array([20.,100.])
+    fil_strengths_glass = np.array( [2157., 1790.] )
+    Eglass = 70e3
+    #yarn tests on AR-glass
+    fh = np.array(fh) / 0.445
+    fa = np.array(fa) / 0.445
+    lengths_glass = l
+    strengths_glass_adapter = fa
+    strengths_glass_resin = fh
+    
+    
     # predicting the SE curve for a filament from bundle data
-    bundle_tests = True
+    bundle_tests = False
     if filament_tests:
-        pe = BundleEvaluationTool( lengths = array( [25., 50.] ), 
-                                   strengths = array( [3557., 3243.] ),
-                                   E = 130e3
+        pe = BundleEvaluationTool( lengths = fil_lengths_glass, 
+                                   strengths = fil_strengths_glass,
+                                   E = Eglass
                                    )
         br = pe.bundle_reduction()
     elif bundle_tests:
@@ -86,56 +101,88 @@ if __name__ == '__main__':
         covar = out[1]
         scale = params[0]
         shape = params[1]
-        shapeErr = sqrt( covar[0][0] )
-        scaleErr = sqrt( covar[1][1] )
+        shapeErr = np.sqrt( covar[0][0] )
+        scaleErr = np.sqrt( covar[1][1] )
     
-        x = linspace( .2, 550., 1000 )
+        x = np.linspace( .2, 550., 1000 )
         y = pe.powerlaw( x, scale, shape )
         
-        plt.subplot( 2, 1, 1 )
+        plt.subplot( 1, 2, 1 )
 
         if filament_tests:
-            plt.plot( x, y, color = 'red', label = 'filament'  )
-            plt.plot( x, y * br, color = 'blue', label = 'bundle-theory' )
-            plt.plot( pe.lengths, pe.strengths, 'ro', label = 'filament measurements' )
+            plt.plot( x, y, color = 'black', lw = 1, label = 'filament scaling'  )
+            plt.plot( x, y * br, color = 'black', lw = 2, ls = 'dashed', label = 'bundle model' )
+            plt.plot( pe.lengths, pe.strengths, 'k^', label = 'filament tests' )
+            plt.xticks(fontsize = 16)
+            plt.yticks(fontsize = 16)
         
             # additional data
-            plt.plot( A_lengths, A_strength[:,0], 'bo', label = 'bundle measurements' )
+            # carbon
+            #plt.plot( A_lengths, A_strength[:,0], 'ko', label = 'Statimat 4U adapter' )
+            #plt.plot( A_lengths, B_strength[:,0], 's', color = 'grey', label = 'standard method' )
+            # glass
+            plt.plot( lengths_glass, strengths_glass_adapter, 'ko', label = 'Statimat 4U adapter' )
+            plt.plot( lengths_glass, strengths_glass_resin, 's', color = 'grey', label = 'resin porters' )
+            plt.grid(True,which="both",ls="-", color = 'grey')
+            plt.xlim(10)
         elif bundle_tests:
             plt.plot( x, y, color = 'blue', label = 'bundle'  )
             plt.plot( x, y * br, color = 'red', label = 'filament-theory' )
             plt.plot( pe.lengths, pe.strengths, 'bo', label = 'bundle measurements' )
+            plt.xticks(fontsize = 16)
+            plt.yticks(fontsize = 16)
         
             # additional data
-            plt.plot( array([25.,50.]), array([3557., 3243.]), 'ro', label = 'filament measurements' )
-        shape_ytick = min( y ) + 0.9 * ( max( y ) - min( y ) )
-        scale_ytick = min( y ) + 0.8 * ( max( y ) - min( y ) )
-        xtick = min( x ) + 0.5 * max( x ) - min( x )
-        plt.text( xtick, shape_ytick, 'shape: %5.2f +/- %5.2f' % ( shape, shapeErr ) )
-        plt.text( xtick, scale_ytick, 'scale for $l_0$ = %5.f' %pe.ref_length
-                  + 'mm: %5.f +/- %5.2f' % ( scale, scaleErr ) )
-        plt.title( 'best fit Weibull scaling' )
-        plt.xlabel( 'length' )
-        plt.ylabel( 'strength' )
+            plt.plot( np.min( y ) + 0.9 * ( np.max( y ) - np.min( y ) ))
+        scale_ytick = np.min( y ) + 0.8 * ( np.max( y ) - np.min( y ) )
+        xtick = np.min( x ) + 0.5 * np.max( x ) - np.min( x )
+        plt.ylim(500,3000)
+        #plt.text( xtick, shape_ytick, 'shape: %5.2f +/- %5.2f' % ( shape, shapeErr ) )
+        #plt.text( xtick, scale_ytick, 'scale for $l_0$ = %5.f' %pe.ref_length
+        #          + 'mm: %5.f +/- %5.2f' % ( scale, scaleErr ) )
+        plt.title( 'Weibull scaling' , fontsize = 16)
+        plt.xlabel( 'length [mm]' , fontsize = 16)
+        plt.ylabel( 'strength [MPa]' , fontsize = 16)
         #plt.legend(loc = 'best')
         #plt.xlim( x[0] - ( x[-1] - x[0] ) * 0.05, x[-1] + ( x[-1] - x[0] ) * 0.05 )
         #plt.ylim( y[-1] + ( y[-1] - y[0] ) * 0.05, y[0] - ( y[-1] - y[0] ) * 0.05 )
+        plt.legend(loc = 'best')
         
-        plt.subplot( 2, 1, 2 )
+        logax = plt.subplot( 1, 2, 2 )
         if filament_tests:
-            plt.loglog( x, y, color = 'red', label = 'filament' )
-            plt.loglog( x, y*br, color = 'blue', label = 'bundle-theory' )
-            plt.loglog( pe.lengths, pe.strengths, 'ro', label = 'fil tests' )
-            plt.loglog( A_lengths, A_strength[:,0], 'bo', label = 'bundle tests' )
-            plt.loglog( A_lengths, B_strength[:,0], 'ko', label = 'UB' )
+            logax.loglog( x, y, color = 'black', label = 'filament scaling', subsy = [2, 3, 4, 5, 6, 7, 8, 9] )
+            logax.loglog( x, y*br, color = 'black', lw = 2, ls = 'dashed', label = 'bundle scaling' )
+            logax.loglog( pe.lengths, pe.strengths, 'k^', label = 'filament tests' )
+            #glass
+            logax.loglog( lengths_glass, strengths_glass_adapter, 'ko', label = 'Statimat 4U adapter' )
+            logax.loglog( lengths_glass, strengths_glass_resin, 's', color = 'grey', label = 'resin porters' )
+            #carbon
+#            plt.loglog( A_lengths, A_strength[:,0], 'ko', label = 'bundle tests' )
+#            plt.loglog( A_lengths, B_strength[:,0], 's', color = 'grey', label = 'UB' )
+            plt.xticks(fontsize = 16)
+            plt.yticks(fontsize = 16)
+            plt.grid(True,which="both",ls="-", color = 'grey')
         elif bundle_tests:
             plt.loglog( x, y, color = 'blue', label = 'bundle' )
             plt.loglog( x, y*br, color = 'red', label = 'filament-theory' )
             plt.loglog( pe.lengths, pe.strengths, 'bo', label = 'bundle tests' )
-            plt.loglog( array([25.,50.]), array([3557., 3243.]), 'ro', label = 'fil tests' )
+            plt.loglog( np.array([25.,50.]), np.array([3557., 3243.]), 'ro', label = 'fil tests' )
             plt.loglog( A_lengths, B_strength[:,0], 'ko', label = 'UB' )
-        plt.xlabel( 'length' )
-        plt.ylabel( 'strength' )
+            plt.xticks(fontsize = 16)
+            plt.yticks([1000, 2000, 3000],fontsize = 16)
+        plt.xlabel( 'length [mm]', fontsize = 16 )
+        plt.title('Weibull scaling log-log', fontsize = 16)
+        yax = logax.yaxis
+        yminor = yax.get_ticklocs(minor = True)
+        ymajor = yax.get_ticklocs()
+        yax.set_ticklabels(np.array(yminor,dtype = 'int'), minor = True, fontsize = 16)
+        yax.set_ticklabels(np.array(ymajor,dtype = 'int'), fontsize = 16)
+        xax = logax.xaxis
+        xmajor = xax.get_ticklocs()
+        xax.set_ticklabels(100*np.array(xmajor, dtype = 'int'), fontsize = 16)
+        plt.ylim(500,3000)
+        plt.xlim(10,1000)
+        #plt.ylabel( 'strength' )
         #plt.xlim( x[0] - ( x[-1] - x[0] ) * 0.01, x[-1] + ( x[-1] - x[0] ) * 0.05 )
         #plt.ylim( y[-1]*br + ( y[-1]*br - y[0]*br ) * 0.05, y[0] - ( y[-1] - y[0] ) * 0.05 )
         plt.legend(loc = 'best')
@@ -143,14 +190,13 @@ if __name__ == '__main__':
     def bundle_ld():
         bundle_length = 35.
         plt.figure()
-        eps = linspace( 0, 0.04, 100 )
+        eps = np.linspace( 0, 0.04, 100 )
         sigma = pe.values( eps, bundle_length )
         plt.plot( eps, sigma, linewidth = 2 )
         plt.title( 'stress-strain of an asymptotic bundle of length %.1f' %bundle_length )
         plt.xlabel( 'strain [-]' )
         plt.ylabel( 'stress [MPa]' )
 
-    
     #bundle_ld() 
     SE()
     plt.show()

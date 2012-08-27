@@ -10,7 +10,7 @@ B stands for classical tests
 import numpy as np
 from stats.spirrid import make_ogrid
 from scipy.interpolate import RectBivariateSpline as Spl
-from enthought.mayavi import mlab as m
+#from etsproxy.mayavi import mlab as m
 from matplotlib import pyplot as plt
 
 # DATA

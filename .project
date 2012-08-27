@@ -3,8 +3,15 @@
 	<name>rostar</name>
 	<comment></comment>
 	<projects>
+		<project>etsproxy</project>
+		<project>ibvpy</project>
+		<project>mathkit</project>
+		<project>matresdev</project>
 		<project>quaducom</project>
+		<project>simdb</project>
+		<project>spirrid</project>
 		<project>stats</project>
+		<project>util</project>
 	</projects>
 	<buildSpec>
 		<buildCommand>
