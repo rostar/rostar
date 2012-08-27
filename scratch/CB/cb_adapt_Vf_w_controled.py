@@ -154,10 +154,7 @@ class CBEMClampedFiberStressVfw(RF):
         q = q0 + q1 + q2
 
         # include breaking strain
-        self.damage.append(1.0 - np.sum(H(Kf * xi - q)) / float(len((q * xi).flatten())))
         return q * np.ones_like(xi)
-
-    damage = List
 
 if __name__ == '__main__':
 

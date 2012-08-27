@@ -141,13 +141,13 @@ class CBEMClampedFiberStressVf(RF):
 
         # displacement at which the debonding to the closer clamp is finished
         w0 = T * Lmin * (Lmin * Km + Kr * (Lmin + Lmax) + l * Ec) / Km
-        
+
         # debonding of one side; the other side is clamped
         q1 = self.pullout(w , l, T, Kr, Km, Lmin, Lmax) 
-        
+
         # displacement at which the debonding is finished at both sides
         w1 = (1. / 2.) * T / Km * (2. * Kr * Lmax ** 2. - Km * Lmin ** 2. + 2. * Lmin * Ec * Lmax + 2 * l * Ec * Lmax + Km * Lmax ** 2)
-        
+
         # debonding completed at both sides, response becomes linear elastic
         q2 = self.linel(w, l, T, Kr, Km, Lmax, Lmin) 
 
@@ -160,12 +160,9 @@ class CBEMClampedFiberStressVf(RF):
         q = q0 + q1 + q2
 
         # include breaking strain
-        #q = q * H(Kr * xi - q)
-        self.damage.append(1.0 - np.sum(H(Kr * xi - q)) / float(len((q * xi).flatten())))
-        return q * np.ones_like(xi)
+        q = q * H(Kr * xi - q)
+        return q / V_f
 
-    damage = List
-    
 if __name__ == '__main__':
 
     r = 0.00345

@@ -7,7 +7,6 @@ Created on 14.6.2012
 import numpy as np
 from matplotlib import pyplot as plt
 from stats.spirrid.spirrid import SPIRRID
-from spirrid.spirrid import SPIRRID
 from stats.spirrid.rv import RV
 from quaducom.micro.resp_func.cb_emtrx_clamped_fiber_stress import \
     CBEMClampedFiberStress
