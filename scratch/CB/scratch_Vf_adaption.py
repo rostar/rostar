@@ -34,6 +34,8 @@ if __name__ == '__main__':
     w = np.linspace(0, 1.4, 300)
     n_int = 50
 
+    spirrid_plot = False
+
     def no_res_stress_CB():
         cb = CBEMClampedFiberStressVf()
         s = SPIRRID(q=cb,
@@ -53,7 +55,7 @@ if __name__ == '__main__':
         def residuum(w, D):
             s_damage.evars['w'] = np.array([w])
             s_damage.tvars['V_f'] = (1. - D) * V_f
-            return s_damage.mu_q_arr[0] - (1. - D)
+            return s_damage.mu_q_arr - (1. - D)
 
         for D in ctrl_damage:
             print D
@@ -63,6 +65,10 @@ if __name__ == '__main__':
             s.tvars['V_f'] = (1.0 - D) * V_f
             mu = s.mu_q_arr
             plt.plot(wD, mu, 'b^')
+            if spirrid_plot == True:
+                s.evars['w'] = w
+                plt.plot(w, s.mu_q_arr, color='blue', lw=0.2)
+
 
     #-----------------------------------------------
     # controled by crack opening no residual stress
@@ -84,10 +90,16 @@ if __name__ == '__main__':
                                phi=phi, E_m=E_m, r=r, V_f=V_f, Ll=Ll, Lr=Lr),
                     n_int=n_int)
 
+#        for vf in np.linspace(0.01, 0.1, 20):
+#            s_damage.tvars['V_f'] = vf
+#            s_damage.evars['w'] = w
+#            plt.plot(w, s_damage.mu_q_arr)
+#        plt.show()
+
         def residuum(w, D):
             s_damage.evars['w'] = np.array([w])
             s_damage.tvars['V_f'] = (1. - D) * V_f
-            return s_damage.mu_q_arr[0] - (1. - D)
+            return s_damage.mu_q_arr - (1. - D)
 
         for D in ctrl_damage:
             print D
@@ -97,6 +109,10 @@ if __name__ == '__main__':
             s.tvars['V_f'] = (1.0 - D) * V_f
             mu = s.mu_q_arr
             plt.plot(wD, mu, 'ro')
+            if spirrid_plot == True:
+                s.evars['w'] = w
+                plt.plot(w, s.mu_q_arr, color='red', lw=0.2)
+
 
     def no_adaption():
         cb = CBEMClampedFiberStress()
