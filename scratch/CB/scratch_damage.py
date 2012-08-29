@@ -1,5 +1,7 @@
 from w_omega import WOmega, WOmegaDamage
 from u_omega import UOmega, UOmegaDamage
+from u_analytical import UOmegaAnalyt
+from w_analytical import WOmegaAnalyt
 from stats.spirrid.spirrid import SPIRRID
 from stats.spirrid.rv import RV
 from matplotlib import pyplot as plt
@@ -16,7 +18,7 @@ if __name__ == '__main__':
     # filaments
     r = 0.00345
     V_f = 0.04
-    tau = RV('uniform', loc=0.2, scale=1.)
+    tau = 0.5#RV('uniform', loc=0.2, scale=1.)
     E_f = 200e3
     E_m = 25e3
     l = 1.0
@@ -28,7 +30,7 @@ if __name__ == '__main__':
 
     ctrl_damage = np.linspace(0.0, .999, 50)
     w = np.linspace(0, 1.2, 100)
-    n_int = 50
+    n_int = 200
 
     spirrid_plot = False
 
@@ -146,9 +148,21 @@ if __name__ == '__main__':
              n_int=200)
         plt.plot(w, s.mu_q_arr, lw=2, color='blue', label='BC ctrl')
 
-u_omega()
+    def u_analytical():
+        a = UOmegaAnalyt()
+        w, q = a(ctrl_damage, tau, l, E_f, E_m, theta, xi, phi, Ll, Lr, V_f, r)
+        plt.plot(w, q, 'r*')
+        
+    def w_analytical():
+        a = WOmegaAnalyt()
+        w, q = a(ctrl_damage, tau, l, E_f, E_m, theta, xi, phi, Ll, Lr, V_f, r)
+        plt.plot(w, q, 'r*')
+
+#u_omega()
 w_omega()
-u_w()
-no_damage()
+#u_w()
+#no_damage()
+#u_analytical()
+w_analytical()
 plt.legend(loc='best')
 plt.show()

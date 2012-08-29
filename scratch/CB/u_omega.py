@@ -224,12 +224,13 @@ if __name__ == '__main__':
     phi = 1.
     Ll = 100.
     Lr = 100.
+    omega = 0.0
 
     def Pw():
         plt.figure()
         w = linspace(0, 1, 300)
-        P = UOmegaI()
-        q = P(w, t, l, Ef, Em, theta, xi, phi, Ll, Lr, V_f, r)
+        P = UOmega()
+        q = P(w, t, l, Ef, Em, theta, xi, phi, Ll, Lr, V_f, r, omega)
         plt.plot(w, q, lw=2, ls='-', color='black', label='CB_emtrx_stress')
         #plt.legend(loc='best')
         plt.ylim(0,)
