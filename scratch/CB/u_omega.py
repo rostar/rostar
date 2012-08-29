@@ -32,7 +32,7 @@ def H(x):
     return x >= 0.0
 
 
-class CBEMClampedFiberStressVf(RF):
+class UOmega(RF):
     '''
     Crack bridged by a fiber with constant
     frictional interface to the elastic matrix; clamped fiber end;
@@ -116,7 +116,7 @@ class CBEMClampedFiberStressVf(RF):
         P2 = 0.5 * (2. * w + T * t1) * Kr / (Lmax + l + Lmin)
         return P2
 
-    def __call__(self, w, tau, l, E_f, E_m, theta, xi, phi, Ll, Lr, V_f, r):
+    def __call__(self, w, tau, l, E_f, E_m, theta, xi, phi, Ll, Lr, V_f, r, omega):
         #assigning short and long embedded length
         Lmin = minimum(Ll, Lr)
         Lmax = maximum(Ll, Lr)
@@ -133,7 +133,7 @@ class CBEMClampedFiberStressVf(RF):
         w = H(w) * w
         T = 2. * tau / (r * E_f)
         Km = (1. - V_f) * E_m
-        Kr = V_f * E_f
+        Kr = V_f * (1. - omega) * E_f
         Ec = Km + Kr
 
         # double sided debonding
@@ -161,7 +161,55 @@ class CBEMClampedFiberStressVf(RF):
 
         # include breaking strain
         q = q * H(Kr * xi - q)
-        return q / V_f
+        return q / V_f / (1. - omega)
+
+class UOmegaDamage(UOmega):
+    
+        def __call__(self, w, tau, l, E_f, E_m, theta, xi, phi, Ll, Lr, V_f, r, omega):
+            #assigning short and long embedded length
+            Lmin = np.minimum(Ll, Lr)
+            Lmax = np.maximum(Ll, Lr)
+            
+            Lmin = np.maximum(Lmin - l / 2., 0.)
+            Lmax = np.maximum(Lmax - l / 2., 0.)
+    
+            #maximum condition for free length
+            l = np.minimum(l / 2., Lr) + np.minimum(l / 2., Ll)
+            
+            #defining variables
+            l = l * (1 + theta)
+            w = w - theta * l
+            w = H(w) * w
+            T = 2. * tau / (r * E_f)
+            Km = (1. - V_f) * E_m
+            Kr = V_f * (1. - omega) * E_f
+            Ec = Km + Kr
+    
+            # double sided debonding
+            q0 = self.crackbridge(w, l, T, Kr, Km, Lmin, Lmax)
+    
+            # displacement at which the debonding to the closer clamp is finished
+            w0 = T * Lmin * (Lmin * Km + Kr * (Lmin + Lmax) + l * Ec) / Km
+            
+            # debonding of one side; the other side is clamped
+            q1 = self.pullout(w , l, T, Kr, Km, Lmin, Lmax) 
+            
+            # displacement at which the debonding is finished at both sides
+            w1 = (1. / 2.) * T / Km * (2. * Kr * Lmax ** 2. - Km * Lmin ** 2. + 2. * Lmin * Ec * Lmax + 2 * l * Ec * Lmax + Km * Lmax ** 2)
+            
+            # debonding completed at both sides, response becomes linear elastic
+            q2 = self.linel(w, l, T, Kr, Km, Lmax, Lmin) 
+    
+            # cut out definition ranges
+            q0 = H(w) * (q0 + 1e-15) * H(w0 - w)
+            q1 = H(w - w0) * q1 * H(w1 - w)
+            q2 = H(w - w1) * q2
+    
+            #add all parts
+            q = q0 + q1 + q2
+    
+            # include breaking strain
+            return 1.0 * H(q - Kr * xi)
 
 if __name__ == '__main__':
 
@@ -180,7 +228,7 @@ if __name__ == '__main__':
     def Pw():
         plt.figure()
         w = linspace(0, 1, 300)
-        P = CBEMClampedFiberStressVf()
+        P = UOmegaI()
         q = P(w, t, l, Ef, Em, theta, xi, phi, Ll, Lr, V_f, r)
         plt.plot(w, q, lw=2, ls='-', color='black', label='CB_emtrx_stress')
         #plt.legend(loc='best')
