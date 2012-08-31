@@ -28,7 +28,7 @@ if __name__ == '__main__':
     Lr = 100.
     xi = RV('weibull_min', shape=5., scale=.02)
 
-    ctrl_damage = np.linspace(0.0, .9999, 50)
+    ctrl_damage = np.linspace(0.0, .99, 500)
     w = np.linspace(0, .6, 100)
     n_int = 500
 
@@ -149,29 +149,32 @@ if __name__ == '__main__':
         a = UOmegaAnalyt()
         w, q = a(ctrl_damage, tau, l, E_f, E_m, theta, xi, phi, Ll, Lr, V_f, r)
         plt.plot(w, q, 'r*')
-        
+
     def w_analytical_iterative():
         a = WAnalytIter()
         w, q = a.eval_w_q(tau, l, E_f, E_m, theta, xi, phi, Ll, Lr, V_f, r, ctrl_damage)
         plt.plot(w, q, 'r*')
-    
+
+    # statistical homogenization of damage function
     def w_analytical():
         def crackbridge(w, tau, E_f, E_m, V_f, r, omega):
             Kf = E_f * V_f * (1 - omega)
             Km = E_m * (1 - V_f)
             Kc = Kf + Km
             c = np.sqrt(E_f * Kc * 2. * tau / Km / r)
-            return c * np.sqrt(w) * (1-ctrl_damage)
-            
+            return c * np.sqrt(w) * (1 - omega)
+
         w_lst = []
         for omega in ctrl_damage:
-            w_lst.append(0.5*(V_f-1.)*r*0.02**2*E_f*E_m*((-np.log(1.-omega))**(1./5.))**2/(-E_m+E_m*V_f-V_f*E_f+V_f*E_f*omega)/tau)
+            w_lst.append(0.5 * (V_f - 1.) * r * 0.02**2 *E_f*E_m*((-np.log(1.-omega))**(1./5.))**2 /
+                         (-E_m+E_m*V_f-V_f*E_f+V_f*E_f*omega)/tau)
         q = crackbridge(np.array(w_lst), tau, E_f, E_m, V_f, r, ctrl_damage)
         plt.plot(np.array(w_lst), q, color='magenta', label='pure analytical')
 
 
-w_omega()
-w_analytical_iterative()
+
+#w_omega()
+#w_analytical_iterative()
 w_analytical()
 #no_damage()
 #u_w()
