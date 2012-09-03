@@ -2,7 +2,7 @@
 from cb_adapt_Vf import CBEMClampedFiberStressVf
 from cb_damage_w import CBDamageW, CBDamageCB
 from quaducom.micro.resp_func.cb_emtrx_clamped_fiber_stress import \
-CBEMClampedFiberStress, CBEMClampedFiberStressSP
+    CBEMClampedFiberStress, CBEMClampedFiberStressSP
 from stats.spirrid.spirrid import SPIRRID
 from stats.spirrid.rv import RV
 from matplotlib import pyplot as plt
