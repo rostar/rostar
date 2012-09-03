@@ -28,8 +28,8 @@ from iteration_CB2 import CBIter2
 if __name__ == '__main__':
     # filaments
     r = 0.00345
-    V_f = 0.103
-    tau = RV('uniform', loc=0.05, scale=2.)
+    V_f = 0.0103
+    tau = RV('uniform', loc = 0.05, scale = 2.)
     E_f = 200e3
     E_m = 25e3
     l = 0.0
@@ -45,12 +45,12 @@ if __name__ == '__main__':
     x = np.linspace(-40, 40, 1000)
 
     cb = CBEMClampedFiberStressResidualSP()
-    s = SPIRRID(q=cb,
-         sampling_type='PGrid',
-         evars=dict(x=x),
-         tvars=dict(w=w, tau=tau, l=l, E_f=E_f, theta=theta, m=m, phi=phi,
-                    E_m=E_m, r=r, V_f=V_f, Ll=Ll, Lr=Lr, s0=s0, Pf=Pf),
-         n_int=100)
+    s = SPIRRID(q = cb,
+         sampling_type = 'PGrid',
+         evars = dict(x = x),
+         tvars = dict(w = w, tau = tau, l = l, E_f = E_f, theta = theta, m = m, phi = phi,
+                    E_m = E_m, r = r, V_f = V_f, Ll = Ll, Lr = Lr, s0 = s0, Pf = Pf),
+         n_int = 100)
 
     n_int = s.n_int
     pi = np.linspace(0.5 / n_int, 1. - 0.5 / n_int, n_int)
@@ -61,10 +61,10 @@ if __name__ == '__main__':
         # initial spirrid guess
         eps_f = s.mu_q_arr / E_f
         eps_m = sigma_m / E_m
-        plt.plot(x, eps_f, lw=1, color='black',
-                 ls='solid', label='initial SPIRRID guess')
-        plt.plot(x, eps_m, lw=1, color='black',
-                 ls='solid')
+        plt.plot(x, eps_f, lw = 1, color = 'black',
+                 ls = 'solid', label = 'initial SPIRRID guess')
+        plt.plot(x, eps_m, lw = 1, color = 'black',
+                 ls = 'solid')
 
         w_means = []
         w_stdevs = []
@@ -86,13 +86,13 @@ if __name__ == '__main__':
         iters = 5
 
         for j in range(iters):
-            cbi = CBIter(eps_m=eps_m, x_arr=x, q_init=cb.q)
-            si = SPIRRID(q=cbi,
-                         sampling_type='PGrid',
-                         evars=dict(x=x),
-                         tvars=dict(w=w, tau=tau, l=l, E_f=E_f, theta=theta, m=m, phi=phi,
-                        E_m=E_m, r=r, V_f=V_f, Ll=Ll, Lr=Lr, s0=s0, Pf=Pf),
-            n_int=100)
+            cbi = CBIter(eps_m = eps_m, x_arr = x, q_init = cb.q)
+            si = SPIRRID(q = cbi,
+                         sampling_type = 'PGrid',
+                         evars = dict(x = x),
+                         tvars = dict(w = w, tau = tau, l = l, E_f = E_f, theta = theta, m = m, phi = phi,
+                        E_m = E_m, r = r, V_f = V_f, Ll = Ll, Lr = Lr, s0 = s0, Pf = Pf),
+            n_int = 100)
     
             load = np.ones(len(x)) * np.max(si.mu_q_arr * E_f) * V_f
             sigma_m = (load - si.mu_q_arr * E_f * V_f) / (1. - V_f)
@@ -103,7 +103,7 @@ if __name__ == '__main__':
                 t = tau.ppf(n)
                 q = cbi.q[i]
                 Tf = 2. * t / r
-                e_x = (q - Tf * np.abs(x))/E_f
+                e_x = (q - Tf * np.abs(x)) / E_f
                 eps_ff = np.maximum(e_x, eps_m)
                 w_err.append(np.trapz(eps_ff - eps_m, x))
             w_err = np.array(w_err)
@@ -112,8 +112,8 @@ if __name__ == '__main__':
             print 'iter =', j
             w_global.append(np.trapz(eps_f - eps_m, x))
 
-        plt.plot(x, si.mu_q_arr, color='blue', label = 'after %i iterations' %iters)
-        plt.plot(x, eps_m, color='blue')
+        plt.plot(x, si.mu_q_arr, color = 'blue', label = 'after %i iterations' % iters)
+        plt.plot(x, eps_m, color = 'blue')
         plt.legend()
         plt.title('fibers and matrix mean strain')
         plt.xlabel('x position [mm]')
@@ -126,7 +126,7 @@ if __name__ == '__main__':
         plt.ylabel('mean w')
         plt.legend()
         plt.figure()
-        plt.plot(np.array(w_stdevs)/np.array(w_means))
+        plt.plot(np.array(w_stdevs) / np.array(w_means))
         plt.title('COV of w for individual filaments')
         plt.xlabel('number of iterations')
         plt.ylabel('stdev w')
@@ -139,10 +139,10 @@ if __name__ == '__main__':
         # initial spirrid guess
         eps_f = s.mu_q_arr / E_f
         eps_m = sigma_m / E_m
-        plt.plot(x, eps_f, lw=1, color='black',
-                 ls='solid', label='initial SPIRRID guess')
-        plt.plot(x, eps_m, lw=1, color='black',
-                 ls='solid')
+        plt.plot(x, eps_f, lw = 1, color = 'black',
+                 ls = 'solid', label = 'initial SPIRRID guess')
+        plt.plot(x, eps_m, lw = 1, color = 'black',
+                 ls = 'solid')
 
         w_means = []
         w_stdevs = []
@@ -163,13 +163,13 @@ if __name__ == '__main__':
 
         for i in range(iters):
             print i
-            cbi = CBIter2(eps_m=eps_m, x_arr=x, q_i=cb.q)
-            si = SPIRRID(q=cbi,
-                         sampling_type='PGrid',
-                         evars=dict(x=x),
-                         tvars=dict(w=w, tau=tau, l=l, E_f=E_f, theta=theta, m=m, phi=phi,
-                        E_m=E_m, r=r, V_f=V_f, Ll=Ll, Lr=Lr, s0=s0, Pf=Pf),
-            n_int=100)
+            cbi = CBIter2(eps_m = eps_m, x_arr = x, q_i = cb.q)
+            si = SPIRRID(q = cbi,
+                         sampling_type = 'PGrid',
+                         evars = dict(x = x),
+                         tvars = dict(w = w, tau = tau, l = l, E_f = E_f, theta = theta, m = m, phi = phi,
+                        E_m = E_m, r = r, V_f = V_f, Ll = Ll, Lr = Lr, s0 = s0, Pf = Pf),
+            n_int = 100)
 
             load = np.ones(len(x)) * np.max(si.mu_q_arr * E_f) * V_f
             sigma_m = (load - si.mu_q_arr * E_f * V_f) / (1. - V_f)
@@ -180,15 +180,15 @@ if __name__ == '__main__':
                 t = tau.ppf(n)
                 q = cbi.q[i]
                 Tf = 2. * t / r
-                e_x = (q - Tf * np.abs(x))/E_f
+                e_x = (q - Tf * np.abs(x)) / E_f
                 eps_ff = np.maximum(e_x, eps_m)
                 w_err.append(np.trapz(eps_ff - eps_m, x))
             w_err = np.array(w_err)
             w_means.append(w_err.mean())
             w_stdevs.append(w_err.std())
 
-        plt.plot(x, si.mu_q_arr, color='blue', label = 'after %i iterations' %iters)
-        plt.plot(x, eps_m, color='blue')
+        plt.plot(x, si.mu_q_arr, color = 'blue', label = 'after %i iterations' % iters)
+        plt.plot(x, eps_m, color = 'blue')
         plt.legend()
         plt.title('fibers and matrix mean strain')
         plt.xlabel('x position [mm]')
@@ -199,7 +199,7 @@ if __name__ == '__main__':
         plt.xlabel('number of iterations')
         plt.ylabel('mean w')
         plt.figure()
-        plt.plot(np.array(w_stdevs)/np.array(w_means))
+        plt.plot(np.array(w_stdevs) / np.array(w_means))
         plt.title('COV of w for individual filaments')
         plt.xlabel('number of iterations')
         plt.ylabel('stdev w')
