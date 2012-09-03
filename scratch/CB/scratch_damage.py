@@ -7,7 +7,7 @@ from stats.spirrid.rv import RV
 from matplotlib import pyplot as plt
 import numpy as np
 from scipy.optimize import brentq
-
+from math import e
 
 if __name__ == '__main__':
 
@@ -24,17 +24,17 @@ if __name__ == '__main__':
     l = 0.0
     theta = 0.0
     phi = 1.
-    Ll = 100.
-    Lr = 100.
+    Ll = 70.
+    Lr = 70.
     xi = RV('weibull_min', shape=5., scale=.02)
 
-    ctrl_damage = np.linspace(0.0, .99, 500)
-    w = np.linspace(0, .6, 100)
+    ctrl_damage = np.linspace(0.0, .99999, 500)
+    w = np.linspace(0, .57, 100)
     n_int = 500
 
     spirrid_plot = False
 
-    def w_omega():
+    def w_omega_spirrid():
         cb = WOmega()
         s = SPIRRID(q=cb,
              sampling_type='PGrid',
@@ -66,7 +66,7 @@ if __name__ == '__main__':
                 s.evars['w'] = w
                 plt.plot(w, s.mu_q_arr, color='red', lw=0.2)
 
-    def u_w():
+    def u_u():
         cb = UOmega()
         s = SPIRRID(q=cb,
              sampling_type='PGrid',
@@ -94,7 +94,7 @@ if __name__ == '__main__':
             mu = s.mu_q_arr
             plt.plot(wi, mu, 'ko')
 
-    def u_omega():
+    def u_omega_spirrid():
         cb = UOmega()
         s = SPIRRID(q=cb,
              sampling_type='PGrid',
@@ -147,38 +147,82 @@ if __name__ == '__main__':
 
     def u_analytical_iterative():
         a = UOmegaAnalyt()
-        w, q = a(ctrl_damage, tau, l, E_f, E_m, theta, xi, phi, Ll, Lr, V_f, r)
+        w, q = a(ctrl_damage, tau, l, E_f, E_m,
+                 theta, xi, phi, Ll, Lr, V_f, r)
         plt.plot(w, q, 'r*')
 
     def w_analytical_iterative():
         a = WAnalytIter()
-        w, q = a.eval_w_q(tau, l, E_f, E_m, theta, xi, phi, Ll, Lr, V_f, r, ctrl_damage)
+        w, q = a.eval_w_q(tau, l, E_f, E_m, theta, xi,
+                          phi, Ll, Lr, V_f, r, ctrl_damage)
         plt.plot(w, q, 'r*')
 
     # statistical homogenization of damage function
     def w_analytical():
+
         def crackbridge(w, tau, E_f, E_m, V_f, r, omega):
             Kf = E_f * V_f * (1 - omega)
             Km = E_m * (1 - V_f)
             Kc = Kf + Km
-            c = np.sqrt(E_f * Kc * 2. * tau / Km / r)
+            T = 2. * tau * V_f * (1. - omega) / r
+            c = np.sqrt(Kc * T / Km / Kf)
             return c * np.sqrt(w) * (1 - omega)
 
+        def w_omega(tau, E_f, E_m, V_f, r, omega, m, s):
+            Kf = E_f * V_f * (1 - omega)
+            Km = E_m * (1 - V_f)
+            Kc = Kf + Km
+            T = 2. * tau * V_f * (1. - omega) / r
+            return (-np.log(1. - omega)) ** (2. / m) \
+                    * s ** 2 * Km * Kf / Kc / T
         w_lst = []
         for omega in ctrl_damage:
-            w_lst.append(0.5 * (V_f - 1.) * r * 0.02**2 *E_f*E_m*((-np.log(1.-omega))**(1./5.))**2 /
-                         (-E_m+E_m*V_f-V_f*E_f+V_f*E_f*omega)/tau)
-        q = crackbridge(np.array(w_lst), tau, E_f, E_m, V_f, r, ctrl_damage)
-        plt.plot(np.array(w_lst), q, color='magenta', label='pure analytical')
+            w_lst.append(w_omega(tau, E_f, E_m, V_f, r, omega, 5.0, 0.02))
+        epsf = crackbridge(np.array(w_lst), tau, E_f, E_m, V_f, r, ctrl_damage)
+        plt.plot(np.array(w_lst), epsf * E_f,
+                 color='magenta')
 
+    def u_analytical():
 
+        def crackbridge(u, tau, E_f, E_m, V_f, r, omega, L):
+            Kf = E_f * V_f * (1 - omega)
+            Km = E_m * (1 - V_f)
+            Kc = Kf + Km
+            T = 2. * tau / r / E_f
+            c = Kf * T * L
+            a = Kc / 2. / Km ** 2
+            b = 4. * Km ** 2 * u * T
+            eps = a * (np.sqrt(c ** 2. + b) - c)
+            return eps * (1. - omega)
 
-#w_omega()
+        def u_omega(tau, E_f, E_m, V_f, r, omega, m, s, L):
+            Kf = E_f * V_f * (1. - omega)
+            Km = E_m * (1 - V_f)
+            Kc = Kf + Km
+            T = 2. * tau / r / E_f
+            u = (1. / Kc**2 / T)*(((-np.log(1. - omega))**(2./m) * s**2 * Km**2
+                + (-np.log(1. - omega))**(1./m) * s * Kc * Kf * T * L))
+            return u
+
+        u_lst = []
+        for omega in ctrl_damage:
+            u_lst.append(u_omega(tau, E_f, E_m, V_f, r, omega, 5.0, 0.02, Ll+Lr))
+        epsf = crackbridge(np.array(u_lst), tau, E_f, E_m, V_f, r, ctrl_damage, Ll+Lr)
+#        plt.plot(np.array(u_lst), ctrl_damage,
+#                 color='brown', label='u-damage')
+        plt.plot(np.array(u_lst), epsf * E_f,
+                 color='brown')
+
+#w_omega_spirrid()
 #w_analytical_iterative()
-w_analytical()
+#w_analytical()
 #no_damage()
-#u_w()
-#u_omega()
+#u_u()
+#u_omega_spirrid()
 #u_analytical_iterative()
+for vf in np.linspace(0.001,0.1,10):
+    V_f = vf
+    u_analytical()
+    w_analytical()
 plt.legend(loc='best')
 plt.show()
