@@ -4,6 +4,8 @@ Created on Sep 3, 2012
 @author: rch
 '''
 
+from ibvpy.api import IBVModel
+
 from spirrid import SPIRRID
 
 if __name__ == '__main__':
