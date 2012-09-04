@@ -24,28 +24,95 @@ from matplotlib import pyplot as plt
 import numpy as np
 from iteration_CB import CBIter
 from iteration_CB2 import CBIter2
+from etsproxy.traits.api import HasTraits, cached_property, Float, Property
+from scipy.optimize import fsolve
+from scipy.stats import weibull_min, uniform
+
+
+class Profile(HasTraits):
+
+    r = Float(0.00345)
+    mtau = Float(5.)
+    stau = Float(0.5)
+    V_f = Float(0.1)
+    E_m = Float(25e3)
+    E_f = Float(200e3)
+    w = Float(0.5)
+
+    Km = Property(depends_on='E_m, V_f')
+
+    @cached_property
+    def _get_Km(self):
+        return self.E_m * (1. - self.V_f)
+
+    Kf = Property(depends_on='E_f, V_f')
+
+    @cached_property
+    def _get_Kf(self):
+        return self.E_f * self.V_f
+
+    Kc = Property(depends_on='E_f, E_m, V_f')
+
+    @cached_property
+    def _get_Kc(self):
+        return self.Km + self.Kf
+
+    def tau_distr(self):
+        return weibull_min(5.0, scale = 1.0)
+
+    def T_epsm(self, tau):
+        return 2. * tau * self.V_f / self.r / self.E_m / (1. - self.V_f)
+
+    def T_epsf(self, tau):
+        return 2. * tau / self.r / self.E_f
+
+    def deps_m(self, T):
+        tau_max = T * self.r * (1 - self.V_f) * self.E_m / 2. / self.V_f
+        tau_min = self.tau_distr().ppf(0.0001)
+        range = self.tau_distr().ppf(0.9999) - self.tau_distr().ppf(0.0001)
+        if tau_max > self.tau_distr().ppf(0.9999):
+            tau_max = self.tau_distr().ppf(0.9999) + 0.01 * range
+        tau_arr = np.linspace(tau_min - 0.01 * range, tau_max, 500)
+        return self.T_epsm(np.trapz(tau_arr * self.tau_distr().pdf(tau_arr), tau_arr))
+
+    def residuum(self, Tepsm, eps_m_x, x_x):
+        tau = Tepsm * self.r * (1 - self.V_f) * self.E_m / 2. / self.V_f
+        res = eps_m_x[-1] * x_x[-1] + self.T_epsf(tau) * x_x[-1] ** 2 / 2. - np.trapz(eps_m_x, x_x)
+        return self.w / 2. - res
+
+    def eps_m(self, x_arr):
+        eps_m_x = [0.0]
+        deps_m_x = [self.T_epsm(self.tau_distr().mean())]
+        T_epsm_x = []
+        x_x = [0.0]
+        for xi in x_arr[1:]:
+            eps_m_x.append(eps_m_x[-1] + deps_m_x[-1] * (xi - x_x[-1]))
+            x_x.append(xi)
+            T_epsm_x.append(fsolve(self.residuum, 0.0, args=(eps_m_x, x_x)))
+            deps_m_x.append(self.deps_m(T_epsm_x[-1]))
+        return eps_m_x
 
 if __name__ == '__main__':
     # filaments
     r = 0.00345
-    V_f = 0.0103
-    tau = RV('uniform', loc = 0.05, scale = 2.)
+    V_f = 0.1
+    tau = RV('weibull_min', shape=5.0, scale=1.0)
     E_f = 200e3
     E_m = 25e3
     l = 0.0
     theta = 0.0
     phi = 1.
-    Ll = 50.
-    Lr = 50.
-    s0 = 10.0205
+    Ll = 40.
+    Lr = 40.
+    s0 = 100.0205
     m = 5.0
     Pf = 0.5#RV('uniform', loc=0., scale=1.0)
 
-    w = 0.4
+    w = 0.5
     x = np.linspace(-40, 40, 1000)
 
     cb = CBEMClampedFiberStressResidualSP()
-    s = SPIRRID(q = cb,
+    s = SPIRRID(q=cb,
          sampling_type = 'PGrid',
          evars = dict(x = x),
          tvars = dict(w = w, tau = tau, l = l, E_f = E_f, theta = theta, m = m, phi = phi,
@@ -83,7 +150,7 @@ if __name__ == '__main__':
         w_stdevs.append(w_err.std())
         w_global.append(np.trapz(eps_f - eps_m, x))
 
-        iters = 5
+        iters = 3
 
         for j in range(iters):
             cbi = CBIter(eps_m = eps_m, x_arr = x, q_init = cb.q)
@@ -106,6 +173,7 @@ if __name__ == '__main__':
                 e_x = (q - Tf * np.abs(x)) / E_f
                 eps_ff = np.maximum(e_x, eps_m)
                 w_err.append(np.trapz(eps_ff - eps_m, x))
+            
             w_err = np.array(w_err)
             w_means.append(w_err.mean())
             w_stdevs.append(w_err.std())
@@ -118,18 +186,21 @@ if __name__ == '__main__':
         plt.title('fibers and matrix mean strain')
         plt.xlabel('x position [mm]')
         plt.ylabel('strain [-]')
-        plt.figure()
-        plt.plot(w_means, label = 'mean of filaments')
-        plt.plot(w_global, label = 'global')
-        plt.title('mean of w for individual filaments')
-        plt.xlabel('number of iterations')
-        plt.ylabel('mean w')
-        plt.legend()
-        plt.figure()
-        plt.plot(np.array(w_stdevs) / np.array(w_means))
-        plt.title('COV of w for individual filaments')
-        plt.xlabel('number of iterations')
-        plt.ylabel('stdev w')
+        p = Profile()
+        xx = np.linspace(0, 40, 1000)
+        plt.plot(xx, p.eps_m(xx), lw=2, ls='dashed', color='red')
+#        plt.figure()
+#        plt.plot(w_means, label = 'mean of filaments')
+#        plt.plot(w_global, label = 'global')
+#        plt.title('mean of w for individual filaments')
+#        plt.xlabel('number of iterations')
+#        plt.ylabel('mean w')
+#        plt.legend()
+#        plt.figure()
+#        plt.plot(np.array(w_stdevs) / np.array(w_means))
+#        plt.title('COV of w for individual filaments')
+#        plt.xlabel('number of iterations')
+#        plt.ylabel('stdev w')
         plt.legend()
         plt.show()
 
@@ -193,16 +264,16 @@ if __name__ == '__main__':
         plt.title('fibers and matrix mean strain')
         plt.xlabel('x position [mm]')
         plt.ylabel('strain [-]')
-        plt.figure()
-        plt.plot(w_means)
-        plt.title('mean of w for individual filaments')
-        plt.xlabel('number of iterations')
-        plt.ylabel('mean w')
-        plt.figure()
-        plt.plot(np.array(w_stdevs) / np.array(w_means))
-        plt.title('COV of w for individual filaments')
-        plt.xlabel('number of iterations')
-        plt.ylabel('stdev w')
+#        plt.figure()
+#        plt.plot(w_means)
+#        plt.title('mean of w for individual filaments')
+#        plt.xlabel('number of iterations')
+#        plt.ylabel('mean w')
+#        plt.figure()
+#        plt.plot(np.array(w_stdevs) / np.array(w_means))
+#        plt.title('COV of w for individual filaments')
+#        plt.xlabel('number of iterations')
+#        plt.ylabel('stdev w')
         plt.legend()
         plt.show()
 
