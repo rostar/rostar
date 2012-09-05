@@ -220,7 +220,7 @@ if __name__ == '__main__':
 #u_u()
 #u_omega_spirrid()
 #u_analytical_iterative()
-for vf in np.linspace(0.001,0.1,10):
+for vf in np.linspace(0.001, 0.1, 10):
     V_f = vf
     u_analytical()
     w_analytical()
