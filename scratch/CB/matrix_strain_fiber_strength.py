@@ -20,7 +20,7 @@ class MatrixStrain(HasTraits):
     stau = Float(0.5)
     mxi = Float(5.0)
     sxi = Float(0.02)
-    V_f = Float(0.1)
+    V_f = Float(0.5)
     E_m = Float(25e3)
     E_f = Float(200e3)
     w = Float(0.4)
@@ -28,66 +28,53 @@ class MatrixStrain(HasTraits):
     fwd_Euler = Bool(False)
     midpoint_method = Bool(False)
 
-    Km = Property(depends_on='E_m, V_f')
-
-    @cached_property
-    def _get_Km(self):
-        return self.E_m * (1. - self.V_f)
-
-    Kf = Property(depends_on='E_f, V_f')
-
-    @cached_property
-    def _get_Kf(self):
-        return self.E_f * self.V_f
-
-    Kc = Property(depends_on='E_f, E_m, V_f')
-
-    @cached_property
-    def _get_Kc(self):
-        return self.Km + self.Kf
-
-    def xi_distr(self):
-        return weibull_min(self.mxi, scale=self.sxi)
-
     def tau_distr(self):
-        return weibull_min(self.mtau, scale=self.stau)
+        return uniform(loc=0.1, scale=3.)
 
-    def T_epsm(self, tau):
-        return 2. * tau * self.V_f / self.r / self.E_m / (1. - self.V_f)
+    def mu_tau_m(self, mu_tau):
+        T = self.T_mu_tau.get_values(mu_tau)
+        deb_yarn = self.tau_distr().cdf(T)
+        E_mtrx = self.V_f * (1 - deb_yarn) * self.E_f + (1. - self.V_f) * self.E_m
+        return 2. * mu_tau * self.V_f / self.r / E_mtrx
 
-    def T_epsf(self, tau):
-        return 2. * tau / self.r / self.E_f
+    def mu_tau_f(self, mu_tau):
+        return 2. * mu_tau / self.r / self.E_f
 
-    int_G = Property
-
+    mu_tau_T = Property
     @cached_property
-    def _get_int_G(self):
-        tau_range = np.linspace(self.tau_distr().ppf(0.0001),
+    def _get_mu_tau_T(self):
+        T = np.linspace(self.tau_distr().ppf(0.0001),
                                 self.tau_distr().ppf(0.9999),
                                 500)
-        int_value = np.hstack((0.0, cumtrapz(self.tau_distr().cdf(tau_range), tau_range)))
+        int_value = np.hstack((0.0, cumtrapz(self.tau_distr().cdf(T), T)))
+        mu_tau = T * self.tau_distr().cdf(T) - int_value
+        return MFnLineArray(xdata=T, ydata=mu_tau)
 
-        return MFnLineArray(xdata=tau_range, ydata=int_value)
+    T_mu_tau = Property
+    @cached_property
+    def _get_T_mu_tau(self):
+        T = self.mu_tau_T.xdata
+        mu_tau = self.mu_tau_T.ydata
+        return MFnLineArray(xdata=mu_tau, ydata=T)
 
     def deps_m(self, T):
-        tau_max = T * self.r * (1. - self.V_f) * self.E_m / 2. / self.V_f
-        if tau_max > self.tau_distr().ppf(0.9999):
-            tau_max = self.tau_distr().ppf(0.9999)
-        result = tau_max * self.tau_distr().cdf(tau_max) - self.int_G.get_values(tau_max)
-        return self.T_epsm(result)
+        if T > self.tau_distr().ppf(0.9999):
+            T = self.tau_distr().ppf(0.9999)
+        mu_tau = self.mu_tau_T.get_values(T)
+        return self.mu_tau_m(mu_tau)
 
     def get_T(self, eps_m_x, x_x):
         um = np.trapz(eps_m_x, x_x)
         c = eps_m_x[-1] * x_x[-1] - um
-        Tf = 2. * (self.w / 2. - c) / x_x[-1] ** 2
-        tau = Tf * self.r * self.E_f / 2.
-        return self.T_epsm(tau)
+        T_f = 2. * (self.w / 2. - c) / x_x[-1] ** 2
+        T = T_f * self.r * self.E_f / 2.
+        return T
 
     eps_m = Property(depends_on='w')
     @cached_property
     def _get_eps_m(self):
         eps_m_x = [0.0]
-        deps_m_x = [self.T_epsm(self.tau_distr().mean())]
+        deps_m_x = [self.mu_tau_f(self.tau_distr().mean())]
         x_x = [0.0]
         for xi in self.x_arr[1:]:
             if self.fwd_Euler == True:
@@ -101,9 +88,16 @@ class MatrixStrain(HasTraits):
                 deps_midp = self.deps_m(T_midp)
                 eps_m_x.append(eps_m_x[-1] + h * deps_midp)
             x_x.append(xi)
-            T_epsm = self.get_T(eps_m_x, x_x)
-            deps_m_x.append(self.deps_m(T_epsm))
+            T = self.get_T(eps_m_x, x_x)
+            deps_m_x.append(self.deps_m(T))
         return np.array(eps_m_x)
+
+##################################################################
+# damage
+##################################################################
+
+    def xi_distr(self):
+        return weibull_min(self.mxi, scale=self.sxi)
 
     def eps_f(self):
         '''stiffness of every 'filament' multiplied by damage_func(T)'''
@@ -121,18 +115,18 @@ class MatrixStrain(HasTraits):
     def _get_epsm_line(self):
         return MFnLineArray(xdata=self.x_arr, ydata=self.eps_m)
 
-    def MC_residuum(self, x, T):
+    def MC_residuum(self, x, T_f):
         c = self.epsm_line.get_values(x) * x - self.um_line.get_values(x)
-        return c + T * x ** 2 / 2. - self.w/2.
+        return c + T_f * x ** 2 / 2. - self.w/2.
 
     def MC(self, n_sim):
         epsy = np.zeros_like(self.x_arr)
         for sim in range(n_sim):
             tau = self.tau_distr().ppf(np.random.rand(1))
-            x = brentq(self.MC_residuum, self.x_arr[0], self.x_arr[-1], args=(self.T_epsf(tau)))
-            epsf_max = self.epsm_line.get_values(x) + self.T_epsf(tau) * x
-            epsf = np.maximum(epsf_max - self.T_epsf(tau) * self.x_arr, self.eps_m)
-            epsy += epsf
+            x = brentq(self.MC_residuum, self.x_arr[0], self.x_arr[-1], args=(self.mu_tau_f(tau)))
+            T_f = self.epsm_line.get_values(x) + self.mu_tau_f(tau) * x
+            T_f = np.maximum(T_f - self.mu_tau_f(tau) * self.x_arr, self.eps_m)
+            epsy += T_f
         epsy /= float(n_sim)
         plt.plot(self.x_arr, epsy)
         print 'w = ', np.trapz(epsy - self.eps_m, self.x_arr)
@@ -145,23 +139,23 @@ if __name__ == '__main__':
         ms = MatrixStrain()
         ms.fwd_Euler = False
         ms.midpoint_method = True
-        ms.x_arr = np.linspace(0, 50., 500)
+        ms.x_arr = np.linspace(0, 15., 1000)
         ms.w = w
         epsm = ms.eps_m
         sigc = epsm[-1] * (ms.V_f * ms.E_f + (1. - ms.V_f) * ms.E_m)
-        sigc = 622.5
         epsf = (sigc - epsm * ms.E_m * (1. - ms.V_f)) / ms.V_f / ms.E_f
         plt.plot(ms.x_arr, ms.eps_m, label='matrix strain')
         plt.plot(ms.x_arr, epsf, label='yarn strain')
         plt.legend(loc='best')
-        ms.MC(200)
+        print np.trapz(epsf-epsm, ms.x_arr)
+        ms.MC(500)
         plt.show()
 
     def plot_w_epsf(w_arr):
         ms = MatrixStrain()
         ms.fwd_Euler = False
         ms.midpoint_method = True
-        ms.x_arr = np.linspace(0, 100., 300)
+        ms.x_arr = np.linspace(0, 10., 300)
         elst = []
         wlst = []
         for w in w_arr:
@@ -177,6 +171,6 @@ if __name__ == '__main__':
         plt.legend(loc='best')
         plt.show()
 
-    #plot_w_epsf(np.linspace(0., 0.7, 5))
-    plot_profile(0.4)
+    plot_w_epsf(np.linspace(0., 0.7, 50))
+    #plot_profile(0.5)
 
