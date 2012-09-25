@@ -66,8 +66,8 @@ class MatrixStrain(HasTraits):
     def get_T(self, eps_m_x, x_x):
         um = np.trapz(eps_m_x, x_x)
         c = eps_m_x[-1] * x_x[-1] - um
-        T_f = 2. * (self.w / 2. - c) / x_x[-1] ** 2
-        T = T_f * self.r * self.E_f / 2.
+        depsf = 2. * (self.w / 2. - c) / x_x[-1] ** 2
+        T = depsf * self.r * self.E_f / 2.
         return T
 
     eps_m = Property(depends_on='w')
