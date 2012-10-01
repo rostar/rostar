@@ -5,11 +5,10 @@ Created on Sep 20, 2012
 '''
 
 import numpy as np
-from scipy.stats.distributions import rv_frozen
-from scipy.stats import uniform, weibull_min
+from stats.spirrid.rv import RV
 from matplotlib import pyplot as plt
 from etsproxy.traits.api import HasTraits, cached_property, \
-    Float, Property, Bool, Instance, List, Int
+    Float, Property, Instance, List, Int
 from scipy.integrate import cumtrapz
 from mathkit.mfn.mfn_line.mfn_line import MFnLineArray
 from scipy.optimize import brentq
@@ -23,45 +22,43 @@ class Reinforcement(HasTraits):
     E_f = Float(200e3)
     #xi = Instance(rv_continuous)
     #tau = Instance(rv_continuous)
-
-
-class BondDiscretization(HasTraits):
-
-    reinforcement = Instance(Reinforcement)
     n_int = Int
 
-    depsf_arr = Property(depends_on='reinforcement, n_int')
+    depsf_arr = Property(depends_on='n_int')
     @cached_property
     def _get_depsf_arr(self):
         weights = 1.0
         no_rv = 0
-        if isinstance(self.reinforcement.tau, rv_frozen):
-            tau = self.reinforcement.tau.ppf(
+        if isinstance(self.tau, RV):
+            tau = self.tau.ppf(
                 np.linspace(.5 / self.n_int, 1. - .5 / self.n_int, self.n_int))
             weights *= 1. / self.n_int
             no_rv += 1
         else:
-            tau = self.reinforcement.tau
-        if isinstance(self.reinforcement.r, rv_frozen):
-            r = self.reinforcement.r.ppf(
+            tau = self.tau
+        if isinstance(self.r, RV):
+            r = self.r.ppf(
                 np.linspace(.5 / self.n_int, 1. - .5 / self.n_int, self.n_int))
             weights *= 1. / self.n_int
             no_rv += 1
         else:
-            r = self.reinforcement.r
+            r = self.r
 
         if isinstance(tau, np.ndarray) and isinstance(r, np.ndarray):
-            r = r.reshape([np.newaxis, self.n_int])
-
-        return 2. * tau / r / self.reinforcement.E_f, weights
-
+            r = r.reshape(1, self.n_int)
+            tau = tau.reshape(self.n_int, 1)
+        return 2. * tau / r / self.E_f, weights
 
 
 class CompositeCrackBridge(HasTraits):
 
     reinforcement_lst = List(Instance(Reinforcement))
     w = Float
-    n_int = Int
+
+    sorted_depsf = Property(depends_on='reinforcement_lst')
+    @cached_property
+    def _get_sorted_depsf(self):
+        return np.sort(self.reinforcement_lst[0].depsf_arr[0])[::1]
 
     def depsm_mu_tau(self, mu_tau):
         T = self.T_mu_tau.get_values(mu_tau)
@@ -105,12 +102,13 @@ class CompositeCrackBridge(HasTraits):
     eps_m = Property(depends_on='w, reinforcement+')
     @cached_property
     def _get_eps_m(self):
+        u_m_x = [0.0]
         eps_m_x = [0.0]
         deps_m_x = [0.0]
-        for fibers in self.reinforcement:
-            deps_m_x[0] += fibers.reinforcement.tau.mean()
+        weight = self.reinforcement_lst[0].depsf_arr[1]
+        deps_m_x[0] += np.sum(self.sorted_depsf) * weight
         x_x = [0.0]
-        for xi in self.x_arr[1:]:
+        for depsf in self.sorted_depsf:
             if self.fwd_Euler == True:
                 eps_m_x.append(eps_m_x[-1] + deps_m_x[-1] * (xi - x_x[-1]))
             elif self.midpoint_method == True:
@@ -161,15 +159,14 @@ class CompositeCrackBridge(HasTraits):
 
 if __name__ == '__main__':
 
-    reinf = Reinforcement(r=uniform(loc=0.003, scale=0.001),
-                          tau=weibull_min(3., scale=0.3),
+    reinf = Reinforcement(r=RV('uniform', loc=0.003, scale=0.001),
+                          tau=RV('weibull_min', shape=3., scale=0.3),
                           V_f=0.2,
                           E_m=25e3,
-                          E_f=200e3)
-    
-    bd = BondDiscretization(reinforcement=reinf,
-                            n_int=5)
-    print bd.depsf_arr
+                          E_f=200e3,
+                          n_int=5)
+
+    print reinf.depsf_arr
 
 #    def plot_profile(w):
 #        ms = MatrixStrain()
