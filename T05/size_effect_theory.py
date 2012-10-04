@@ -4,7 +4,7 @@ Created on Sep 22, 2009
 @author: rostislav
 '''
 
-from enthought.traits.api import HasTraits, Float, Int, Property
+from etsproxy.traits.api import HasTraits, Float, Int, Property
 from numpy import linspace, argmax, sqrt
 from numpy.random import rand
 from math import exp
@@ -160,7 +160,7 @@ if __name__ == '__main__':
 
     #weibull()
     #normal()
-    fil()
+    #fil()
     #size_effect()
     plt.show()
 
