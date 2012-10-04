@@ -51,6 +51,8 @@ class CompositeCrackBridge(HasTraits):
     reinforcement_lst = List(Instance(Reinforcement))
     w = Float
     E_m = Float(25e3)
+    Ll = Float
+    Lr = Float
     
     V_f_tot = Property(depends_on='reinforcement_lst+')
     @cached_property
@@ -59,6 +61,13 @@ class CompositeCrackBridge(HasTraits):
         for reinf in self.reinforcement_lst:
             V_f_tot += reinf.V_f
         return V_f_tot
+
+    E_c = Property(depends_on='reinforcement_lst+')
+    def _get_E_c(self):
+        E_fibers = 0.0
+        for reinf in self.reinforcement_lst:
+            E_fibers += reinf.V_f * reinf.E_f
+        return self.E_m * (1. - self.V_f_tot) + E_fibers
 
     sorted_depsf = Property(depends_on='reinforcement_lst+')
     @cached_property
@@ -87,9 +96,9 @@ class CompositeCrackBridge(HasTraits):
             mean_acting_depsm += sum_depsf * reinf.E_f * reinf.V_f
         return mean_acting_depsm / E_mtrx
 
-    eps_m_x = Property(depends_on='w, reinforcement+')
+    epsm_x = Property(depends_on='w, reinforcement+')
     @cached_property
-    def _get_eps_m_x(self):
+    def _get_epsm_x(self):
         um = [0.0]
         epsm = [0.0]
         depsm = [0.0]
@@ -110,17 +119,34 @@ class CompositeCrackBridge(HasTraits):
             um.append(um[-1] + epsm[-2] / 2. * dx + epsm[-1] / 2. * dx)
         return np.array(epsm), np.array(x_lst)
 
-    eps_y_x = Property(depends_on='w, reinforcement+')
+    um_x_line = Property(depends_on='w, reinforcement+')
     @cached_property
-    def _get_eps_y_x(self):
-        epsy = np.zeros_like(self.eps_m_x[0])
-        epsm = self.eps_m_x[0]
-        x_arr = self.eps_m_x[1]
+    def _get_um_x_line(self):
+        um = cumtrapz(self.epsm_x[0], self.epsm_x[1])
+        um = np.hstack((np.array([0.]),um))
+        return MFnLineArray(xdata=self.epsm_x[1], ydata=um)
+
+    epsm_x_line = Property(depends_on='w, reinforcement+')
+    @cached_property
+    def _get_epsm_x_line(self):
+        return MFnLineArray(xdata=self.epsm_x[0], ydata=self.epsm_x[1])
+
+    epsy_x = Property(depends_on='w, reinforcement+')
+    @cached_property
+    def _get_epsy_x(self):
+        epsy = np.zeros_like(self.epsm_x[0])
+        epsm = self.epsm_x[0]
+        x_arr = self.epsm_x[1]
         for i, depsf in enumerate(self.sorted_depsf):
             for reinf in self.reinforcement_lst:
                 if len(np.where(depsf == reinf.depsf_arr[0])[0]) != 0:
                     weight = reinf.depsf_arr[1]
-                    Vf_ratio = reinf.V_f / self.V_f_tot
+                    Vf_ratio = reinf.V_f * reinf.E_f / (self.E_c - (1. - self.V_f_tot) * self.E_m)
+#            if x_arr[i + 1] > self.Lr:
+#                epsm_Lr = self.epsm_x_line.get_values(self.Lr)
+#                um_Lr = self.um_x_line.get_values(self.Lr)
+#                c = epsm_Lr * self.Lr - um_Lr
+#                epsf_max = self.epsm_x_line.get_values(self.Lr)
             epsf = depsf * x_arr[i + 1] + epsm[i + 1] - x_arr * depsf
             epsy += np.maximum(epsf, epsm) * weight * Vf_ratio
         return epsy
@@ -128,30 +154,33 @@ class CompositeCrackBridge(HasTraits):
     eps_y_x_force_equil = Property(depends_on='w, reinforcement+')
     @cached_property
     def _get_eps_y_x_force_equil(self):
-        E_fibers = 0.0
-        for reinf in self.reinforcement_lst:
-            E_fibers += reinf.E_f * reinf.V_f
-        Ec = (self.E_m * (1. - self.V_f_tot) + E_fibers)
-        sigma_c = self.eps_m_x[0][-1] * Ec
-        return (sigma_c - self.E_m * (1. - self.V_f_tot) * self.eps_m_x[0]) / E_fibers
+        sigma_c = self.eps_m_x[0][-1] * self.E_c
+        return (sigma_c - self.E_m * (1. - self.V_f_tot) * self.eps_m_x[0]) / (self.E_c - self.E_m * (1. - self.V_f_tot))
 
 if __name__ == '__main__':
 
-    reinf1 = Reinforcement(r = 0.003,#r=RV('uniform', loc=0.002, scale=0.002),
+    reinf1 = Reinforcement(r=RV('uniform', loc=0.002, scale=0.002),
                           tau=RV('uniform', loc=1., scale=5.),
                           V_f=0.125,
                           E_f=200e3,
-                          n_int=200)
-    reinf2 = Reinforcement(r=0.003,#RV('uniform', loc=0.002, scale=0.002),
+                          n_int=20)
+    reinf2 = Reinforcement(r=RV('uniform', loc=0.002, scale=0.002),
                           tau=RV('uniform', loc=10., scale=4.),
+                          V_f=0.35,
+                          E_f=50e3,
+                          n_int=20)
+    reinf3 = Reinforcement(r=0.003,#RV('uniform', loc=0.002, scale=0.002),
+                          tau=RV('uniform', loc=20., scale=3.),
                           V_f=0.05,
                           E_f=200e3,
-                          n_int=200)
+                          n_int=20)
 
     ccb = CompositeCrackBridge(w=0.4,
-                               reinforcement_lst=[reinf1, reinf2])
+                               reinforcement_lst=[reinf1, reinf2, reinf3])
     plt.plot(ccb.eps_m_x[1], ccb.eps_m_x[0], label='matrix1')
     plt.plot(ccb.eps_m_x[1], ccb.eps_y_x, label='yarn1')
+    print 'w1 = ', np.trapz(ccb.eps_y_x - ccb.eps_m_x[0], ccb.eps_m_x[1])
+    print 'w2 = ', np.trapz(ccb.eps_y_x_force_equil - ccb.eps_m_x[0], ccb.eps_m_x[1])
     plt.plot(ccb.eps_m_x[1], ccb.eps_y_x_force_equil, label='forces')
     #ccb.reinforcement_lst = [reinf1]
     #plt.plot(ccb.eps_m_x[1], ccb.eps_m_x[0], label='2')
