@@ -1,6 +1,12 @@
 '''
 Created on Sep 20, 2012
 
+The module evaluates fibers and matrix strain in the vicinity of a crack bridge.
+Fiber diameter and bond coefficient can be set as random variables.
+Reinforcement types can be combined by creating a list of Reinforcement instances
+and defining it as the reinforcement_lst Trait in the CompositeCrackBridge class.
+TODO:   - add breaking strain
+        - define r, xi, tau as EitherType Traits
 @author: rostar
 '''
 
@@ -9,9 +15,6 @@ from stats.spirrid.rv import RV
 from matplotlib import pyplot as plt
 from etsproxy.traits.api import HasTraits, cached_property, \
     Float, Property, Instance, List, Int
-from scipy.integrate import cumtrapz
-from mathkit.mfn.mfn_line.mfn_line import MFnLineArray
-from scipy.optimize import brentq
 
 
 class Reinforcement(HasTraits):
@@ -50,10 +53,10 @@ class CompositeCrackBridge(HasTraits):
 
     reinforcement_lst = List(Instance(Reinforcement))
     w = Float
-    E_m = Float(25e3)
+    E_m = Float
     Ll = Float
     Lr = Float
-    
+
     V_f_tot = Property(depends_on='reinforcement_lst+')
     @cached_property
     def _get_V_f_tot(self):
@@ -92,13 +95,6 @@ class CompositeCrackBridge(HasTraits):
         sorted_weights = weights_arr[np.argsort(depsf_arr)[::-1]]
         return sorted_weights
 
-
-    weights = Property(depends_on='reinforcement_lst+')
-    @cached_property
-    def _get_weights(self):
-        weights = [reinf.depsf_arr[1] for reinf in self.reinforcement_lst]
-        return weights
-
     def depsm_depsf(self, depsf):
         bonded_f_stiffness = 0.0
         for reinf in self.reinforcement_lst:
@@ -119,16 +115,37 @@ class CompositeCrackBridge(HasTraits):
 
     def double_sided(self, depsf, xi, demi, emi, umi):
         depsm = self.depsm_depsf(depsf)
-        dx = (-depsf * xi - demi * xi + (demi ** 2 * xi ** 2 +
-            2 * depsf * umi - 2 * depsf * emi * xi +
-            depsf * self.w + 4 * demi * umi - 4 * demi * emi * xi +
-            2 * demi * self.w) ** (0.5)) / (depsf + 2 * demi)
+        dx = (-depsf * xi - demi * xi + (demi ** 2 * xi ** 2
+            + (4 * umi - 4 * emi * xi + 2 * self.w) * demi + ( 2 *
+            umi - 2 * emi * xi + self.w) * depsf) ** (0.5)) / (depsf + 2 * demi)
         epsm = emi + demi / 2. * dx + depsm / 2. * dx
         um = umi + emi / 2. * dx + epsm / 2. * dx
         return dx, depsm, epsm, um
-    
+
     def one_sided(self, depsf, xi, demi, emi, umi, clamped):
-        pass
+        w = self.w
+        depsm = self.depsm_depsf(depsf)
+        xs = clamped[0]
+        ems = clamped[1]
+        ums = clamped[2]
+        c2 = ems * xs - ums
+        dx = ((-xi - xs) * depsf + ((xi + xs) ** 2 * demi ** 2 + 4 * (depsf *
+            xs ** 2 - xs * emi + umi - c2 - emi * xi + w + xs * ems) * demi +
+            2 * depsf ** 2 * xs ** 2 + 2 * (-xs * emi + xs * ems + umi + w -
+            c2 - emi * xi) * depsf) ** (0.5) - demi * xi - xs * demi) / (depsf
+            + 2 * demi)
+        epsm = emi + demi / 2. * dx + depsm / 2. * dx
+        um = umi + emi / 2. * dx + epsm / 2. * dx
+        return dx, depsm, epsm, um
+
+    def clamped(self, depsf, xs, xl, ems, eml, ums, uml):
+        c1 = eml * xl - uml
+        c2 = ems * xs - ums
+        c3 = depsf * xl ** 2 / 2.
+        c4 = depsf * xs ** 2 / 2.
+        c5 = (depsf * (xl - xs) + (eml - ems)) * xs
+        h = (self.w - c1 - c2 - c3 - c4 - c5) / (xl + xs)
+        return depsf * xl + eml + h
 
     profile = Property(depends_on='w, Ll, Lr, reinforcement+')
     @cached_property
@@ -138,6 +155,7 @@ class CompositeCrackBridge(HasTraits):
         depsm_short = [self.depsm_depsf(self.sorted_depsf[0])]
         depsm_long = [self.depsm_depsf(self.sorted_depsf[0])]
         epsy_crack = 0.0
+        ff = epsy_crack
         Lmin = min(self.Ll, self.Lr)
         Lmax = max(self.Ll, self.Lr)
         for i, depsf in enumerate(self.sorted_depsf):
@@ -146,6 +164,7 @@ class CompositeCrackBridge(HasTraits):
                 dx, depsm, epsm, um = self.double_sided(depsf, x_short[-1], depsm_short[-1],
                                                    epsm_short[-1], um_short[-1])
                 if x_short[-1] + dx < Lmin:
+                    # dx increment does not reach the boundary
                     depsm_short.append(depsm)
                     depsm_long.append(depsm)
                     x_short.append(x_short[-1] + dx)
@@ -154,94 +173,105 @@ class CompositeCrackBridge(HasTraits):
                     epsm_long.append(epsm)
                     um_short.append(um)
                     um_long.append(um)
-                    epsy_crack += self.sorted_weights[i] * (epsm_short[-1] + x_short[-1] * depsf)
+                    epsy_crack += self.sorted_weights[i] * (epsm_short[-1] + x_short[-1] * depsf)# * ((epsm_short[-1] + x_short[-1] * depsf) < 0.2)
                 else:
-                    dx = Lmin - x_short[-1]
-                    x_short.append(x_short[-1] + dx)
-                    epsm_short.append(epsm_short[-1] + depsm_short[-1] * dx)
-                    um_short.append(um_short[-1] + (epsm_short[-2] + epsm_short[-1]) * dx / 2.)
-                    if Lmax == Lmin:
-                        x_long.append(x_long[-1] + dx)
-                        epsm_long.append(epsm_long[-1] + depsm_long[-1] * dx)
-                        um_long.append(um_long[-1] + (epsm_long[-2] + epsm_long[-1]) * dx / 2.)
-                        c = 2. * (epsm_long[-1] * x_long[-1] - um_long[-1])
-                        h = (self.w - c - depsf * x_long[-1] ** 2) / (2. * x_long[-1])
-                        epsy_crack += self.sorted_weights[i] * (epsm_short[-1] + x_short[-1] * depsf + h)
+                    # boundary reached at shorter side
+                    deltax = Lmin - x_short[-1]
+                    x_short.append(Lmin)
+                    epsm_short.append(epsm_short[-1] + depsm_short[-1] * deltax)
+                    um_short.append(um_short[-1] + (epsm_short[-2] + epsm_short[-1]) * deltax / 2.)
+
+                    short_side = [x_short[-1], epsm_short[-1], um_short[-1]]
+                    dx, depsm, epsm, um = self.one_sided(depsf, x_long[-1], depsm_long[-1],
+                                            epsm_long[-1], um_long[-1], short_side)
+
+                    if x_long[-1] + dx >= Lmax:
+                        # boundary reached at longer side
+                        deltax = Lmax - x_long[-1]
+                        x_long.append(Lmax)
+                        epsm_long.append(epsm_long[-1] + depsm_long[-1] * deltax)
+                        um_long.append(um_long[-1] + (epsm_long[-2] + epsm_long[-1]) * deltax / 2.)
+                        epsy_crack_clamped = self.clamped(depsf, x_short[-1], x_long[-1], epsm_short[-1],
+                             epsm_long[-1], um_short[-1], um_long[-1])
+                        epsy_crack += self.sorted_weights[i] * epsy_crack_clamped# * (epsy_crack_clamped < 0.2)
                     else:
-                        clamped = [x_short[-1], epsm_short[-1], um_short[-1]]
-                        dx, depsm, epsm, um = self.one_sided(depsf, x_long[-1], depsm_long[-1],
-                                            epsm_long[-1], um_long[-1], clamped)
                         depsm_long.append(depsm)
                         x_long.append(x_long[-1] + dx)
                         epsm_long.append(epsm)
                         um_long.append(um)
-                        epsy_crack += self.sorted_weights[i] * (epsm_long[-1] + x_long[-1] * depsf)                        
+                        epsy_crack += self.sorted_weights[i] * (epsm_long[-1] + x_long[-1] * depsf)#*((epsm_long[-1] + x_long[-1] * depsf) < 0.2)                     
 
             elif x_short[-1] == Lmin and x_long[-1] < Lmax:
-                '''one sided pullout'''
-                dx, depsm, epsm, um = self.double_sided(depsf, x_short[-1], depsm_short[-1],
-                                                   epsm_short[-1], um_short[-1])
-            
+                #one sided pullout
+                clamped = [x_short[-1], epsm_short[-1], um_short[-1]]
+                dx, depsm, epsm, um = self.one_sided(depsf, x_long[-1], depsm_long[-1],
+                                    epsm_long[-1], um_long[-1], clamped)
+                if x_long[-1] + dx < Lmax:
+                    depsm_long.append(depsm)
+                    x_long.append(x_long[-1] + dx)
+                    epsm_long.append(epsm)
+                    um_long.append(um)
+                    epsy_crack += self.sorted_weights[i] * (epsm_long[-1] + x_long[-1] * depsf)# * ((epsm_long[-1] + x_long[-1] * depsf) < 0.2)
+                else:
+                    dx = Lmax - x_long[-1]
+                    x_long.append(Lmax)
+                    epsm_long.append(epsm_long[-1] + depsm_long[-1] * dx)
+                    um_long.append(um_long[-1] + (epsm_long[-2] + epsm_long[-1]) * dx / 2.)
+                    epsy_crack_clamped = self.clamped(depsf, x_short[-1], x_long[-1], epsm_short[-1],
+                                 epsm_long[-1], um_short[-1], um_long[-1])
+                    epsy_crack += self.sorted_weights[i] * epsy_crack_clamped# * (epsy_crack_clamped<0.2)
+
             elif x_short[-1] == Lmin and x_long[-1] == Lmax:
-                '''clamped fibers'''
-                c1 = epsm_long[-1] * x_long[-1] - um_long[-1]
-                c2 = epsm_short[-1] * x_short[-1] - um_short[-1]
-                c3 = depsf * x_long[-1] ** 2 / 2.
-                c4 = depsf * x_short[-1] ** 2 / 2.
-                c5 = (depsf * (x_long[-1] - x_short[-1]) + (epsm_long[-1] - epsm_short[-1])) * x_short[-1]
-                h = (self.w - c1 - c2 - c3 - c4 - c5) / (x_long[-1] + x_short[-1])
-                epsy_crack += self.sorted_weights[i] * (depsf * x_long[-1] + epsm_long[-1] + h)
-
-
+                #clamped fibers
+                epsy_crack_clamped = self.clamped(depsf, x_short[-1], x_long[-1], epsm_short[-1],
+                             epsm_long[-1], um_short[-1], um_long[-1])
+                epsy_crack += self.sorted_weights[i] * epsy_crack_clamped# * (epsy_crack_clamped<0.2)
         x_arr = np.hstack((-np.array(x_short)[::-1], np.array(x_long)))
         epsm_arr = np.hstack((np.array(epsm_short)[::-1], np.array(epsm_long)))
         epsy_arr = self.epsy_arr(epsm_arr, epsy_crack)
-        print 'w = ', np.trapz(epsy_arr - epsm_arr, x_arr)
+        #print 'w = ', np.trapz(epsy_arr - epsm_arr, x_arr)
         return x_arr, epsm_arr, epsy_arr
 
 if __name__ == '__main__':
 
-    reinf1 = Reinforcement(r=RV('uniform', loc=0.002, scale=0.002),
-                          tau=RV('uniform', loc=1., scale=.5),
-                          V_f=0.15,
+    reinf1 = Reinforcement(r=0.00345,#RV('uniform', loc=0.002, scale=0.002),
+                          tau=RV('uniform', loc=1., scale=3.),
+                          V_f=0.05,
                           E_f=200e3,
-                          n_int=20)
-    reinf2 = Reinforcement(r=RV('uniform', loc=0.002, scale=0.002),
+                          n_int=100)
+    reinf2 = Reinforcement(r=0.00345,#r=RV('uniform', loc=0.002, scale=0.002),
                           tau=RV('uniform', loc=10., scale=2.),
                           V_f=0.05,
                           E_f=70e3,
                           n_int=20)
-    reinf3 = Reinforcement(r=RV('uniform', loc=0.002, scale=0.002),
+    reinf3 = Reinforcement(r=0.00345,#r=RV('uniform', loc=0.002, scale=0.002),
                           tau=RV('uniform', loc=20., scale=2.),
                           V_f=0.25,
                           E_f=50e3,
                           n_int=30)
 
-    ccb = CompositeCrackBridge(w=0.4,
-                               reinforcement_lst=[reinf1, reinf2, reinf3],
-                               Ll=2.,
-                               Lr=2.)
+    ccb = CompositeCrackBridge(E_m=25e3,
+                               w=0.4,
+                               reinforcement_lst=[reinf1],
+                               Ll=5.,
+                               Lr=40.)
 
     def profile(w):
         ccb.w = w
         plt.plot(ccb.profile[0], ccb.profile[1], label='matrix1')
         plt.plot(ccb.profile[0], ccb.profile[2], label='yarn')
-        print 'w = ', np.trapz(ccb.profile[2] - ccb.profile[1], ccb.profile[0])
         plt.legend(loc='best')
-        #plt.show()
-        
+        plt.show()
+
     def eps_w(w_arr):
         eps = []
         for w in w_arr:
-            print 'w_ctrl=', w
+            #print 'w_ctrl=', w
             ccb.w = w
             eps.append(np.max(ccb.profile[2]))
         plt.plot(w_arr, eps, label='ld')
-        plt.legend()
-        plt.show()
+        #plt.legend()
+        #plt.show()
 
-    #profile(4.6)
-    eps_w(np.linspace(0., 5.2, 50))
-            
-        
-    
+    profile(4.)
+    #eps_w(np.linspace(0., 4., 50))

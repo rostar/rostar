@@ -16,11 +16,7 @@ from scipy.optimize import brentq
 class MatrixStrain(HasTraits):
 
     r = Float(0.00345)
-    mtau = Float(3.)
-    stau = Float(0.5)
-    mxi = Float(5.0)
-    sxi = Float(0.5)
-    V_f = Float(0.4)
+    V_f = Float(0.125)
     E_m = Float(25e3)
     E_f = Float(200e3)
     w = Float(0.4)
@@ -74,7 +70,7 @@ class MatrixStrain(HasTraits):
     @cached_property
     def _get_eps_m(self):
         eps_m_x = [0.0]
-        deps_m_x = [self.depsf_mu_tau(self.tau_distr().mean())]
+        deps_m_x = [self.depsm_mu_tau(self.tau_distr().mean())]
         x_x = [0.0]
         for xi in self.x_arr[1:]:
             if self.fwd_Euler == True:
@@ -103,14 +99,14 @@ class MatrixStrain(HasTraits):
         '''stiffness of every 'filament' multiplied by damage_func(T)'''
         pass
 
-    um_line = Property(depends_on = 'w')
+    um_line = Property(depends_on='w')
     @cached_property
     def _get_um_line(self):
         um = cumtrapz(self.eps_m, self.x_arr)
         um = np.hstack((np.array([0.]),um))
         return MFnLineArray(xdata=self.x_arr, ydata=um)
 
-    epsm_line = Property(depends_on = 'w')
+    epsm_line = Property(depends_on='w')
     @cached_property
     def _get_epsm_line(self):
         return MFnLineArray(xdata=self.x_arr, ydata=self.eps_m)
@@ -123,14 +119,14 @@ class MatrixStrain(HasTraits):
         epsy = np.zeros_like(self.x_arr)
         for sim in range(n_sim):
             tau = self.tau_distr().ppf(np.random.rand(1))
-            x = brentq(self.MC_residuum, self.x_arr[0], self.x_arr[-1], args=(self.mu_tau_f(tau)))
-            T_f = self.epsm_line.get_values(x) + self.mu_tau_f(tau) * x
-            T_f = np.maximum(T_f - self.mu_tau_f(tau) * self.x_arr, self.eps_m)
+            x = brentq(self.MC_residuum, self.x_arr[0], self.x_arr[-1], args=(self.depsf_mu_tau(tau)))
+            T_f = self.epsm_line.get_values(x) + self.depsf_mu_tau(tau) * x
+            T_f = np.maximum(T_f - self.depsf_mu_tau(tau) * self.x_arr, self.eps_m)
             epsy += T_f
         epsy /= float(n_sim)
         plt.plot(self.x_arr, epsy)
-        print 'w = ', np.trapz(epsy - self.eps_m, self.x_arr)
-        print 'force = ', epsy * self.E_f * self.V_f + self.eps_m * self.E_m * (1-self.V_f)
+        #print 'w = ', np.trapz(epsy - self.eps_m, self.x_arr)
+        #print 'force = ', epsy * self.E_f * self.V_f + self.eps_m * self.E_m * (1-self.V_f)
         plt.ylim(0)
 
 if __name__ == '__main__':
@@ -139,7 +135,7 @@ if __name__ == '__main__':
         ms = MatrixStrain()
         ms.fwd_Euler = False
         ms.midpoint_method = True
-        ms.x_arr = np.linspace(0, 50., 300)
+        ms.x_arr = np.linspace(0, 25., 300)
         ms.w = w
         epsm = ms.eps_m
         sigc = epsm[-1] * (ms.V_f * ms.E_f + (1. - ms.V_f) * ms.E_m)
@@ -147,8 +143,8 @@ if __name__ == '__main__':
         plt.plot(ms.x_arr, ms.eps_m, label='matrix strain')
         plt.plot(ms.x_arr, epsf, label='yarn strain')
         plt.legend(loc='best')
-        print np.trapz(epsf-epsm, ms.x_arr)
-        ms.MC(100)
+        #print np.trapz(epsf-epsm, ms.x_arr)
+        ms.MC(10)
         plt.show()
 
     def plot_w_epsf(w_arr):
@@ -171,6 +167,6 @@ if __name__ == '__main__':
         plt.legend(loc='best')
         plt.show()
 
-    plot_w_epsf(np.linspace(0., 0.7, 10))
-    #plot_profile(0.5)
+    #plot_w_epsf(np.linspace(0., 0.7, 10))
+    plot_profile(0.4)
 

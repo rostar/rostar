@@ -180,7 +180,7 @@ if __name__ == '__main__':
             w_lst.append(w_omega(tau, E_f, E_m, V_f, r, omega, 5.0, 0.02))
         epsf = crackbridge(np.array(w_lst), tau, E_f, E_m, V_f, r, ctrl_damage)
         plt.plot(np.array(w_lst), epsf * E_f,
-                 color='magenta')
+                 color='blue')
 
     def u_analytical():
 
@@ -211,11 +211,12 @@ if __name__ == '__main__':
 #        plt.plot(np.array(u_lst), ctrl_damage,
 #                 color='brown', label='u-damage')
         plt.plot(np.array(u_lst), epsf * E_f,
-                 color='brown')
+                 color='red')
 
 #w_omega_spirrid()
 #w_analytical_iterative()
 #w_analytical()
+#u_analytical()
 #no_damage()
 #u_u()
 #u_omega_spirrid()
@@ -226,3 +227,4 @@ for vf in np.linspace(0.001, 0.1, 10):
     w_analytical()
 plt.legend(loc='best')
 plt.show()
+ 
