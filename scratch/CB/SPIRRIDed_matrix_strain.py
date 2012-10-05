@@ -127,8 +127,8 @@ class CompositeCrackBridge(HasTraits):
         um = umi + emi / 2. * dx + epsm / 2. * dx
         return dx, depsm, epsm, um
     
-    def one_sided(self):
-        print 'ja'
+    def one_sided(self, depsf, xi, demi, emi, umi, clamped):
+        pass
 
     profile = Property(depends_on='w, Ll, Lr, reinforcement+')
     @cached_property
@@ -159,11 +159,11 @@ class CompositeCrackBridge(HasTraits):
                     dx = Lmin - x_short[-1]
                     x_short.append(x_short[-1] + dx)
                     epsm_short.append(epsm_short[-1] + depsm_short[-1] * dx)
-                    um_short.append(um_short[-1] + epsm_short[-2] * dx)
+                    um_short.append(um_short[-1] + (epsm_short[-2] + epsm_short[-1]) * dx / 2.)
                     if Lmax == Lmin:
                         x_long.append(x_long[-1] + dx)
                         epsm_long.append(epsm_long[-1] + depsm_long[-1] * dx)
-                        um_long.append(um_long[-1] + epsm_long[-2] * dx)
+                        um_long.append(um_long[-1] + (epsm_long[-2] + epsm_long[-1]) * dx / 2.)
                         c = 2. * (epsm_long[-1] * x_long[-1] - um_long[-1])
                         h = (self.w - c - depsf * x_long[-1] ** 2) / (2. * x_long[-1])
                         epsy_crack += self.sorted_weights[i] * (epsm_short[-1] + x_short[-1] * depsf + h)
@@ -175,7 +175,7 @@ class CompositeCrackBridge(HasTraits):
                         x_long.append(x_long[-1] + dx)
                         epsm_long.append(epsm)
                         um_long.append(um)
-                        epsy_crack += self.sorted_weights[i] * (epsm_short[-1] + x_short[-1] * depsf)                        
+                        epsy_crack += self.sorted_weights[i] * (epsm_long[-1] + x_long[-1] * depsf)                        
 
             elif x_short[-1] == Lmin and x_long[-1] < Lmax:
                 '''one sided pullout'''
@@ -228,7 +228,7 @@ if __name__ == '__main__':
         plt.plot(ccb.profile[0], ccb.profile[2], label='yarn')
         print 'w = ', np.trapz(ccb.profile[2] - ccb.profile[1], ccb.profile[0])
         plt.legend(loc='best')
-        plt.show()
+        #plt.show()
         
     def eps_w(w_arr):
         eps = []
@@ -240,8 +240,8 @@ if __name__ == '__main__':
         plt.legend()
         plt.show()
 
-    #profile(4.16)
-    eps_w(np.linspace(3., 5.2, 10))
+    #profile(4.6)
+    eps_w(np.linspace(0., 5.2, 50))
             
         
     
