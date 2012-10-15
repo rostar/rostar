@@ -8,6 +8,7 @@ from matplotlib import pyplot as plt
 import numpy as np
 from scipy.optimize import brentq
 from math import e
+from composite_crack_bridge import CompositeCrackBridge, Reinforcement
 
 if __name__ == '__main__':
 
@@ -17,8 +18,8 @@ if __name__ == '__main__':
 
     # filaments
     r = 0.00345
-    V_f = 0.04
-    tau = 0.5#RV('uniform', loc=0.2, scale=1.)
+    V_f = 0.1
+    tau = RV('uniform', loc=0.2, scale=1.)
     E_f = 200e3
     E_m = 25e3
     l = 0.0
@@ -28,9 +29,9 @@ if __name__ == '__main__':
     Lr = 70.
     xi = RV('weibull_min', shape=5., scale=.02)
 
-    ctrl_damage = np.linspace(0.0, .99999, 500)
-    w = np.linspace(0, .57, 100)
-    n_int = 500
+    ctrl_damage = np.linspace(0.0, .99, 50)
+    w = np.linspace(0, .57, 50)
+    n_int = 50
 
     spirrid_plot = False
 
@@ -212,8 +213,36 @@ if __name__ == '__main__':
 #                 color='brown', label='u-damage')
         plt.plot(np.array(u_lst), epsf * E_f,
                  color='red')
+        
+    def DOE(w_arr):
+        reinf1 = Reinforcement(r=0.00345,#r=RV('uniform', loc=0.002, scale=0.002),
+                          tau=RV('uniform', loc=.2, scale=1.),
+                          V_f=0.1,
+                          E_f=200e3,
+                          xi=RV('weibull_min', shape=5., scale=.02),
+                          n_int=100)
+    
+        ccb = CompositeCrackBridge(E_m=25e3,
+                               reinforcement_lst=[reinf1],
+                               Ll=100.,
+                               Lr=100.)
 
-#w_omega_spirrid()
+        def eps_w(w_arr):
+           
+            eps = []
+            ccb.iters = 6
+            for w in w_arr:
+    #            print 'w_ctrl=', 
+                ccb.w = w
+                ccb.damage = np.zeros_like(ccb.sorted_E_f)
+                eps.append(ccb.profile[3])
+            plt.plot(w_arr, eps, color='black', lw=2, label=str(ccb.iters))
+    
+        eps_w(w_arr)
+
+
+w_omega_spirrid()
+DOE(np.linspace(0., .8, 50))
 #w_analytical_iterative()
 #w_analytical()
 #u_analytical()
@@ -221,10 +250,10 @@ if __name__ == '__main__':
 #u_u()
 #u_omega_spirrid()
 #u_analytical_iterative()
-for vf in np.linspace(0.001, 0.1, 10):
-    V_f = vf
-    u_analytical()
-    w_analytical()
+#for vf in np.linspace(0.001, 0.1, 10):
+#    V_f = vf
+#    u_analytical()
+#    w_analytical()
 plt.legend(loc='best')
 plt.show()
  
