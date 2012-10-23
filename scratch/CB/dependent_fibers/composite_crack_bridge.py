@@ -37,6 +37,7 @@ class CompositeCrackBridge(HasTraits):
         return V_f_tot
 
     E_c = Property(depends_on='reinforcement_lst+')
+    @cached_property
     def _get_E_c(self):
         E_fibers = 0.0
         for reinf in self.reinforcement_lst:
@@ -384,17 +385,17 @@ if __name__ == '__main__':
         plt.plot(ccb.profile[0], ccb.profile[1], label='matrix1')
         plt.plot(ccb.profile[0], ccb.profile[2], label='yarn')
 
-    def eps_w(w_arr):           
+    def eps_w(w_arr, label):           
         eps = []
         w_err = []
         for w in w_arr:
             ccb.w = w
             eps.append(ccb.profile[3])
-            w_err.append((ccb.w_evaluated - ccb.w) / ccb.w)
+            w_err.append((ccb.w_evaluated - ccb.w) / (ccb.w + 1e-10))
         plt.figure()
         plt.plot(w_arr, w_err)
         plt.figure()
-        plt.plot(w_arr, eps, color='black', lw=2, label='CB')
+        plt.plot(w_arr, eps, lw=2, label=label)
         
     def bundle(w_arr, L):
         from scipy.stats import weibull_min
@@ -418,8 +419,25 @@ if __name__ == '__main__':
         m.show()
     
     #profile(.20)
-    eps_w(np.linspace(.0, .8, 100))
+    eps_w(np.linspace(.0, .8, 100), 'discrete')
+    reinf1 = Reinforcement(r=0.00345,#RV('uniform', loc=0.002, scale=0.002),
+                          tau=RV('uniform', loc=.5, scale=.001),
+                          V_f=0.2,
+                          E_f=200e3,
+                          xi=RV('weibull_min', shape=5., scale=.02),
+                          n_int=20)
+    reinf2 = Reinforcement(r=0.00345,#RV('uniform', loc=0.002, scale=0.002),
+                          tau=RV('uniform', loc=.5, scale=.001),
+                          V_f=0.2,
+                          E_f=200e3,
+                          xi=RV('weibull_min', shape=5., scale=.04),
+                          n_int=20)
+    ccb = CompositeCrackBridge(E_m=25e3,
+                               reinforcement_lst=[reinf1, reinf2],
+                               Ll=10.,
+                               Lr=10.)
+    eps_w(np.linspace(.0, .8, 100), 'random')
     #bundle(np.linspace(0, 0.65, 30), 20.)
-    #plt.legend(loc='best')
+    plt.legend(loc='best')
     plt.show()
     #plot3d()
