@@ -242,14 +242,15 @@ if __name__ == '__main__':
 
         # access the response values.
         for V in [V13, V23, V33]:
-            eps = V.ex_type.eps_asc
+            eps = V.ex_type.eps_asc * 100.
             sig_c = V.ex_type.sig_c_asc
-            plt.plot(eps, sig_c, color='blue')
-        for V in [V2small, V3small]:
-            eps = V.ex_type.eps_asc
-            sig_c = V.ex_type.sig_c_asc
-            plt.plot(eps, sig_c, color='green')
-        plt.xlim(0.0, 0.008)
+            plt.plot(eps, sig_c, color='black')
+#        for V in [V2small, V3small]:
+#            eps = V.ex_type.eps_asc * 100.
+#            sig_c = V.ex_type.sig_c_asc
+#            plt.plot(eps, sig_c, color='black')
+        plt.xlim(0.0, 0.8)
+        plt.ylim(0.0,27.)
 
     # filaments
         r = 0.00345
@@ -269,7 +270,7 @@ if __name__ == '__main__':
                                     nsim=1,
                                     loc=.0,
                                     shape=21.,
-                                    scale=5.8 * 1.1,
+                                    scale=5.8 * 1.05,
                                     non_negative_check=True,
                                     distribution='Weibull'
                                    )
@@ -295,7 +296,7 @@ if __name__ == '__main__':
                   cb_randomization=rand1,
                   cb_type='mean',
                   load_sigma_c_min=.1,
-                  load_sigma_c_max=27.,
+                  load_sigma_c_max=25.,
                   load_n_sigma_c=200,
                   n_w=60,
                   n_x=81,
@@ -336,7 +337,7 @@ if __name__ == '__main__':
                   cb_randomization=rand2,
                   cb_type='mean',
                   load_sigma_c_min=.1,
-                  load_sigma_c_max=25.,
+                  load_sigma_c_max=15.,
                   load_n_sigma_c=200,
                   n_w=60,
                   n_x=81,
@@ -347,18 +348,18 @@ if __name__ == '__main__':
         scm_view2.model.evaluate()
 
         eps1, sigma1 = scm_view1.eps_sigma
-        plt.plot(eps1, sigma1, lw=2, color='black',
-                 label='no of cracks = ' + str(len(scm_view1.crack_widths(12.))))
+        plt.plot(eps1 * 100., sigma1, lw=2, ls='dashed', color='red')
+                 #label='no of cracks = ' + str(len(scm_view1.crack_widths(12.))))
         plt.legend(loc='best')
-        plt.xlabel('composite strain [-]')
-        plt.ylabel('composite stress [MPa]')
+#        plt.xlabel('composite strain [-]')
+#        plt.ylabel('composite stress [MPa]')
         eps2, sigma2 = scm_view2.eps_sigma
-        plt.plot(eps2, sigma2, lw=2, color='black',
-                 label='no of cracks = ' + str(len(scm_view2.crack_widths(12.))))
+        plt.plot(eps2 * 100., sigma2, lw=2, color='red')
+                 #label='no of cracks = ' + str(len(scm_view2.crack_widths(12.))))
         plt.legend(loc='best')
-        plt.xlabel('composite strain [-]')
+        plt.xlabel('composite strain [%]')
         plt.ylabel('composite stress [MPa]')
-        plt.legend(loc='best')
+#        plt.legend(loc='best')
         #plt.figure()
         #plt.hist(scm_view.crack_widths(15.), bins=20, label='load = 15 MPa')
         #plt.hist(scm_view1.crack_widths(22.), bins=20, label='load = 22 MPa')
