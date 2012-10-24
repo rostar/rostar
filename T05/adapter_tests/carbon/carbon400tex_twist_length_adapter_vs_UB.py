@@ -10,7 +10,7 @@ B stands for classical tests
 import numpy as np
 from stats.spirrid import make_ogrid
 from scipy.interpolate import RectBivariateSpline as Spl
-#from etsproxy.mayavi import mlab as m
+from etsproxy.mayavi import mlab as m
 from matplotlib import pyplot as plt
 
 # DATA
@@ -49,15 +49,13 @@ B_COV = np.array([B35cv, B70cv, B130cv, B250cv, B500cv])
 Rel_strength = A_strength / B_strength - 1.0
 
 if __name__ == '__main__':
-        
-    #plt.plot(lengths, A_strength[:,0],
-    #                lw = 2, color = 'black', label = 'Adapter')
-    #plt.errorbar(x = lengths, y = A_strength[:,0],
-    #       yerr = A_COV[:,0] * A_strength[:,0]/100., color = 'black')
-    #plt.plot(lengths, B_strength[:,0],
-    #                lw = 2, color = 'black', ls = 'dashed', label = 'Umlenkbolzen')
-    #plt.errorbar(x = lengths, y = B_strength[:,0],
-    #       yerr = B_COV[:,0] * B_strength[:,0]/100., color = 'black', ls = 'dashed')
+
+    plt.plot(lengths, A_strength[:, 0], 'ko')
+    plt.errorbar(x=lengths, y=A_strength[:,0], label='neuentwickelte Klemmen',
+           yerr = A_COV[:,0] * A_strength[:,0]/100., lw = 2, color = 'red')
+    plt.plot(lengths, B_strength[:,0], 'ko')
+    plt.errorbar(x = lengths, y = B_strength[:,0], label = 'Standardmethode',
+           yerr = B_COV[:,0] * B_strength[:,0]/100., lw=2, color = 'black', ls = 'solid')
     
     #plt.plot(lengths, A_strength[:,1],
     #                lw = 2, color = 'red', label = '10 twists')
@@ -87,12 +85,14 @@ if __name__ == '__main__':
 #    plt.errorbar(x = lengths, y = B_strength[:,4],
 #           yerr = B_COV[:,4] * B_strength[:,4]/100., color = 'black', ls = 'dashed')    
     
-    plt.title('carbon 400tex')
-    plt.ylim(1400, 2300)
+    plt.ylim(0, 2300)
     plt.xlim(0,520)
-    plt.ylabel('strength [MPa]')
-    plt.xlabel('length [mm]')
-    plt.legend(loc = 'best')
+    plt.ylabel('Festigkeit [MPa]', fontsize = 16)
+    plt.xticks(fontsize = 16)
+    plt.yticks(fontsize = 16)
+    plt.legend(loc = 'lower right')
+    plt.title('Toho Tenax Carbon 400 tex', fontsize = 16)
+    plt.xlabel('Laenge [mm]', fontsize = 16)
     
     def plot_results(strength_arr, COV_arr):
         '''contains plotting methods'''
@@ -199,11 +199,11 @@ if __name__ == '__main__':
         # SETTINGS
         #twist()
         #length()
-        plot_3d(cov = False, smooth = False)
+        #plot_3d(cov = False, smooth = False)
     
     #plot_results(B_strength, B_COV)
     #plot_results(A_strength, A_COV)
     #plot_results(Rel_strength, A_COV)
     
     plt.show()
-    m.show()
+    #m.show()

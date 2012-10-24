@@ -135,6 +135,8 @@ class TwoSampleMeanTest(HasTraits):
         alpha for which the null hypothesis is rejected '''
         n1 = self.n1
         n2 = self.n2
+        print 'mean [COV] data1 = ', self.data1.mean(), '[', self.data1.std()/self.data1.mean(), ']'
+        print 'mean [COV] data2 = ', self.data2.mean(), '[', self.data2.std()/self.data2.mean(), ']'
         print 'at the level of significance ', alpha, ':'
         if stdev == 'equal':
             H1a, H1b, H1c, p1a, p1b, p1c, CI = self.equal_stdev(alpha)
@@ -150,15 +152,29 @@ class TwoSampleMeanTest(HasTraits):
         print 'probability of type I error for mu1 != mu2:', p1a
         print 'probability of type I error for mu1 > mu2:', p1b
         print 'probability of type I error for mu1 < mu2:', p1c
-        print 'CI (%.1f%%) for mu1 - mu2:' %(100-100*alpha), CI
+        print 'CI (%.1f%%) for mu1 - mu2:' %(100-100*alpha), CI, CI/self.data1.mean()
    
 if __name__ == '__main__':
-    
+    from matplotlib import pyplot as plt
+    tests = np.loadtxt('tests.csv', delimiter = ';') / 0.445
+    a50 = tests[1:21,0]
+    a70 = tests[1:21,1]
+    a110 = tests[1:21,2]
+    a160 = tests[1:21,3]
+    a230 = tests[1:21,4]
+    a340 = tests[1:21,5]
+    a500 = tests[1:21,6]
+    r50 = tests[22:43,0]
+    r70 = tests[22:43,1]
+    r110 = tests[22:43,2]
+    r160 = tests[22:43,3]
+    r230 = tests[22:43,4]
+    r340 = tests[22:43,5]
+    r500 = tests[22:43,6]
+
     means = TwoSampleMeanTest()
-    means.data1 = np.array([460., 415,486,488,493,443,512,512,569,487,
-                              458,426,454,387,464,524,551,521,462,579])
-    means.data2 = np.array([542.,503,578,533,572,537,543,538,582,563,
-                              572,541,541,561,526,535,474,536,568,503])
+    means.data1 = a500
+    means.data2 = r500
     means.sigma1 = np.sqrt(np.var(means.data1))
     means.sigma2 = np.sqrt(np.var(means.data2))
     means.evaluate(alpha = 0.05, stdev = 'different')

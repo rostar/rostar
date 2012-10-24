@@ -4,8 +4,9 @@ Created on Sep 20, 2012
 The CompositeCrackBridge class has a method for evaluating fibers and matrix
 strain in the vicinity of a crack bridge.
 Fiber diameter and bond coefficient can be set as random variables.
-Reinforcement types can be combined by creating a list of Reinforcement instances
-and defining it as the reinforcement_lst Trait in the CompositeCrackBridge class.
+Reinforcement types can be combined by creating a list of Reinforcement
+instances and defining it as the reinforcement_lst Trait in the
+CompositeCrackBridge class.
 
 @author: rostar
 '''
@@ -18,7 +19,7 @@ from etsproxy.traits.api import HasTraits, cached_property, \
 from types import FloatType
 from reinforcement import Reinforcement
 from scipy.optimize import fsolve
-    
+
 
 class CompositeCrackBridge(HasTraits):
 
@@ -44,9 +45,10 @@ class CompositeCrackBridge(HasTraits):
             E_fibers += reinf.V_f * reinf.E_f
         return self.E_m * (1. - self.V_f_tot) + E_fibers
 
-    sorted_filaments = Property(depends_on='reinforcement_lst+')
+    sorted_theta = Property(depends_on='reinforcement_lst+')
     @cached_property
-    def _get_sorted_filaments(self):
+    def _get_sorted_theta(self):
+        '''sorts the integral points by bond in descending order'''
         depsf_arr = np.array([])
         V_f_arr = np.array([])
         E_f_arr = np.array([])
@@ -61,40 +63,42 @@ class CompositeCrackBridge(HasTraits):
             xi_arr = np.hstack((xi_arr, np.repeat(reinf.xi, n_int)))
         argsort = np.argsort(depsf_arr)[::-1]
         return depsf_arr[argsort], V_f_arr[argsort], E_f_arr[argsort], xi_arr[argsort],  weight_arr[argsort]
-    
+
     sorted_depsf = Property(depends_on='reinforcement_lst+')
     @cached_property
     def _get_sorted_depsf(self):
-        return self.sorted_filaments[0]
+        return self.sorted_theta[0]
 
     sorted_V_f = Property(depends_on='reinforcement_lst+')
     @cached_property
     def _get_sorted_V_f(self):
-        return self.sorted_filaments[1]
-    
+        return self.sorted_theta[1]
+
     sorted_E_f = Property(depends_on='reinforcement_lst+')
     @cached_property
     def _get_sorted_E_f(self):
-        return self.sorted_filaments[2]
-    
+        return self.sorted_theta[2]
+
     sorted_xi = Property(depends_on='reinforcement_lst+')
     @cached_property
     def _get_sorted_xi(self):
-        return self.sorted_filaments[3]
+        return self.sorted_theta[3]
 
     sorted_stats_weights = Property(depends_on='reinforcement_lst+')
     @cached_property
     def _get_sorted_stats_weights(self):
-        return self.sorted_filaments[4]
+        return self.sorted_theta[4]
 
     sorted_Vf_weights = Property(depends_on='reinforcement_lst+')
     @cached_property
     def _get_sorted_Vf_weights(self):
-        return self.sorted_V_f * self.sorted_E_f / (self.E_c - (1. - self.V_f_tot) * self.E_m)
+        return self.sorted_V_f * self.sorted_E_f / (self.E_c -
+                (1. - self.V_f_tot) * self.E_m)
 
     sorted_xi_cdf = Property(depends_on='reinforcement_lst+')
     @cached_property
     def _get_sorted_xi_cdf(self):
+        '''breaking strain: CDF for random and Heaviside for discrete values'''
         sorted_xi_cdf = []
         for xi in self.sorted_xi:
             if isinstance(xi, FloatType):
@@ -107,8 +111,10 @@ class CompositeCrackBridge(HasTraits):
         return np.array([ff(epsy[i]) for i, ff in enumerate(self.sorted_xi_cdf)])
 
     def depsm_depsf(self, depsf, damage):
+        '''evaluates the deps_m given deps_f at that point and the damage array'''
         intact_bonded_fibers = np.sum(self.sorted_V_f * self.sorted_stats_weights *
-                                      self.sorted_E_f * (depsf <= self.sorted_depsf) * (1. - damage))
+                                      self.sorted_E_f * (depsf <= self.sorted_depsf) *
+                                      (1. - damage))
         broken_fibers = np.sum(self.sorted_V_f * self.sorted_stats_weights *
                                self.sorted_E_f * damage)
         add_m_stiffness = intact_bonded_fibers + broken_fibers
@@ -173,7 +179,7 @@ class CompositeCrackBridge(HasTraits):
                 '''double sided pullout'''
                 dx, depsm, epsm, um, E_mtrx = self.double_sided(depsf, x_short[-1], depsm_short[-1],
                                                    epsm_short[-1], um_short[-1], iter_damage)
-                
+
                 if x_short[-1] + dx < Lmin:
                     # dx increment does not reach the boundary
                     depsm_short.append(depsm)
