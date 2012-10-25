@@ -19,6 +19,7 @@ from etsproxy.traits.api import HasTraits, cached_property, \
 from types import FloatType
 from reinforcement import Reinforcement
 from scipy.optimize import fsolve
+import time as t
 
 
 class CompositeCrackBridge(HasTraits):
@@ -55,8 +56,8 @@ class CompositeCrackBridge(HasTraits):
         xi_arr = np.array([])
         weight_arr = np.array([])
         for reinf in self.reinforcement_lst:
-            n_int = len(np.hstack((np.array([]), reinf.depsf_arr[0])).flatten())
-            depsf_arr = np.hstack((depsf_arr, reinf.depsf_arr[0])).flatten()
+            n_int = len(np.hstack((np.array([]), reinf.depsf_arr[0])))
+            depsf_arr = np.hstack((depsf_arr, reinf.depsf_arr[0]))
             weight_arr = np.hstack((weight_arr, np.repeat(reinf.depsf_arr[1], n_int)))
             V_f_arr = np.hstack((V_f_arr, np.repeat(reinf.V_f, n_int)))
             E_f_arr = np.hstack((E_f_arr, np.repeat(reinf.E_f, n_int)))
@@ -105,10 +106,23 @@ class CompositeCrackBridge(HasTraits):
                 sorted_xi_cdf.append(lambda x: 1.0 * (xi <= x))
             elif isinstance(xi, RV):
                 sorted_xi_cdf.append(xi._distr.cdf)
-        return np.array(sorted_xi_cdf)
+
+        methods = []
+        masks = []
+        for reinf in self.reinforcement_lst:
+            masks.append(self.sorted_xi == reinf.xi)
+            if isinstance(reinf.xi, FloatType):
+                methods.append(lambda x: 1.0 * (reinf.xi <= x))
+            elif isinstance(reinf.xi, RV):
+                methods.append(reinf.xi._distr.cdf)
+        return methods, masks
 
     def vect_xi_cdf(self, epsy):
-        return np.array([ff(epsy[i]) for i, ff in enumerate(self.sorted_xi_cdf)])
+        xi = np.zeros_like(self.sorted_depsf)
+        methods, masks = self.sorted_xi_cdf
+        for i, method in enumerate(methods):
+            xi += method(epsy * masks[i])
+        return xi
 
     def dem_depsf(self, depsf, damage):
         '''evaluates the deps_m given deps_f at that point and the damage array'''
@@ -172,15 +186,12 @@ class CompositeCrackBridge(HasTraits):
 
     ii=0
     def damage_residuum(self, iter_damage):
-        self.ii += 1
+        #self.ii += 1
         #print self.ii
         um_short, em_short, x_short = [0.0], [0.0], [0.0]
         um_long, em_long, x_long = [0.0], [0.0], [0.0]
         dem_short = [self.dem_init(iter_damage)]
         dem_long = [self.dem_init(iter_damage)]
-        #if self.ii == 1:
-        #if self.ii == 9 or self.ii == 29:
-#           self.depsm_depsf2(self.sorted_depsf[-1], iter_damage)
         epsy_crack = np.zeros_like(self.sorted_depsf)
         Lmin = min(self.Ll, self.Lr)
         Lmax = max(self.Ll, self.Lr)
@@ -254,18 +265,18 @@ class CompositeCrackBridge(HasTraits):
                 epsy_crack_clamped = self.clamped(defi, x_short[-1], x_long[-1], em_short[-1],
                              em_long[-1], um_short[-1], um_long[-1])
                 epsy_crack[i] = epsy_crack_clamped
-
-        self.DP.append(np.sum(self.vect_xi_cdf(epsy_crack) - iter_damage))
-        return self.vect_xi_cdf(epsy_crack) - iter_damage
+        residuum = self.vect_xi_cdf(epsy_crack) - iter_damage
+        return residuum
 
     DP = List
 
     damage = Property(depends_on='w, Ll, Lr, reinforcement+')
     @cached_property
     def _get_damage(self):
-        #return np.zeros_like(self.sorted_depsf)
-        return fsolve(self.damage_residuum, np.zeros_like(self.sorted_depsf),
-                      xtol=0.01)
+        ff = t.clock()
+        damage = fsolve(self.damage_residuum, np.zeros_like(self.sorted_depsf))
+        print t.clock() - ff, 'sec total'
+        return damage
 
     profile = Property(depends_on='w, Ll, Lr, reinforcement+')
     @cached_property
@@ -274,9 +285,6 @@ class CompositeCrackBridge(HasTraits):
         um_long, em_long, x_long = [0.0], [0.0], [0.0]
         dem_short = [self.dem_init(self.damage)]
         dem_long = [self.dem_init(self.damage)]
-        #if self.ii == 1:
-        #if self.ii == 9 or self.ii == 29:
-#           self.depsm_depsf2(self.sorted_depsf[-1], iter_damage)
         epsy_crack = np.zeros_like(self.sorted_depsf)
         Lmin = min(self.Ll, self.Lr)
         Lmax = max(self.Ll, self.Lr)
@@ -376,7 +384,7 @@ if __name__ == '__main__':
                           E_f=200e3,
                           xi=RV('weibull_min', shape=5., scale=.02),
                           n_int=25)
-    
+
     reinf2 = Reinforcement(r=0.00345,#r=RV('uniform', loc=0.002, scale=0.002),
                           tau=0.5,#RV('uniform', loc=.0001, scale=.0001),
                           V_f=0.2,
@@ -407,6 +415,7 @@ if __name__ == '__main__':
         w_err = []
         for w in w_arr:
             ccb.w = w
+            print w
             eps.append(ccb.profile[3])
             w_err.append((ccb.w_evaluated - ccb.w) / (ccb.w + 1e-10))
         plt.figure()
@@ -423,15 +432,15 @@ if __name__ == '__main__':
 
     #profile(.001)
 
-    eps_w(np.linspace(.0, .5, 100), label='discrete')
-    reinf1 = Reinforcement(r=0.00345,#RV('uniform', loc=0.002, scale=0.002),
-                          tau=RV('uniform', loc=.499995, scale=.00001),
+    #eps_w(np.linspace(.0, .5, 100), label='discrete')
+    reinf1 = Reinforcement(r=RV('uniform', loc=0.002, scale=0.002),
+                          tau=RV('uniform', loc=.3, scale=.3),
                           V_f=0.2,
                           E_f=200e3,
                           xi=RV('weibull_min', shape=5., scale=.02),
-                          n_int=25)
+                          n_int=10)
     reinf2 = Reinforcement(r=0.00345,#RV('uniform', loc=0.002, scale=0.002),
-                          tau=RV('uniform', loc=.499995, scale=.00001),
+                          tau=RV('uniform', loc=.6, scale=.00001),
                           V_f=0.2,
                           E_f=200e3,
                           xi=RV('weibull_min', shape=10., scale=.04),
@@ -440,8 +449,9 @@ if __name__ == '__main__':
                                reinforcement_lst=[reinf1, reinf2],
                                Ll=10.,
                                Lr=2.)
+
     #plt.figure()
-    #profile(0.001)
+    #profile(0.3)
     eps_w(np.linspace(.0, .5, 30), label='random')
     #bundle(np.linspace(0, 0.65, 30), 20.)
     plt.legend(loc='best')

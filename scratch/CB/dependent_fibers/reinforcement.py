@@ -44,6 +44,7 @@ class Reinforcement(HasTraits):
         if isinstance(tau, np.ndarray) and isinstance(r, np.ndarray):
             r = r.reshape(1, self.n_int)
             tau = tau.reshape(self.n_int, 1)
-            
-        return 2. * tau / r / self.E_f, weights
+            return (2. * tau / r / self.E_f).flatten(), weights
+        else:
+            return 2. * tau / r / self.E_f, weights
     
