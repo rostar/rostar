@@ -6,8 +6,8 @@ compares ODE_em and SPIRRID implementation
 @author: rostar
 '''
 
-from composite_crack_bridge import CompositeCrackBridge
-from composite_crack_bridge import Reinforcement
+from dependent_fibers.composite_crack_bridge import CompositeCrackBridge
+from dependent_fibers.composite_crack_bridge import Reinforcement
 from stats.spirrid.rv import RV
 from matplotlib import pyplot as plt
 import numpy as np
@@ -32,10 +32,10 @@ if __name__ == '__main__':
     n_int = 20
 
     def profile(w):
-        reinf1 = Reinforcement(r=r, tau=tau, V_f=V_f, E_f=E_f, n_int=n_int)
+        reinf1 = Reinforcement(r=r, tau=tau, V_f=V_f, E_f=E_f, xi=xi, n_int=n_int)
         ccb = CompositeCrackBridge(E_m=E_m, reinforcement_lst=[reinf1], Ll=Ll, Lr=Lr, w=w)
-        plt.plot(ccb.profile[0], ccb.profile[1], color='red')
-        plt.plot(ccb.profile[0], ccb.profile[2], color='red', label='ODE')
+        plt.plot(ccb.x_arr, ccb.em_arr, color='red')
+        plt.plot(ccb.x_arr, ccb.ey_arr, color='red', label='ODE')
 
         cb_prof = CBEMClampedFiberStressSP()
         s = SPIRRID(q=cb_prof,
@@ -50,19 +50,19 @@ if __name__ == '__main__':
                  label='SPIRRID')
         epsy_arr = s.mu_q_arr.flatten() / E_f
         epsm_arr = (np.max(epsy_arr) - epsy_arr) * E_f * V_f / (1.-V_f) / E_m
-        plt.plot(np.linspace(-Ll,Lr,n_int**2), epsm_arr, color='blue')
+        plt.plot(np.linspace(-Ll, Lr, n_int**2), epsm_arr, color='blue')
         plt.legend(loc='best')
         print 'SPIRRID w = ', np.trapz(epsy_arr-epsm_arr, np.linspace(-Ll,Lr,n_int**2))
-        print 'DOE w = ', np.trapz(ccb.profile[2] - ccb.profile[1], ccb.profile[0])
-        plt.show() 
+        print 'DOE w = ', ccb.w_evaluated
+        plt.show()
 
     def eps_w(w_arr):
-        reinf1 = Reinforcement(r=r, tau=tau, V_f=V_f, E_f=E_f, n_int=n_int)
+        reinf1 = Reinforcement(r=r, tau=tau, V_f=V_f, E_f=E_f, xi=xi, n_int=n_int)
         ccb = CompositeCrackBridge(E_m=E_m, reinforcement_lst=[reinf1], Ll=Ll, Lr=Lr)
         eps = []
         for w in w_arr:
             ccb.w = w
-            eps.append(np.max(ccb.profile[2]))
+            eps.append(ccb.max_norm_stress)
         plt.plot(w_arr, eps, color='red', label='ODE')
 
         cb_emtrx = CBEMClampedFiberStress()
@@ -73,10 +73,9 @@ if __name__ == '__main__':
                            E_m=E_m, r=r, V_f=V_f, Ll=Ll, Lr=Lr),
          n_int=n_int)
 
-
-        plt.plot(w_arr, s.mu_q_arr/E_f, color='blue', label='SPIRRID')
+        plt.plot(w_arr, s.mu_q_arr, color='blue', label='SPIRRID')
         plt.legend(loc='best')
         plt.show()
 
     profile(.2)
-    eps_w(np.linspace(0, 3.5, 50))
+    eps_w(np.linspace(0, .5, 50))

@@ -248,14 +248,12 @@ class CompositeCrackBridge(HasTraits):
                     x_long.append(x_long[-1] + dxi)
                     em_long.append(emi)
                     um_long.append(umi)
-                    E_mtrx_glob = E_mtrx
                     epsy_crack[i] = (em_long[-1] + x_long[-1] * defi)
                 else:
                     dxi = Lmax - x_long[-1]
                     x_long.append(Lmax)
                     em_long.append(em_long[-1] + dem_long[-1] * dxi)
                     um_long.append(um_long[-1] + (em_long[-2] + em_long[-1]) * dxi / 2.)
-                    E_mtrx_glob = E_mtrx
                     epsy_crack_clamped = self.clamped(defi, x_short[-1], x_long[-1], em_short[-1],
                                  em_long[-1], um_short[-1], um_long[-1])
                     epsy_crack[i] = epsy_crack_clamped
@@ -273,9 +271,9 @@ class CompositeCrackBridge(HasTraits):
     damage = Property(depends_on='w, Ll, Lr, reinforcement+')
     @cached_property
     def _get_damage(self):
-        ff = t.clock()
+        #ff = t.clock()
         damage = fsolve(self.damage_residuum, np.zeros_like(self.sorted_depsf))
-        print t.clock() - ff, 'sec total'
+        #print t.clock() - ff, 'sec total'
         return damage
 
     results = Property(depends_on='w, Ll, Lr, reinforcement+')
@@ -454,4 +452,3 @@ if __name__ == '__main__':
     #bundle(np.linspace(0, 0.65, 30), 20.)
     plt.legend(loc='best')
     plt.show()
-    #plot3d()

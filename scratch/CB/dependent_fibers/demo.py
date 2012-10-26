@@ -92,11 +92,11 @@ if __name__ == '__main__':
         stiffness due to broken fibers, which are in the CB model
         added to matrix stiffness. As the matrix E grows and the V_f
         decreases, the solutions tend to get closer'''
-        tau, E_f, E_m, V_f = 0.5, 200e3, 25e3, 0.03
+        tau, E_f, E_m, V_f = 0.2, 200e3, 25e2, 0.03
         r, shape, scale = 0.00345, 5., 0.02
 
         # analytical solution for damage controlled test
-        ctrl_damage = np.linspace(0.0, .99, 50)
+        ctrl_damage = np.linspace(0.0, .99, 100)
 
         def crackbridge(w, tau, E_f, E_m, V_f, r, omega):
             Kf = E_f * V_f * (1 - omega)
@@ -128,15 +128,15 @@ if __name__ == '__main__':
                                    Ll=1000., Lr=1000.)
 
         stress = []
-        w_arr = np.linspace(0.0, np.max(w_lst), 50)
+        w_arr = np.linspace(0.0, np.max(w_lst), 100)
         for w in w_arr:
             ccb.w = w
             stress.append(ccb.max_norm_stress)
         plt.plot(w_arr, stress, color='blue', lw=2, label='CB model')
         plt.legend(loc='best')
 
-    #profile(.01)
+    profile(.01)
     #norm_stress_w(np.linspace(.0, .5, 50))
     #bundle_comparison(np.linspace(0, 0.65, 30), 20., 5., 0.02, 70e3)
-    analytical_comparison()
+    #analytical_comparison()
     plt.show()
