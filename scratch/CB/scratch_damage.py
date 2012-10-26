@@ -1,14 +1,14 @@
-from w_omega import WOmega, WOmegaDamage
-from u_omega import UOmega, UOmegaDamage
-from u_analytical import UOmegaAnalyt
-from w_analyt_iter import WAnalytIter
+from independent_fibers.w_omega import WOmega, WOmegaDamage
+from independent_fibers.u_omega import UOmega, UOmegaDamage
+from independent_fibers.u_analytical import UOmegaAnalyt
+from independent_fibers.w_analyt_iter import WAnalytIter
 from stats.spirrid.spirrid import SPIRRID
 from stats.spirrid.rv import RV
 from matplotlib import pyplot as plt
 import numpy as np
 from scipy.optimize import brentq
 from math import e
-from composite_crack_bridge import CompositeCrackBridge, Reinforcement
+from dependent_fibers.composite_crack_bridge import CompositeCrackBridge, Reinforcement
 
 if __name__ == '__main__':
 
@@ -19,7 +19,7 @@ if __name__ == '__main__':
     # filaments
     r = 0.00345
     V_f = 0.1
-    tau = RV('uniform', loc=0.2, scale=1.)
+    tau = 0.5#RV('uniform', loc=0.2, scale=1.)
     E_f = 200e3
     E_m = 25e3
     l = 0.0
@@ -241,10 +241,9 @@ if __name__ == '__main__':
         eps_w(w_arr)
 
 
-w_omega_spirrid()
-DOE(np.linspace(0., .8, 50))
+#w_omega_spirrid()
 #w_analytical_iterative()
-#w_analytical()
+w_analytical()
 #u_analytical()
 #no_damage()
 #u_u()

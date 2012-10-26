@@ -278,9 +278,9 @@ class CompositeCrackBridge(HasTraits):
         print t.clock() - ff, 'sec total'
         return damage
 
-    profile = Property(depends_on='w, Ll, Lr, reinforcement+')
+    results = Property(depends_on='w, Ll, Lr, reinforcement+')
     @cached_property
-    def _get_profile(self):
+    def _get_results(self):
         um_short, em_short, x_short = [0.0], [0.0], [0.0]
         um_long, em_long, x_long = [0.0], [0.0], [0.0]
         dem_short = [self.dem_init(self.damage)]
@@ -370,11 +370,30 @@ class CompositeCrackBridge(HasTraits):
                                                  self.sorted_Vf_weights *
                                                  self.sorted_E_f * (1. - self.damage))
 
+    x_arr = Property(depends_on='w, Ll, Lr, reinforcement+')
+    @cached_property
+    def _get_x_arr(self):
+        return self.results[0]
+
+    em_arr = Property(depends_on='w, Ll, Lr, reinforcement+')
+    @cached_property
+    def _get_em_arr(self):
+        return self.results[1]
+
+    ey_arr = Property(depends_on='w, Ll, Lr, reinforcement+')
+    @cached_property
+    def _get_ey_arr(self):
+        return self.results[2]
+
+    max_norm_stress = Property(depends_on='w, Ll, Lr, reinforcement+')
+    @cached_property
+    def _get_max_norm_stress(self):
+        return self.results[3]
+
     w_evaluated = Property(depends_on='w, Ll, Lr, reinforcement+')
     @cached_property
     def _get_w_evaluated(self):
-        return  np.trapz(self.profile[2] - self.profile[1], self.profile[0])
-
+        return  np.trapz(self.ey_arr - self.em_arr, self.x_arr)
 
 if __name__ == '__main__':
 
@@ -405,8 +424,8 @@ if __name__ == '__main__':
 
     def profile(w):
         ccb.w = w
-        plt.plot(ccb.profile[0], ccb.profile[1], label='w_eval='+str(ccb.w_evaluated)+' w_ctrl='+str(ccb.w))
-        plt.plot(ccb.profile[0], ccb.profile[2], label='yarn')
+        plt.plot(ccb.x_arr, ccb.em_arr, label='w_eval='+str(ccb.w_evaluated)+' w_ctrl='+str(ccb.w))
+        plt.plot(ccb.x_arr, ccb.ey_arr, label='yarn')
         plt.xlabel('position [mm]')
         plt.ylabel('strain')
 
@@ -416,7 +435,7 @@ if __name__ == '__main__':
         for w in w_arr:
             ccb.w = w
             print w
-            eps.append(ccb.profile[3])
+            eps.append(ccb.max_norm_stress)
             w_err.append((ccb.w_evaluated - ccb.w) / (ccb.w + 1e-10))
         plt.figure()
         plt.plot(w_arr, w_err, label='error in w')
@@ -427,32 +446,11 @@ if __name__ == '__main__':
 
     def bundle(w_arr, L):
         from scipy.stats import weibull_min
-        yy = w_arr / L * (1. - weibull_min(5., scale=0.02).cdf(w_arr/L))
+        yy = w_arr / L * (1. - weibull_min(5., scale=0.02).cdf(w_arr / L))
         plt.plot(w_arr, yy * 200e3, lw=4, color='red', ls='dashed', label='bundle')
 
     #profile(.001)
-
-    #eps_w(np.linspace(.0, .5, 100), label='discrete')
-    reinf1 = Reinforcement(r=RV('uniform', loc=0.002, scale=0.002),
-                          tau=RV('uniform', loc=.3, scale=.3),
-                          V_f=0.2,
-                          E_f=200e3,
-                          xi=RV('weibull_min', shape=5., scale=.02),
-                          n_int=10)
-    reinf2 = Reinforcement(r=0.00345,#RV('uniform', loc=0.002, scale=0.002),
-                          tau=RV('uniform', loc=.6, scale=.00001),
-                          V_f=0.2,
-                          E_f=200e3,
-                          xi=RV('weibull_min', shape=10., scale=.04),
-                          n_int=25)
-    ccb = CompositeCrackBridge(E_m=25e3,
-                               reinforcement_lst=[reinf1, reinf2],
-                               Ll=10.,
-                               Lr=2.)
-
-    #plt.figure()
-    #profile(0.3)
-    eps_w(np.linspace(.0, .5, 30), label='random')
+    eps_w(np.linspace(.0, .5, 30), label='ld')
     #bundle(np.linspace(0, 0.65, 30), 20.)
     plt.legend(loc='best')
     plt.show()
