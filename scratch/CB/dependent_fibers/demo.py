@@ -13,20 +13,20 @@ import numpy as np
 if __name__ == '__main__':
 
     # AR-glass
-    reinf1 = Reinforcement(r=0.013,#RV('uniform', loc=0.002, scale=0.002),
+    reinf1 = Reinforcement(r=RV('uniform', loc=0.012, scale=0.002),
                           tau=RV('uniform', loc=.3, scale=.1),
-                          V_f=0.4,
+                          V_f=0.2,
                           E_f=72e3,
                           xi=RV('weibull_min', shape=20., scale=.02),
-                          n_int=20)
+                          n_int=15)
 
     # carbon
-    reinf2 = Reinforcement(r=0.00345,#RV('uniform', loc=0.002, scale=0.002),
+    reinf2 = Reinforcement(r=RV('uniform', loc=0.002, scale=0.002),
                           tau=RV('uniform', loc=.6, scale=.1),
                           V_f=0.05,
                           E_f=200e3,
                           xi=RV('weibull_min', shape=10., scale=.015),
-                          n_int=20)
+                          n_int=15)
 
     # instance of CompCrackBridge with matrix E and BC
     ccb = CompositeCrackBridge(E_m=25e3,
@@ -70,7 +70,7 @@ if __name__ == '__main__':
         from scipy.stats import weibull_min
         eps = w_arr / L * (1. - weibull_min(shape, scale=scale).cdf(w_arr / L))
         plt.plot(w_arr / L, eps * E, lw=4, color='red', ls='dashed', label='FB model')
-        
+
         bundle = Reinforcement(r=0.013, tau=0.00001, V_f=0.5, E_f=E,
                           xi=RV('weibull_min', shape=shape, scale=scale),
                           n_int=5)
@@ -92,7 +92,7 @@ if __name__ == '__main__':
         stiffness due to broken fibers, which are in the CB model
         added to matrix stiffness. As the matrix E grows and the V_f
         decreases, the solutions tend to get closer'''
-        tau, E_f, E_m, V_f = 0.2, 200e3, 25e2, 0.03
+        tau, E_f, E_m, V_f = 0.2, 200e3, 25e3, 0.3
         r, shape, scale = 0.00345, 5., 0.02
 
         # analytical solution for damage controlled test
@@ -135,8 +135,8 @@ if __name__ == '__main__':
         plt.plot(w_arr, stress, color='blue', lw=2, label='CB model')
         plt.legend(loc='best')
 
-    profile(.01)
+    #profile(.01)
     #norm_stress_w(np.linspace(.0, .5, 50))
     #bundle_comparison(np.linspace(0, 0.65, 30), 20., 5., 0.02, 70e3)
-    #analytical_comparison()
+    analytical_comparison()
     plt.show()

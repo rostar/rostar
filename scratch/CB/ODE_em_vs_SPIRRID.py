@@ -25,7 +25,7 @@ if __name__ == '__main__':
     E_m = 25e3
     l = 0.0#RV('uniform', scale=10., loc=2.)
     theta = 0.0
-    xi = 200.#RV('weibull_min', scale=0.02, shape=5)
+    xi = RV('weibull_min', scale=0.02, shape=5)
     phi = 1.
     Ll = 5.
     Lr = 40.
@@ -77,5 +77,5 @@ if __name__ == '__main__':
         plt.legend(loc='best')
         plt.show()
 
-    profile(.2)
-    eps_w(np.linspace(0, .5, 50))
+    #profile(.5)
+    eps_w(np.linspace(0, .2, 100))

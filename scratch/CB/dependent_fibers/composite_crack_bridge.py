@@ -18,7 +18,7 @@ from etsproxy.traits.api import HasTraits, cached_property, \
     Float, Property, Instance, List
 from types import FloatType
 from reinforcement import Reinforcement
-from scipy.optimize import fsolve
+from scipy.optimize import fsolve, broyden2
 import time as t
 
 
@@ -100,13 +100,6 @@ class CompositeCrackBridge(HasTraits):
     @cached_property
     def _get_sorted_xi_cdf(self):
         '''breaking strain: CDF for random and Heaviside for discrete values'''
-        sorted_xi_cdf = []
-        for xi in self.sorted_xi:
-            if isinstance(xi, FloatType):
-                sorted_xi_cdf.append(lambda x: 1.0 * (xi <= x))
-            elif isinstance(xi, RV):
-                sorted_xi_cdf.append(xi._distr.cdf)
-
         methods = []
         masks = []
         for reinf in self.reinforcement_lst:
@@ -145,9 +138,10 @@ class CompositeCrackBridge(HasTraits):
                                          self.sorted_E_f * damage)
         E_mtrx = (1. - self.V_f_tot) * self.E_m + broken_fibers_stiffness
         mean_acting_depsm = np.sum(self.sorted_depsf *
-                                   self.sorted_stats_weights * self.sorted_E_f *
-                                   self.sorted_V_f * (1. - damage)) / E_mtrx
-        return mean_acting_depsm
+                                   self.sorted_stats_weights *
+                                   self.sorted_E_f * self.sorted_V_f *
+                                   (1. - damage))
+        return mean_acting_depsm / E_mtrx
 
     def epsy_arr(self, epsm_arr, epsy_crack, E_mtrx_arr):
         sigma_c = epsy_crack * (self.E_c - self.E_m * (1. - self.V_f_tot))
@@ -167,9 +161,15 @@ class CompositeCrackBridge(HasTraits):
     def one_sided(self, defi, x0, demi, em0, um0, clamped, damage):
         w = self.w
         xs = clamped[0]
-        ems = clamped[1]
-        ums = clamped[2]
-        dxi = (-xs*demi-demi*x0-defi*xs-defi*x0+(2*demi*x0*defi*xs+demi*x0**2*defi+2*demi**2*x0*xs+3*defi*xs**2*demi-2*demi*xs*em0-2*demi*em0*x0-2*defi*xs*em0-2*defi*em0*x0+demi**2*x0**2+2*defi**2*xs**2+xs**2*demi**2+2*demi*um0+2*demi*ums+2*demi*w+2*defi*um0+2*defi*ums+2*defi*w)**(0.5))/(demi+defi)
+        ums = clamped[1]
+        dxi = (-xs * demi - demi * x0 - defi * xs - defi * x0 + (2 *
+                demi * x0 * defi * xs + demi * x0 ** 2 * defi + 2 *
+                demi ** 2 * x0 * xs + 3 * defi * xs ** 2 * demi - 2 *
+                demi * xs * em0 - 2 * demi * em0 * x0 - 2 * defi *
+                xs * em0 - 2 * defi * em0 * x0 + demi ** 2 * x0 ** 2 +
+                2 * defi ** 2 * xs ** 2 + xs ** 2 * demi ** 2 + 2 *
+                demi * um0 + 2 * demi * ums + 2 * demi * w + 2 * defi *
+                um0 + 2 * defi * ums + 2 * defi * w) ** (0.5)) / (demi + defi)
         dem, E_mtrx = self.dem_depsf(defi, damage)
         emi = em0 + demi * dxi
         umi = um0 + (em0 + emi) * dxi / 2.
@@ -184,10 +184,7 @@ class CompositeCrackBridge(HasTraits):
         h = (self.w - c1 - c2 - c3 - c4 - c5) / (xl + xs)
         return defi * xl + eml + h
 
-    ii=0
     def damage_residuum(self, iter_damage):
-        #self.ii += 1
-        #print self.ii
         um_short, em_short, x_short = [0.0], [0.0], [0.0]
         um_long, em_long, x_long = [0.0], [0.0], [0.0]
         dem_short = [self.dem_init(iter_damage)]
@@ -218,7 +215,7 @@ class CompositeCrackBridge(HasTraits):
                     x_short.append(Lmin)
                     em_short.append(em_short[-1] + dem_short[-1] * deltax)
                     um_short.append(um_short[-1] + (em_short[-2] + em_short[-1]) * deltax / 2.)
-                    short_side = [x_short[-1], em_short[-1], um_short[-1]]
+                    short_side = [x_short[-1], um_short[-1]]
                     dxi, dem, emi, umi, E_mtrx = self.one_sided(defi, x_long[-1], dem_long[-1],
                                             em_long[-1], um_long[-1], short_side, iter_damage)
 
@@ -240,7 +237,7 @@ class CompositeCrackBridge(HasTraits):
 
             elif x_short[-1] == Lmin and x_long[-1] < Lmax:
                 #one sided pullout
-                clamped = [x_short[-1], em_short[-1], um_short[-1]]
+                clamped = [x_short[-1], um_short[-1]]
                 dxi, dem, emi, umi, E_mtrx = self.one_sided(defi, x_long[-1], dem_long[-1],
                                     em_long[-1], um_long[-1], clamped, iter_damage)
                 if x_long[-1] + dxi < Lmax:
@@ -266,14 +263,12 @@ class CompositeCrackBridge(HasTraits):
         residuum = self.vect_xi_cdf(epsy_crack) - iter_damage
         return residuum
 
-    DP = List
-
     damage = Property(depends_on='w, Ll, Lr, reinforcement+')
     @cached_property
     def _get_damage(self):
-        #ff = t.clock()
-        damage = fsolve(self.damage_residuum, np.zeros_like(self.sorted_depsf))
-        #print t.clock() - ff, 'sec total'
+        ff = t.clock()
+        damage = broyden2(self.damage_residuum, np.zeros_like(self.sorted_depsf))
+        print t.clock() - ff, 'sec total'
         return damage
 
     results = Property(depends_on='w, Ll, Lr, reinforcement+')
@@ -310,7 +305,7 @@ class CompositeCrackBridge(HasTraits):
                     x_short.append(Lmin)
                     em_short.append(em_short[-1] + dem_short[-1] * deltax)
                     um_short.append(um_short[-1] + (em_short[-2] + em_short[-1]) * deltax / 2.)
-                    short_side = [x_short[-1], em_short[-1], um_short[-1]]
+                    short_side = [x_short[-1], um_short[-1]]
                     dxi, dem, emi, umi, E_mtrx = self.one_sided(defi, x_long[-1], dem_long[-1],
                                             em_long[-1], um_long[-1], short_side, self.damage)
                     E_mtrx_glob = E_mtrx
@@ -332,7 +327,7 @@ class CompositeCrackBridge(HasTraits):
 
             elif x_short[-1] == Lmin and x_long[-1] < Lmax:
                 #one sided pullout
-                clamped = [x_short[-1], em_short[-1], um_short[-1]]
+                clamped = [x_short[-1], um_short[-1]]
                 dxi, dem, emi, umi, E_mtrx = self.one_sided(defi, x_long[-1], dem_long[-1],
                                     em_long[-1], um_long[-1], clamped, self.damage)
                 if x_long[-1] + dxi < Lmax:
@@ -395,19 +390,19 @@ class CompositeCrackBridge(HasTraits):
 
 if __name__ == '__main__':
 
-    reinf1 = Reinforcement(r=0.00345,#RV('uniform', loc=0.002, scale=0.002),
-                          tau=0.5,#RV('uniform', loc=.5, scale=.001),
+    reinf1 = Reinforcement(r=RV('uniform', loc=0.002, scale=0.002),
+                          tau=RV('uniform', loc=.5, scale=.001),
                           V_f=0.2,
                           E_f=200e3,
                           xi=RV('weibull_min', shape=5., scale=.02),
-                          n_int=25)
+                          n_int=20)
 
-    reinf2 = Reinforcement(r=0.00345,#r=RV('uniform', loc=0.002, scale=0.002),
-                          tau=0.5,#RV('uniform', loc=.0001, scale=.0001),
+    reinf2 = Reinforcement(r=RV('uniform', loc=0.002, scale=0.002),
+                          tau=RV('uniform', loc=.5, scale=.1),
                           V_f=0.2,
                           E_f=200e3,
                           xi=RV('weibull_min', shape=10., scale=.04),
-                          n_int=25)
+                          n_int=20)
 
     reinf3 = Reinforcement(r=0.00345,#RV('uniform', loc=0.002, scale=0.002),
                           tau=RV('uniform', loc=1., scale=3.),
@@ -418,7 +413,7 @@ if __name__ == '__main__':
     ccb = CompositeCrackBridge(E_m=25e3,
                                reinforcement_lst=[reinf1, reinf2],
                                Ll=10.,
-                               Lr=2.)
+                               Lr=20.)
 
     def profile(w):
         ccb.w = w
@@ -447,8 +442,8 @@ if __name__ == '__main__':
         yy = w_arr / L * (1. - weibull_min(5., scale=0.02).cdf(w_arr / L))
         plt.plot(w_arr, yy * 200e3, lw=4, color='red', ls='dashed', label='bundle')
 
-    #profile(.001)
-    eps_w(np.linspace(.0, .5, 30), label='ld')
+    profile(.1)
+    #eps_w(np.linspace(.0, .8, 50), label='ld')
     #bundle(np.linspace(0, 0.65, 30), 20.)
     plt.legend(loc='best')
     plt.show()
