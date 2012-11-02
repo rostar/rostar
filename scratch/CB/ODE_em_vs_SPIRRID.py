@@ -14,12 +14,14 @@ import numpy as np
 from quaducom.micro.resp_func.cb_emtrx_clamped_fiber_stress import \
     CBEMClampedFiberStress, CBEMClampedFiberStressSP
 from stats.spirrid.spirrid import SPIRRID
+from independent_fibers.w_omega import WOmega, WOmegaDamage
+from scipy.optimize import brentq
 
 
 if __name__ == '__main__':
 
     r = 0.00345#RV('uniform', loc=0.002, scale=0.002)
-    V_f = 0.7
+    V_f = 0.3
     tau = RV('weibull_min', shape=3., scale=.3)
     E_f = 200e3
     E_m = 25e3
@@ -30,6 +32,12 @@ if __name__ == '__main__':
     Ll = 5.
     Lr = 40.
     n_int = 20
+
+    ctrl_damage = np.linspace(0.0, .99, 50)
+    w_arr = np.linspace(0, .57, 50)
+    n_int = 50
+
+    spirrid_plot = False
 
     def profile(w):
         reinf1 = Reinforcement(r=r, tau=tau, V_f=V_f, E_f=E_f, xi=xi, n_int=n_int)
@@ -65,17 +73,37 @@ if __name__ == '__main__':
             eps.append(ccb.max_norm_stress)
         plt.plot(w_arr, eps, color='red', label='ODE')
 
-        cb_emtrx = CBEMClampedFiberStress()
-        s = SPIRRID(q=cb_emtrx,
-                sampling_type='PGrid',
-                evars=dict(w=w_arr),
-                tvars=dict(tau=tau, l=l, E_f=E_f, theta=theta, xi=xi, phi=phi,
-                           E_m=E_m, r=r, V_f=V_f, Ll=Ll, Lr=Lr),
-         n_int=n_int)
+        cb = WOmega()
+        s = SPIRRID(q=cb,
+             sampling_type='PGrid',
+             evars=dict(w=w_arr),
+             tvars=dict(tau=tau, l=l, E_f=E_f, theta=theta, xi=xi, phi=phi,
+                        E_m=E_m, r=r, V_f=V_f, Ll=Ll, Lr=Lr),
+             n_int=n_int)
 
-        plt.plot(w_arr, s.mu_q_arr, color='blue', label='SPIRRID')
+        damage_func = WOmegaDamage()
+        s_damage = SPIRRID(q=damage_func,
+                    sampling_type='PGrid',
+                    tvars=dict(tau=tau, l=l, E_f=E_f, theta=theta, xi=xi,
+                               phi=phi, E_m=E_m, r=r, V_f=V_f, Ll=Ll, Lr=Lr),
+                    n_int=n_int)
+
+        def residuum(w, omega):
+            s_damage.evars['w'] = np.array([w])
+            s_damage.tvars['omega'] = omega
+            return s_damage.mu_q_arr - omega
+
+        for omega in ctrl_damage:
+            print omega
+            wD = brentq(residuum, 0.0, 5.0, args=(omega,))
+            s.q = WOmega()
+            s.evars['w'] = np.array([wD])
+            s.tvars['omega'] = omega
+            mu = s.mu_q_arr
+            plt.plot(wD, mu, 'ro')
+
         plt.legend(loc='best')
         plt.show()
 
     #profile(.5)
-    eps_w(np.linspace(0, .2, 100))
+    eps_w(np.linspace(0, .8, 50))
