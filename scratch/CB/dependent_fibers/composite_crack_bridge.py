@@ -136,7 +136,7 @@ class CompositeCrackBridge(HasTraits):
         broken_fibers_stiffness = np.sum(self.sorted_V_f *
                                          self.sorted_stats_weights *
                                          self.sorted_E_f * damage)
-        E_mtrx = (1. - self.V_f_tot) * self.E_m + broken_fibers_stiffness
+        E_mtrx = (1. - self.V_f_tot) * self.E_m# + broken_fibers_stiffness
         mean_acting_depsm = np.sum(self.sorted_depsf *
                                    self.sorted_stats_weights *
                                    self.sorted_E_f * self.sorted_V_f *
