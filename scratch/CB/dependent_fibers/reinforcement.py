@@ -1,3 +1,4 @@
+
 '''
 Created on 23.10.2012
 
@@ -13,6 +14,29 @@ from etsproxy.traits.api import HasTraits, cached_property, \
     Float, Property, Int
 from types import FloatType
 from util.traits.either_type import EitherType
+from scipy.stats import weibull_min
+
+class WeibullFibers(HasTraits):
+    '''class evaluating damage for weibull fibers with linearly decreasing stress'''
+    shape = Float(5.0)
+    scale = Float(0.02)
+    L0 = Float(10.)
+    
+    distribution = Property(depends_on='shape, scale, L0')
+    @cached_property
+    def _get_distribution(self):
+        return weibull_min(self.shape, scale=self.scale)
+    
+    def weibull_fibers_Pf(self, epsy_arr, depsf, x_short, x_long):
+        x_short = np.hstack((x_short[1:], np.repeat(x_short[-1], len(epsy_arr)-len(x_short[1:]))))
+        x_long = np.hstack((x_long[1:], np.repeat(x_long[-1], len(epsy_arr)-len(x_long[1:]))))
+        Pf_short = (((depsf * x_short - 1.) * ((epsy_arr * (1. - depsf * x_short)))
+                     / self.scale) ** self.shape + ( epsy_arr / self.scale ) ** self.shape) / (self.shape + 1) / depsf
+        Pf_long = (((depsf * x_long - 1.) * ((epsy_arr * (1. - depsf * x_long)))
+                     / self.scale) ** self.shape + ( epsy_arr / self.scale ) ** self.shape) / (self.shape + 1) / depsf
+        Pf_short = 1. - np.exp(-1. / self.L0 * Pf_short)
+        Pf_long = 1. - np.exp(-1. / self.L0 * Pf_long)
+        return Pf_long + Pf_short - Pf_long * Pf_short  
 
 
 class Reinforcement(HasTraits):
@@ -20,7 +44,7 @@ class Reinforcement(HasTraits):
     r = EitherType(klasses=[FloatType, RV])
     V_f = Float
     E_f = Float
-    xi = EitherType(klasses=[FloatType, RV])
+    xi = EitherType(klasses=[FloatType, RV, WeibullFibers])
     tau = EitherType(klasses=[FloatType, RV])
     n_int = Int
 
@@ -48,3 +72,4 @@ class Reinforcement(HasTraits):
         else:
             return 2. * tau / r / self.E_f, weights
     
+

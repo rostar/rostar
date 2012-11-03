@@ -10,17 +10,15 @@ CompositeCrackBridge class.
 
 @author: rostar
 '''
-
 import numpy as np
 from stats.spirrid.rv import RV
 from matplotlib import pyplot as plt
 from etsproxy.traits.api import HasTraits, cached_property, \
     Float, Property, Instance, List
 from types import FloatType
-from reinforcement import Reinforcement
+from reinforcement import Reinforcement, WeibullFibers
 from scipy.optimize import fsolve, broyden2
 import time as t
-
 
 class CompositeCrackBridge(HasTraits):
 
@@ -108,14 +106,19 @@ class CompositeCrackBridge(HasTraits):
                 methods.append(lambda x: 1.0 * (reinf.xi <= x))
             elif isinstance(reinf.xi, RV):
                 methods.append(reinf.xi._distr.cdf)
+            elif isinstance(reinf.xi, WeibullFibers):
+                methods.append(reinf.xi.weibull_fibers_Pf)
         return methods, masks
 
-    def vect_xi_cdf(self, epsy):
-        xi = np.zeros_like(self.sorted_depsf)
+    def vect_xi_cdf(self, epsy, x_short, x_long):
+        Pf = np.zeros_like(self.sorted_depsf)
         methods, masks = self.sorted_xi_cdf
         for i, method in enumerate(methods):
-            xi += method(epsy * masks[i])
-        return xi
+            if method.__name__ == 'weibull_fibers_Pf':
+                Pf += method(epsy * masks[i], self.sorted_depsf, x_short=x_short, x_long=x_long)
+            else:
+                Pf += method(epsy * masks[i])
+        return Pf
 
     def dem_depsf(self, depsf, damage):
         '''evaluates the deps_m given deps_f at that point and the damage array'''
@@ -136,7 +139,7 @@ class CompositeCrackBridge(HasTraits):
         broken_fibers_stiffness = np.sum(self.sorted_V_f *
                                          self.sorted_stats_weights *
                                          self.sorted_E_f * damage)
-        E_mtrx = (1. - self.V_f_tot) * self.E_m# + broken_fibers_stiffness
+        E_mtrx = (1. - self.V_f_tot) * self.E_m + broken_fibers_stiffness
         mean_acting_depsm = np.sum(self.sorted_depsf *
                                    self.sorted_stats_weights *
                                    self.sorted_E_f * self.sorted_V_f *
@@ -260,16 +263,23 @@ class CompositeCrackBridge(HasTraits):
                 epsy_crack_clamped = self.clamped(defi, x_short[-1], x_long[-1], em_short[-1],
                              em_long[-1], um_short[-1], um_long[-1])
                 epsy_crack[i] = epsy_crack_clamped
-        residuum = self.vect_xi_cdf(epsy_crack) - iter_damage
+        residuum = self.vect_xi_cdf(epsy_crack, x_short=x_short, x_long=x_long) - iter_damage
         return residuum
 
     damage = Property(depends_on='w, Ll, Lr, reinforcement+')
     @cached_property
     def _get_damage(self):
-        ff = t.clock()
-        damage = broyden2(self.damage_residuum, np.zeros_like(self.sorted_depsf))
-        print t.clock() - ff, 'sec total'
-        return damage
+        if self.w == 0.:
+            damage = np.zeros_like(self.sorted_depsf)
+        else:
+            ff = t.clock()
+            try:
+                damage = broyden2(self.damage_residuum, 0.2 * np.ones_like(self.sorted_depsf), maxiter=20)
+            except:
+                print 'broyden2 does not converge fast enough: switched to fsolve for this step'
+                damage = fsolve(self.damage_residuum, 0.2 * np.ones_like(self.sorted_depsf))
+            print t.clock() - ff, 'sec total, damage =', np.sum(damage)/len(damage)
+        return damage 
 
     results = Property(depends_on='w, Ll, Lr, reinforcement+')
     @cached_property
@@ -390,30 +400,31 @@ class CompositeCrackBridge(HasTraits):
 
 if __name__ == '__main__':
 
-    reinf1 = Reinforcement(r=RV('uniform', loc=0.002, scale=0.002),
-                          tau=RV('uniform', loc=.5, scale=.001),
+    reinf1 = Reinforcement(r=0.00345,#RV('uniform', loc=0.002, scale=0.002),
+                          tau=RV('uniform', loc=.5, scale=.5),
                           V_f=0.2,
                           E_f=200e3,
-                          xi=RV('weibull_min', shape=5., scale=.02),
-                          n_int=20)
+                          xi=WeibullFibers(shape=5., scale=0.02, L0=10.),#RV('weibull_min', shape=5., scale=.02),
+                          n_int=100)
 
-    reinf2 = Reinforcement(r=RV('uniform', loc=0.002, scale=0.002),
+    reinf2 = Reinforcement(r=0.00345,#RV('uniform', loc=0.002, scale=0.002),
                           tau=RV('uniform', loc=.5, scale=.1),
                           V_f=0.2,
                           E_f=200e3,
-                          xi=RV('weibull_min', shape=10., scale=.04),
-                          n_int=20)
+                          xi=0.04,#RV('weibull_min', shape=100., scale=.04),
+                          n_int=30)
 
     reinf3 = Reinforcement(r=0.00345,#RV('uniform', loc=0.002, scale=0.002),
                           tau=RV('uniform', loc=1., scale=3.),
                           V_f=0.1,
                           E_f=200e3,
+                          xi=0.03,
                           n_int=20)
 
     ccb = CompositeCrackBridge(E_m=25e3,
-                               reinforcement_lst=[reinf1, reinf2],
-                               Ll=10.,
-                               Lr=20.)
+                               reinforcement_lst=[reinf1],
+                               Ll=3.,
+                               Lr=5.)
 
     def profile(w):
         ccb.w = w
@@ -427,7 +438,6 @@ if __name__ == '__main__':
         w_err = []
         for w in w_arr:
             ccb.w = w
-            print w
             eps.append(ccb.max_norm_stress)
             w_err.append((ccb.w_evaluated - ccb.w) / (ccb.w + 1e-10))
         plt.figure()
@@ -442,8 +452,8 @@ if __name__ == '__main__':
         yy = w_arr / L * (1. - weibull_min(5., scale=0.02).cdf(w_arr / L))
         plt.plot(w_arr, yy * 200e3, lw=4, color='red', ls='dashed', label='bundle')
 
-    profile(.1)
-    #eps_w(np.linspace(.0, .8, 50), label='ld')
+    #profile(.1)
+    eps_w(np.linspace(.0, .2, 50), label='ld')
     #bundle(np.linspace(0, 0.65, 30), 20.)
     plt.legend(loc='best')
     plt.show()
