@@ -57,7 +57,7 @@ class CompositeCrackBridge(HasTraits):
             n_int = len(np.hstack((np.array([]), reinf.depsf_arr[0])))
             depsf_arr = np.hstack((depsf_arr, reinf.depsf_arr[0]))
             weight_arr = np.hstack((weight_arr, np.repeat(reinf.depsf_arr[1], n_int)))
-            V_f_arr = np.hstack((V_f_arr, np.repeat(reinf.V_f, n_int)))
+            V_f_arr = np.hstack((V_f_arr, np.repeat(reinf.V_f, n_int) * reinf.depsf_arr[2]))
             E_f_arr = np.hstack((E_f_arr, np.repeat(reinf.E_f, n_int)))
             xi_arr = np.hstack((xi_arr, np.repeat(reinf.xi, n_int)))
         argsort = np.argsort(depsf_arr)[::-1]
@@ -278,7 +278,7 @@ class CompositeCrackBridge(HasTraits):
             except:
                 print 'broyden2 does not converge fast enough: switched to fsolve for this step'
                 damage = fsolve(self.damage_residuum, 0.2 * np.ones_like(self.sorted_depsf))
-            print t.clock() - ff, 'sec total, damage =', np.sum(damage)/len(damage)
+            print 'damage =', np.sum(damage)/len(damage), 'iteration time =', t.clock() - ff, 'sec' 
         return damage 
 
     results = Property(depends_on='w, Ll, Lr, reinforcement+')
@@ -400,16 +400,16 @@ class CompositeCrackBridge(HasTraits):
 
 if __name__ == '__main__':
 
-    reinf1 = Reinforcement(r=0.00345,#RV('uniform', loc=0.002, scale=0.002),
+    reinf1 = Reinforcement(r=RV('uniform', loc=0.001, scale=0.005),
                           tau=RV('uniform', loc=.5, scale=.5),
                           V_f=0.2,
                           E_f=200e3,
                           xi=WeibullFibers(shape=5., scale=0.02, L0=10.),#RV('weibull_min', shape=5., scale=.02),
-                          n_int=100)
+                          n_int=10)
 
     reinf2 = Reinforcement(r=0.00345,#RV('uniform', loc=0.002, scale=0.002),
                           tau=RV('uniform', loc=.5, scale=.1),
-                          V_f=0.2,
+                          V_f=0.1,
                           E_f=200e3,
                           xi=0.04,#RV('weibull_min', shape=100., scale=.04),
                           n_int=30)

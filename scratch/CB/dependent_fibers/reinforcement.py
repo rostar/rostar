@@ -15,6 +15,7 @@ from etsproxy.traits.api import HasTraits, cached_property, \
 from types import FloatType
 from util.traits.either_type import EitherType
 from scipy.stats import weibull_min
+from math import pi
 
 class WeibullFibers(HasTraits):
     '''class evaluating damage for weibull fibers with linearly decreasing stress'''
@@ -48,28 +49,33 @@ class Reinforcement(HasTraits):
     tau = EitherType(klasses=[FloatType, RV])
     n_int = Int
 
-    depsf_arr = Property(depends_on='r, V_f, E_F, xi, tau, n_int')
+    depsf_arr = Property(depends_on='r, V_f, E_f, xi, tau, n_int')
     @cached_property
     def _get_depsf_arr(self):
-        weights = 1.0
+        stat_weights = 1.0
         if isinstance(self.tau, RV):
             tau = self.tau.ppf(
                 np.linspace(.5 / self.n_int, 1. - .5 / self.n_int, self.n_int))
-            weights *= 1. / self.n_int
+            stat_weights *= 1. / self.n_int
         else:
             tau = self.tau
         if isinstance(self.r, RV):
             r = self.r.ppf(
                 np.linspace(.5 / self.n_int, 1. - .5 / self.n_int, self.n_int))
-            weights *= 1. / self.n_int
+            stat_weights *= 1. / self.n_int
+            Af = pi * r ** 2
+            Vf_weights = Af / np.mean(Af)
         else:
             r = self.r
-
+            Vf_weights = 1.0
         if isinstance(tau, np.ndarray) and isinstance(r, np.ndarray):
             r = r.reshape(1, self.n_int)
             tau = tau.reshape(self.n_int, 1)
-            return (2. * tau / r / self.E_f).flatten(), weights
+            Vf_weights_r = (Af / np.mean(Af)).reshape(1, self.n_int)
+            Vf_weights_tau = np.ones(self.n_int).reshape(self.n_int, 1)
+            Vf_weights = Vf_weights_r * Vf_weights_tau
+            return (2. * tau / r / self.E_f).flatten(), stat_weights, Vf_weights.flatten()
         else:
-            return 2. * tau / r / self.E_f, weights
+            return 2. * tau / r / self.E_f, stat_weights, Vf_weights
     
 

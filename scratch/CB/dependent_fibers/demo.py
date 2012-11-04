@@ -136,7 +136,7 @@ if __name__ == '__main__':
         plt.legend(loc='best')
 
     #profile(.01)
-    #norm_stress_w(np.linspace(.0, .5, 50))
+    norm_stress_w(np.linspace(.0, .5, 50))
     #bundle_comparison(np.linspace(0, 0.65, 30), 20., 5., 0.02, 70e3)
-    analytical_comparison()
+    #analytical_comparison()
     plt.show()
