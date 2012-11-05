@@ -52,16 +52,16 @@ class CompositeCrackBridge(HasTraits):
         V_f_arr = np.array([])
         E_f_arr = np.array([])
         xi_arr = np.array([])
-        weight_arr = np.array([])
+        stat_weights_arr = np.array([])
         for reinf in self.reinforcement_lst:
-            n_int = len(np.hstack((np.array([]), reinf.depsf_arr[0])))
-            depsf_arr = np.hstack((depsf_arr, reinf.depsf_arr[0]))
-            weight_arr = np.hstack((weight_arr, np.repeat(reinf.depsf_arr[1], n_int)))
-            V_f_arr = np.hstack((V_f_arr, np.repeat(reinf.V_f, n_int) * reinf.depsf_arr[2]))
+            n_int = len(np.hstack((np.array([]), reinf.depsf_arr)))
+            depsf_arr = np.hstack((depsf_arr, reinf.depsf_arr))
+            stat_weights_arr = np.hstack((stat_weights_arr, np.repeat(reinf.stat_weights, n_int)))
+            V_f_arr = np.hstack((V_f_arr, np.repeat(reinf.V_f, n_int) * reinf.Vf_weights))
             E_f_arr = np.hstack((E_f_arr, np.repeat(reinf.E_f, n_int)))
             xi_arr = np.hstack((xi_arr, np.repeat(reinf.xi, n_int)))
         argsort = np.argsort(depsf_arr)[::-1]
-        return depsf_arr[argsort], V_f_arr[argsort], E_f_arr[argsort], xi_arr[argsort],  weight_arr[argsort]
+        return depsf_arr[argsort], V_f_arr[argsort], E_f_arr[argsort], xi_arr[argsort],  stat_weights_arr[argsort]
 
     sorted_depsf = Property(depends_on='reinforcement_lst+')
     @cached_property
@@ -115,13 +115,15 @@ class CompositeCrackBridge(HasTraits):
         methods, masks = self.sorted_xi_cdf
         for i, method in enumerate(methods):
             if method.__name__ == 'weibull_fibers_Pf':
-                Pf += method(epsy * masks[i], self.sorted_depsf, x_short=x_short, x_long=x_long)
+                Pf += method(epsy * masks[i], self.sorted_depsf,
+                             x_short=x_short, x_long=x_long)
             else:
                 Pf += method(epsy * masks[i])
         return Pf
 
     def dem_depsf(self, depsf, damage):
-        '''evaluates the deps_m given deps_f at that point and the damage array'''
+        '''evaluates the deps_m given deps_f
+        at that point and the damage array'''
         intact_bonded_fibers = np.sum(self.sorted_V_f * self.sorted_stats_weights *
                                       self.sorted_E_f * (depsf <= self.sorted_depsf) *
                                       (1. - damage))
@@ -198,8 +200,9 @@ class CompositeCrackBridge(HasTraits):
         for i, defi in enumerate(self.sorted_depsf):
             if x_short[-1] < Lmin and x_long[-1] < Lmax:
                 '''double sided pullout'''
-                dxi, dem, emi, umi, E_mtrx = self.double_sided(defi, x_short[-1], dem_short[-1],
-                                                   em_short[-1], um_short[-1], iter_damage)
+                dxi, dem, emi, umi, E_mtrx = self.double_sided(defi,
+                                    x_short[-1], dem_short[-1],
+                                    em_short[-1], um_short[-1], iter_damage)
 
                 if x_short[-1] + dxi < Lmin:
                     # dx increment does not reach the boundary
@@ -278,7 +281,7 @@ class CompositeCrackBridge(HasTraits):
             except:
                 print 'broyden2 does not converge fast enough: switched to fsolve for this step'
                 damage = fsolve(self.damage_residuum, 0.2 * np.ones_like(self.sorted_depsf))
-            print 'damage =', np.sum(damage)/len(damage), 'iteration time =', t.clock() - ff, 'sec' 
+            print 'damage =', np.sum(damage) / len(damage), 'iteration time =', t.clock() - ff, 'sec' 
         return damage 
 
     results = Property(depends_on='w, Ll, Lr, reinforcement+')

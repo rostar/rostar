@@ -49,9 +49,9 @@ class Reinforcement(HasTraits):
     tau = EitherType(klasses=[FloatType, RV])
     n_int = Int
 
-    depsf_arr = Property(depends_on='r, V_f, E_f, xi, tau, n_int')
+    results = Property(depends_on='r, V_f, E_f, xi, tau, n_int')
     @cached_property
-    def _get_depsf_arr(self):
+    def _get_results(self):
         stat_weights = 1.0
         if isinstance(self.tau, RV):
             tau = self.tau.ppf(
@@ -77,5 +77,20 @@ class Reinforcement(HasTraits):
             return (2. * tau / r / self.E_f).flatten(), stat_weights, Vf_weights.flatten()
         else:
             return 2. * tau / r / self.E_f, stat_weights, Vf_weights
+
+    depsf_arr = Property(depends_on='r, V_f, E_f, xi, tau, n_int')
+    @cached_property
+    def _get_depsf_arr(self):
+        return self.results[0]
+
+    stat_weights = Property(depends_on='r, V_f, E_f, xi, tau, n_int')
+    @cached_property
+    def _get_stat_weights(self):
+        return self.results[1]
+    
+    Vf_weights = Property(depends_on='r, V_f, E_f, xi, tau, n_int')
+    @cached_property
+    def _get_Vf_weights(self):
+        return self.results[2]  
     
 
