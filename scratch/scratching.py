@@ -32,32 +32,32 @@ m.show()
 
 
 
-#m = 5.0
-#s = 0.02
-#Ef = 72e3
-#L0 = 50.
-#T = 0.02/50.
-#
-#print np.repeat(3, 0)
-#
-#def P(e):
-#    return 1. - np.exp(-(e/s)**m)
-#
-#def Pf(e, L):
-#    return 1. - np.exp(-L/L0*(e/s)**m)
-#
-#def Pf2(e, a):
-#    f = a * (e/s)**m / (m+1)
-#    return 1. - np.exp(-2. / L0 * f)
-#
-#def Pf3(e, tau, l):
-#    f = (((tau * l - 1)*((e*(1-tau*l)))/s)**m + (e/s)**m) / (m+1) / tau
-#    return 1. - np.exp(-2. / L0 * f)
-#
-#def muL(L, e):
-#    nom = L * e ** 2 * gammainc(2./m, (e/s)**m)/m/s**2 + L**2/2.
-#    de = L * e **2 * gammainc(1./m, (e/s)**m)/m/s + L
-#    return nom/de
+m = 5.0
+s = 0.02
+Ef = 72e3
+L0 = 50.
+T = 0.02/50.
+
+print np.repeat(3, 0)
+
+def P(e):
+    return 1. - np.exp(-(e/s)**m)
+
+def Pf(e, L):
+    return 1. - np.exp(-L/L0*(e/s)**m)
+
+def Pf2(e, a):
+    f = a * (e/s)**m / (m+1)
+    return 1. - np.exp(-2. / L0 * f)
+
+def Pf3(e, tau, l):
+    f = (((tau * l - 1)*((e*(1-tau*l)))/s)**m + (e/s)**m) / (m+1) / tau
+    return 1. - np.exp(-2. / L0 * f)
+
+def muL(L, e):
+    nom = L * e ** 2 * gammainc(2./m, (e/s)**m)/m/s**2 + L**2/2.
+    de = L * e **2 * gammainc(1./m, (e/s)**m)/m/s + L
+    return nom/de
 #    
 ##print Pf(0.02, 50.)
 ##print Pf2(0.02, 50.)

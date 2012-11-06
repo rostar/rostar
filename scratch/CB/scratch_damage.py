@@ -158,30 +158,15 @@ if __name__ == '__main__':
                           phi, Ll, Lr, V_f, r, ctrl_damage)
         plt.plot(w, q, 'r*')
 
-    # statistical homogenization of damage function
     def w_analytical():
-
-        def crackbridge(w, tau, E_f, E_m, V_f, r, omega):
-            Kf = E_f * V_f * (1 - omega)
-            Km = E_m * (1 - V_f)
-            Kc = Kf + Km
-            T = 2. * tau * V_f * (1. - omega) / r
-            c = np.sqrt(Kc * T / Km / Kf)
-            return c * np.sqrt(w) * (1 - omega)
-
-        def w_omega(tau, E_f, E_m, V_f, r, omega, m, s):
-            Kf = E_f * V_f * (1 - omega)
-            Km = E_m * (1 - V_f)
-            Kc = Kf + Km
-            T = 2. * tau * V_f * (1. - omega) / r
-            return (-np.log(1. - omega)) ** (2. / m) \
-                    * s ** 2 * Km * Kf / Kc / T
-        w_lst = []
-        for omega in ctrl_damage:
-            w_lst.append(w_omega(tau, E_f, E_m, V_f, r, omega, 5.0, 0.02))
-        epsf = crackbridge(np.array(w_lst), tau, E_f, E_m, V_f, r, ctrl_damage)
-        plt.plot(np.array(w_lst), epsf * E_f,
-                 color='blue')
+        Kf = E_f * V_f * (1 - ctrl_damage)
+        Km = E_m * (1 - V_f * (1 - ctrl_damage))
+        Kc = Kf + Km
+        T = 2. * tau * V_f * (1. - ctrl_damage) / r
+        w = (-np.log(1. - ctrl_damage)) ** (2. / 5.) \
+                * 0.02 ** 2 * Km * Kf / Kc / T
+        q = (-np.log(1 - ctrl_damage)) ** (0.2) * 0.02 * E_f * (1 - ctrl_damage)
+        plt.plot(w, q, color='blue', label='analytical')
 
     def u_analytical():
 
@@ -213,7 +198,7 @@ if __name__ == '__main__':
 #                 color='brown', label='u-damage')
         plt.plot(np.array(u_lst), epsf * E_f,
                  color='red')
-        
+
     def DOE(w_arr):
         reinf1 = Reinforcement(r=0.00345,#r=RV('uniform', loc=0.002, scale=0.002),
                           tau=RV('uniform', loc=.2, scale=1.),

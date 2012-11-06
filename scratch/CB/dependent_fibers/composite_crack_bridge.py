@@ -407,7 +407,7 @@ if __name__ == '__main__':
                           tau=RV('uniform', loc=.5, scale=.5),
                           V_f=0.2,
                           E_f=200e3,
-                          xi=WeibullFibers(shape=5., scale=0.02, L0=10.),#RV('weibull_min', shape=5., scale=.02),
+                          xi=1000.,#WeibullFibers(shape=5., scale=0.02, L0=10.),#RV('weibull_min', shape=5., scale=.02),
                           n_int=10)
 
     reinf2 = Reinforcement(r=0.00345,#RV('uniform', loc=0.002, scale=0.002),
@@ -426,12 +426,12 @@ if __name__ == '__main__':
 
     ccb = CompositeCrackBridge(E_m=25e3,
                                reinforcement_lst=[reinf1],
-                               Ll=3.,
-                               Lr=5.)
+                               Ll=3000.,
+                               Lr=5000.)
 
     def profile(w):
         ccb.w = w
-        plt.plot(ccb.x_arr, ccb.em_arr, label='w_eval='+str(ccb.w_evaluated)+' w_ctrl='+str(ccb.w))
+        plt.plot(ccb.x_arr, ccb.em_arr, label='w_eval=' + str(ccb.w_evaluated) + ' w_ctrl=' + str(ccb.w))
         plt.plot(ccb.x_arr, ccb.ey_arr, label='yarn')
         plt.xlabel('position [mm]')
         plt.ylabel('strain')
@@ -455,8 +455,8 @@ if __name__ == '__main__':
         yy = w_arr / L * (1. - weibull_min(5., scale=0.02).cdf(w_arr / L))
         plt.plot(w_arr, yy * 200e3, lw=4, color='red', ls='dashed', label='bundle')
 
-    #profile(.1)
-    eps_w(np.linspace(.0, .2, 50), label='ld')
+    profile(.4)
+    #eps_w(np.linspace(.0, .2, 50), label='ld')
     #bundle(np.linspace(0, 0.65, 30), 20.)
     plt.legend(loc='best')
     plt.show()
