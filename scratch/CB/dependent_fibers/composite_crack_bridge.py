@@ -53,15 +53,20 @@ class CompositeCrackBridge(HasTraits):
         E_f_arr = np.array([])
         xi_arr = np.array([])
         stat_weights_arr = np.array([])
+        V_f_weights_arr = np.array([])
         for reinf in self.reinforcement_lst:
             n_int = len(np.hstack((np.array([]), reinf.depsf_arr)))
             depsf_arr = np.hstack((depsf_arr, reinf.depsf_arr))
-            stat_weights_arr = np.hstack((stat_weights_arr, np.repeat(reinf.stat_weights, n_int)))
-            V_f_arr = np.hstack((V_f_arr, np.repeat(reinf.V_f, n_int) * reinf.Vf_weights))
+            V_f_arr = np.hstack((V_f_arr, np.repeat(reinf.V_f, n_int)))
             E_f_arr = np.hstack((E_f_arr, np.repeat(reinf.E_f, n_int)))
             xi_arr = np.hstack((xi_arr, np.repeat(reinf.xi, n_int)))
+            stat_weights_arr = np.hstack((stat_weights_arr,
+                                          np.repeat(reinf.stat_weights, n_int)))
+            V_f_weights_arr = np.hstack((V_f_weights_arr, reinf.V_f_weights))
         argsort = np.argsort(depsf_arr)[::-1]
-        return depsf_arr[argsort], V_f_arr[argsort], E_f_arr[argsort], xi_arr[argsort],  stat_weights_arr[argsort]
+        return depsf_arr[argsort], V_f_arr[argsort], E_f_arr[argsort], \
+                xi_arr[argsort],  stat_weights_arr[argsort], \
+                V_f_weights_arr[argsort]
 
     sorted_depsf = Property(depends_on='reinforcement_lst+')
     @cached_property
@@ -88,9 +93,16 @@ class CompositeCrackBridge(HasTraits):
     def _get_sorted_stats_weights(self):
         return self.sorted_theta[4]
 
-    sorted_Vf_weights = Property(depends_on='reinforcement_lst+')
+    sorted_V_f_weights = Property(depends_on='reinforcement_lst+')
     @cached_property
-    def _get_sorted_Vf_weights(self):
+    def _get_sorted_V_f_weights(self):
+        return self.sorted_theta[5]
+
+    sorted_E_f_ratio = Property(depends_on='reinforcement_lst+')
+    @cached_property
+    def _get_sorted_E_f_ratio(self):
+        '''stiffness of a reinforcement type with
+        respect to total reinforcement stiffness'''
         return self.sorted_V_f * self.sorted_E_f / (self.E_c -
                 (1. - self.V_f_tot) * self.E_m)
 
@@ -124,32 +136,34 @@ class CompositeCrackBridge(HasTraits):
     def dem_depsf(self, depsf, damage):
         '''evaluates the deps_m given deps_f
         at that point and the damage array'''
-        intact_bonded_fibers = np.sum(self.sorted_V_f * self.sorted_stats_weights *
-                                      self.sorted_E_f * (depsf <= self.sorted_depsf) *
-                                      (1. - damage))
-        broken_fibers = np.sum(self.sorted_V_f * self.sorted_stats_weights *
-                               self.sorted_E_f * damage)
-        add_m_stiffness = intact_bonded_fibers + broken_fibers
-        E_mtrx = (1. - self.V_f_tot) * self.E_m + add_m_stiffness
+        Kf = self.sorted_V_f * self.sorted_V_f_weights * \
+            self.sorted_stats_weights * self.sorted_E_f
+        Kf_intact_bonded = np.sum(Kf * (depsf <= self.sorted_depsf)
+                                         * (1. - damage))
+        Kf_broken = np.sum(Kf * damage)
+        Kf_add = Kf_intact_bonded + Kf_broken
+        Km = (1. - self.V_f_tot) * self.E_m
+        Kc = Km + Kf_add
         mean_acting_depsm = np.sum(self.sorted_depsf * (self.sorted_depsf < depsf) *
                                    self.sorted_stats_weights * self.sorted_E_f *
-                                   self.sorted_V_f * (1. - damage))
-        return mean_acting_depsm / E_mtrx, (1. - self.V_f_tot) * self.E_m + broken_fibers
+                                   self.sorted_V_f * self.sorted_V_f_weights * (1. - damage))
+        return mean_acting_depsm / Kc, (1. - self.V_f_tot) * self.E_m + Kf_broken
 
     def dem_init(self, damage):
         '''evaluates the initial slope of eps_m given the damage array'''
-        broken_fibers_stiffness = np.sum(self.sorted_V_f *
-                                         self.sorted_stats_weights *
-                                         self.sorted_E_f * damage)
-        E_mtrx = (1. - self.V_f_tot) * self.E_m + broken_fibers_stiffness
-        mean_acting_depsm = np.sum(self.sorted_depsf *
-                                   self.sorted_stats_weights *
+        Kf_broken = np.sum(self.sorted_V_f * self.sorted_V_f_weights *
+                           self.sorted_stats_weights * self.sorted_E_f *
+                           damage)
+        Kc = (1. - self.V_f_tot) * self.E_m + Kf_broken
+        mean_acting_depsm = np.sum(self.sorted_depsf * self.sorted_stats_weights *
                                    self.sorted_E_f * self.sorted_V_f *
-                                   (1. - damage))
-        return mean_acting_depsm / E_mtrx
+                                   self.sorted_V_f_weights * (1. - damage))
+        return mean_acting_depsm / Kc
 
     def epsy_arr(self, epsm_arr, epsy_crack, E_mtrx_arr):
-        sigma_c = epsy_crack * (self.E_c - self.E_m * (1. - self.V_f_tot))
+        mu_epsf0 = np.sum(epsy_crack * self.sorted_stats_weights * self.sorted_E_f_ratio *\
+                self.sorted_V_f_weights * (1 - self.damage))
+        sigma_c = mu_epsf0 * (self.E_c - self.E_m * (1. - self.V_f_tot))
         epsy_arr = (sigma_c - E_mtrx_arr * epsm_arr) / (self.E_c - E_mtrx_arr)
         return epsy_arr
 
@@ -367,14 +381,12 @@ class CompositeCrackBridge(HasTraits):
                 epsy_crack[i] = epsy_crack_clamped
         x_arr = np.hstack((-np.array(x_short)[::-1], np.array(x_long)))
         em_arr = np.hstack((np.array(em_short)[::-1], np.array(em_long)))
-        ey_arr = self.epsy_arr(em_arr,
-                               np.sum(epsy_crack * self.sorted_stats_weights *
-                                    self.sorted_Vf_weights * (1. - self.damage)),
-                               E_mtrx_glob)
+        ey_arr = self.epsy_arr(em_arr, epsy_crack, E_mtrx_glob)
         return x_arr, em_arr, ey_arr, np.sum(epsy_crack *
-                                                 self.sorted_stats_weights *
-                                                 self.sorted_Vf_weights *
-                                                 self.sorted_E_f * (1. - self.damage))
+                                            self.sorted_stats_weights *
+                                            self.sorted_E_f_ratio *
+                                            self.sorted_V_f_weights *
+                                            self.sorted_E_f * (1. - self.damage))
 
     x_arr = Property(depends_on='w, Ll, Lr, reinforcement+')
     @cached_property
@@ -407,15 +419,15 @@ if __name__ == '__main__':
                           tau=RV('uniform', loc=.5, scale=.5),
                           V_f=0.2,
                           E_f=200e3,
-                          xi=1000.,#WeibullFibers(shape=5., scale=0.02, L0=10.),#RV('weibull_min', shape=5., scale=.02),
-                          n_int=10)
+                          xi=WeibullFibers(shape=5., scale=0.02, L0=10.),#RV('weibull_min', shape=5., scale=.02),
+                          n_int=15)
 
-    reinf2 = Reinforcement(r=0.00345,#RV('uniform', loc=0.002, scale=0.002),
+    reinf2 = Reinforcement(r=RV('uniform', loc=0.002, scale=0.002),
                           tau=RV('uniform', loc=.5, scale=.1),
-                          V_f=0.1,
+                          V_f=0.3,
                           E_f=200e3,
-                          xi=0.04,#RV('weibull_min', shape=100., scale=.04),
-                          n_int=30)
+                          xi=RV('weibull_min', shape=10., scale=.03),
+                          n_int=15)
 
     reinf3 = Reinforcement(r=0.00345,#RV('uniform', loc=0.002, scale=0.002),
                           tau=RV('uniform', loc=1., scale=3.),
@@ -425,9 +437,9 @@ if __name__ == '__main__':
                           n_int=20)
 
     ccb = CompositeCrackBridge(E_m=25e3,
-                               reinforcement_lst=[reinf1],
-                               Ll=3000.,
-                               Lr=5000.)
+                               reinforcement_lst=[reinf1, reinf2],
+                               Ll=3.,
+                               Lr=5.)
 
     def profile(w):
         ccb.w = w
@@ -455,8 +467,8 @@ if __name__ == '__main__':
         yy = w_arr / L * (1. - weibull_min(5., scale=0.02).cdf(w_arr / L))
         plt.plot(w_arr, yy * 200e3, lw=4, color='red', ls='dashed', label='bundle')
 
-    profile(.4)
-    #eps_w(np.linspace(.0, .2, 50), label='ld')
+    #profile(.03)
+    eps_w(np.linspace(.0, .3, 50), label='ld')
     #bundle(np.linspace(0, 0.65, 30), 20.)
     plt.legend(loc='best')
     plt.show()

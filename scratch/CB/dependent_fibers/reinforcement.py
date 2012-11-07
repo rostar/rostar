@@ -57,8 +57,10 @@ class Reinforcement(HasTraits):
             tau = self.tau.ppf(
                 np.linspace(.5 / self.n_int, 1. - .5 / self.n_int, self.n_int))
             stat_weights *= 1. / self.n_int
+            Vf_weights_tau = np.ones_like(tau)
         else:
             tau = self.tau
+            Vf_weights_tau = 1.0
         if isinstance(self.r, RV):
             r = self.r.ppf(
                 np.linspace(.5 / self.n_int, 1. - .5 / self.n_int, self.n_int))
@@ -67,7 +69,7 @@ class Reinforcement(HasTraits):
             Vf_weights = Af / np.mean(Af)
         else:
             r = self.r
-            Vf_weights = 1.0
+            Vf_weights = Vf_weights_tau * 1.0
         if isinstance(tau, np.ndarray) and isinstance(r, np.ndarray):
             r = r.reshape(1, self.n_int)
             tau = tau.reshape(self.n_int, 1)
@@ -88,9 +90,9 @@ class Reinforcement(HasTraits):
     def _get_stat_weights(self):
         return self.results[1]
     
-    Vf_weights = Property(depends_on='r, V_f, E_f, xi, tau, n_int')
+    V_f_weights = Property(depends_on='r, V_f, E_f, xi, tau, n_int')
     @cached_property
-    def _get_Vf_weights(self):
+    def _get_V_f_weights(self):
         return self.results[2]  
     
 
