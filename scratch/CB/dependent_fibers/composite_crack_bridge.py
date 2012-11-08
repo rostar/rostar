@@ -470,5 +470,5 @@ if __name__ == '__main__':
     #profile(.03)
     eps_w(np.linspace(.0, .3, 50), label='ld')
     #bundle(np.linspace(0, 0.65, 30), 20.)
-    plt.legend(loc='best')
+    plt.legend(loc='best') 
     plt.show()

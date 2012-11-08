@@ -100,7 +100,7 @@ if __name__ == '__main__':
 
         def crackbridge(w, tau, E_f, E_m, V_f, r, omega):
             Kf = E_f * V_f * (1 - omega)
-            Km = E_m * (1 - V_f)
+            Km = E_m * (1 - V_f) + E_f * V_f * omega 
             Kc = Kf + Km
             T = 2. * tau * V_f * (1. - omega) / r
             c = np.sqrt(Kc * T / Km / Kf)
@@ -108,7 +108,7 @@ if __name__ == '__main__':
 
         def w_omega(tau, E_f, E_m, V_f, r, omega, shape, scale):
             Kf = E_f * V_f * (1 - omega)
-            Km = E_m * (1 - V_f)
+            Km = E_m * (1 - V_f) + E_f * V_f * omega
             Kc = Kf + Km
             T = 2. * tau * V_f * (1. - omega) / r
             return (-np.log(1. - omega)) ** (2. / shape) \

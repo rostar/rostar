@@ -159,14 +159,28 @@ if __name__ == '__main__':
         plt.plot(w, q, 'r*')
 
     def w_analytical():
+        m = 5.0
+        s = 0.02
         Kf = E_f * V_f * (1 - ctrl_damage)
-        Km = E_m * (1 - V_f * (1 - ctrl_damage))
+        Km = E_m * (1 - V_f) + E_f * V_f * ctrl_damage
         Kc = Kf + Km
         T = 2. * tau * V_f * (1. - ctrl_damage) / r
-        w = (-np.log(1. - ctrl_damage)) ** (2. / 5.) \
-                * 0.02 ** 2 * Km * Kf / Kc / T
-        q = (-np.log(1 - ctrl_damage)) ** (0.2) * 0.02 * E_f * (1 - ctrl_damage)
+        w = (-np.log(1. - ctrl_damage)) ** (2. / m) \
+                * s ** 2 * Km * Kf / Kc / T
+        q = (-np.log(1 - ctrl_damage)) ** (1. / m) * s * E_f * (1 - ctrl_damage)
         plt.plot(w, q, color='blue', label='analytical')
+
+    def w_analytical2():
+        m = 5.0
+        s = 0.02
+        Kf = E_f * V_f * (1 - ctrl_damage)
+        Km = E_m * (1 - V_f) + E_f * V_f * ctrl_damage
+        Kc = Kf + Km
+        T = 2. * tau * V_f * (1. - ctrl_damage) / r
+        w = (-np.log(1. - ctrl_damage)) ** (2. / m) \
+                * s ** 2 * Km * Kf / Kc / T
+        q = (-np.log(1 - ctrl_damage)) ** (1. / m) * s * E_f * (1 - ctrl_damage)
+        plt.plot(w, q, color='red', lw=3, ls='dashed', label='analytical2')
 
     def u_analytical():
 
@@ -229,6 +243,7 @@ if __name__ == '__main__':
 #w_omega_spirrid()
 #w_analytical_iterative()
 w_analytical()
+w_analytical2()
 #u_analytical()
 #no_damage()
 #u_u()
