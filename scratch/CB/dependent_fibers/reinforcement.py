@@ -57,28 +57,28 @@ class Reinforcement(HasTraits):
             tau = self.tau.ppf(
                 np.linspace(.5 / self.n_int, 1. - .5 / self.n_int, self.n_int))
             stat_weights *= 1. / self.n_int
-            Vf_weights_tau = np.ones_like(tau)
+            nu_r_tau = np.ones_like(tau)
         else:
             tau = self.tau
-            Vf_weights_tau = 1.0
+            nu_r_tau = 1.0
         if isinstance(self.r, RV):
             r = self.r.ppf(
                 np.linspace(.5 / self.n_int, 1. - .5 / self.n_int, self.n_int))
             stat_weights *= 1. / self.n_int
-            Af = pi * r ** 2
-            Vf_weights = Af / np.mean(Af)
+            r2 = r ** 2
+            nu_r = r2 / np.mean(r2)
         else:
             r = self.r
-            Vf_weights = Vf_weights_tau * 1.0
+            nu_r = nu_r_tau * 1.0
         if isinstance(tau, np.ndarray) and isinstance(r, np.ndarray):
             r = r.reshape(1, self.n_int)
             tau = tau.reshape(self.n_int, 1)
-            Vf_weights_r = (Af / np.mean(Af)).reshape(1, self.n_int)
-            Vf_weights_tau = np.ones(self.n_int).reshape(self.n_int, 1)
-            Vf_weights = Vf_weights_r * Vf_weights_tau
-            return (2. * tau / r / self.E_f).flatten(), stat_weights, Vf_weights.flatten()
+            nu_r_r = (r2 / np.mean(r2)).reshape(1, self.n_int)
+            nu_r_tau = np.ones(self.n_int).reshape(self.n_int, 1)
+            nu_r = nu_r_r * nu_r_tau
+            return (2. * tau / r / self.E_f).flatten(), stat_weights, nu_r.flatten()
         else:
-            return 2. * tau / r / self.E_f, stat_weights, Vf_weights
+            return 2. * tau / r / self.E_f, stat_weights, nu_r
 
     depsf_arr = Property(depends_on='r, V_f, E_f, xi, tau, n_int')
     @cached_property
@@ -90,9 +90,9 @@ class Reinforcement(HasTraits):
     def _get_stat_weights(self):
         return self.results[1]
     
-    V_f_weights = Property(depends_on='r, V_f, E_f, xi, tau, n_int')
+    nu_r = Property(depends_on='r, V_f, E_f, xi, tau, n_int')
     @cached_property
-    def _get_V_f_weights(self):
+    def _get_nu_r(self):
         return self.results[2]  
     
 
