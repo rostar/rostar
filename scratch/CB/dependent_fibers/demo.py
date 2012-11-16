@@ -4,7 +4,8 @@ Created on Oct 26, 2012
 @author: rostar
 '''
 
-from composite_crack_bridge import CompositeCrackBridge
+from composite_CB_model import CompositeCrackBridge
+from composite_CB_modelview import CompositeCrackBridgeView
 from reinforcement import Reinforcement
 from stats.spirrid.rv import RV
 from matplotlib import pyplot as plt
@@ -29,17 +30,19 @@ if __name__ == '__main__':
                           n_int=15)
 
     # instance of CompCrackBridge with matrix E and BC
-    ccb = CompositeCrackBridge(E_m=25e3,
+    model = CompositeCrackBridge(E_m=25e3,
                                reinforcement_lst=[reinf1, reinf2],
                                Ll=10.,
                                Lr=20.)
 
+    ccb_view = CompositeCrackBridgeView(model=model)
+
     def profile(w):
         '''evaluates and plots the strain profile in matrix
         and the mean strain profile in the reinforcement'''
-        ccb.w = w
-        plt.plot(ccb.x_arr, ccb.em_arr, label='matrix')
-        plt.plot(ccb.x_arr, ccb.ey_arr, label='yarn')
+        ccb_view.model.w = w
+        plt.plot(ccb_view.x_arr, ccb_view.em_arr, label='matrix')
+        plt.plot(ccb_view.x_arr, ccb_view.mu_epsf_arr, label='yarn')
         plt.xlabel('position [mm]')
         plt.ylabel('strain [-]')
         plt.legend(loc='best')
@@ -50,9 +53,9 @@ if __name__ == '__main__':
         norm_stress = []
         w_err = []
         for w in w_arr:
-            ccb.w = w
+            ccb_view.model.w = w
             print 'progress: ', 100 * w / w_arr[-1], '%'
-            norm_stress.append(ccb.max_norm_stress)
+            norm_stress.append(ccb_view.max_norm_stress)
             w_err.append((ccb.w_evaluated - ccb.w) / (ccb.w + 1e-10))
         plt.figure()
         plt.plot(w_arr, w_err, label='error in w')
@@ -71,9 +74,9 @@ if __name__ == '__main__':
         eps = w_arr / L * (1. - weibull_min(shape, scale=scale).cdf(w_arr / L))
         plt.plot(w_arr / L, eps * E, lw=4, color='red', ls='dashed', label='FB model')
 
-        bundle = Reinforcement(r=0.013, tau=0.00001, V_f=0.5, E_f=E,
+        bundle = Reinforcement(r=0.13, tau=0.00001, V_f=0.9999, E_f=E,
                           xi=RV('weibull_min', shape=shape, scale=scale),
-                          n_int=5)
+                          n_int=50)
         ccb = CompositeCrackBridge(E_m=25e3,
                                    reinforcement_lst=[bundle],
                                    Ll=L / 2.,

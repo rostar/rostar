@@ -12,7 +12,6 @@ CompositeCrackBridge class.
 '''
 import numpy as np
 from stats.spirrid.rv import RV
-from matplotlib import pyplot as plt
 from etsproxy.traits.api import HasTraits, cached_property, \
     Float, Property, Instance, List, Array
 from types import FloatType
@@ -107,6 +106,7 @@ class CompositeCrackBridge(HasTraits):
     @cached_property
     def _get_sorted_xi_cdf(self):
         '''breaking strain: CDF for random and Heaviside for discrete values'''
+        # TODO: does not work for reinforcement types with the same xi
         methods = []
         masks = []
         for reinf in self.reinforcement_lst:
@@ -144,17 +144,6 @@ class CompositeCrackBridge(HasTraits):
         mean_acting_depsm = np.sum(self.sorted_depsf * (self.sorted_depsf < depsf) *
                                    self.sorted_stats_weights * self.sorted_E_f *
                                    self.sorted_V_f * self.sorted_nu_r * (1. - damage))
-        return mean_acting_depsm / Kc
-
-    def dem_init(self, damage):
-        '''evaluates the initial slope of eps_m given the damage array'''
-        Kf_broken = np.sum(self.sorted_V_f * self.sorted_nu_r *
-                           self.sorted_stats_weights * self.sorted_E_f *
-                           damage)
-        Kc = (1. - self.V_f_tot) * self.E_m + Kf_broken
-        mean_acting_depsm = np.sum(self.sorted_depsf * self.sorted_stats_weights *
-                                   self.sorted_E_f * self.sorted_V_f *
-                                   self.sorted_nu_r * (1. - damage))
         return mean_acting_depsm / Kc
 
     def double_sided(self, defi, x0, demi, em0, um0, damage):
@@ -196,8 +185,8 @@ class CompositeCrackBridge(HasTraits):
     def damage_residuum(self, iter_damage):
         um_short, em_short, x_short = [0.0], [0.0], [0.0]
         um_long, em_long, x_long = [0.0], [0.0], [0.0]
-        dem_short = [self.dem_init(iter_damage)]
-        dem_long = [self.dem_init(iter_damage)]
+        dem_short = [self.dem_depsf(np.infty, iter_damage)]
+        dem_long = [self.dem_depsf(np.infty, iter_damage)]
         epsf0 = np.zeros_like(self.sorted_depsf)
         Lmin = min(self.Ll, self.Lr)
         Lmax = max(self.Ll, self.Lr)
@@ -296,96 +285,5 @@ class CompositeCrackBridge(HasTraits):
             print 'damage =', np.sum(damage) / len(damage), 'iteration time =', t.clock() - ff, 'sec' 
         return damage
 
-    results = Property(depends_on='w, Ll, Lr, reinforcement+')
-    @cached_property
-    def _get_results(self):
-        if self.w == 0.0:
-            self.w = 1e-15
-        self.damage
-        sigma_c = np.sum(self._epsf0_arr * self.sorted_stats_weights * self.sorted_V_f_ratio *
-                      self.sorted_nu_r * self.sorted_E_f * (1. - self.damage)) * self.V_f_tot
-        Kf_broken = np.sum(self.sorted_V_f * self.sorted_nu_r * \
-            self.sorted_stats_weights * self.sorted_E_f * self.damage)
-        E_mtrx_arr = (1. - self.V_f_tot) * self.E_m + Kf_broken
-        mu_epsf_arr = (sigma_c - E_mtrx_arr * self._epsm_arr) / (self.E_c - E_mtrx_arr)
-        w_eval = np.trapz(mu_epsf_arr - self._epsm_arr, self._x_arr)
-        return self._x_arr, self._epsm_arr, sigma_c, mu_epsf_arr, w_eval
-
-    x_arr = Property(depends_on='w, Ll, Lr, reinforcement+')
-    @cached_property
-    def _get_x_arr(self):
-        return self.results[0]        
-
-    epsm_arr = Property(depends_on='w, Ll, Lr, reinforcement+')
-    @cached_property
-    def _get_epsm_arr(self):
-        return self.results[1]
-
-    sigma_c = Property(depends_on='w, Ll, Lr, reinforcement+')
-    @cached_property
-    def _get_sigma_c(self):
-        return self.results[2]
-
-    mu_epsf_arr = Property(depends_on='w, Ll, Lr, reinforcement+')
-    @cached_property
-    def _get_mu_epsf_arr(self):
-        return self.results[3]
-
-    w_evaluated = Property(depends_on='w, Ll, Lr, reinforcement+')
-    @cached_property
-    def _get_w_evaluated(self):
-        return self.results[4]
-
 if __name__ == '__main__':
-
-    reinf1 = Reinforcement(r=RV('uniform', loc=0.001, scale=0.005),
-                          tau=RV('uniform', loc=.5, scale=.5),
-                          V_f=0.1,
-                          E_f=70e3,
-                          xi=WeibullFibers(shape=5., scale=0.02, L0=10.),#RV('weibull_min', shape=5., scale=.02),
-                          n_int=10)
-
-    reinf2 = Reinforcement(r=RV('uniform', loc=0.002, scale=0.002),
-                          tau=RV('uniform', loc=.5, scale=.1),
-                          V_f=0.3,
-                          E_f=200e3,
-                          xi=RV('weibull_min', shape=10., scale=.03),
-                          n_int=15)
-
-    reinf3 = Reinforcement(r=0.00345,#RV('uniform', loc=0.002, scale=0.002),
-                          tau=RV('uniform', loc=1., scale=3.),
-                          V_f=0.1,
-                          E_f=200e3,
-                          xi=0.03,
-                          n_int=20)
-
-    ccb = CompositeCrackBridge(E_m=25e3,
-                               reinforcement_lst=[reinf1, reinf2],
-                               Ll=3.,
-                               Lr=5.)
-
-    def profile(w):
-        ccb.w = w
-        plt.plot(ccb.x_arr, ccb.epsm_arr, label='w_eval=' + str(ccb.w_evaluated) + ' w_ctrl=' + str(ccb.w))
-        plt.plot(ccb.x_arr, ccb.mu_epsf_arr, label='yarn')
-        plt.xlabel('position [mm]')
-        plt.ylabel('strain')
-
-    def sigma_c_w(w_arr, label):
-        sigma_c = []
-        w_err = []
-        for w in w_arr:
-            ccb.w = w
-            sigma_c.append(ccb.sigma_c)
-            w_err.append((ccb.w_evaluated - ccb.w) / (ccb.w + 1e-10))
-        plt.figure()
-        plt.plot(w_arr, w_err, label='error in w')
-        plt.legend(loc='best')
-        plt.figure()
-        plt.plot(w_arr, sigma_c, lw=2, label=label)
-        plt.legend(loc='best')
-
-    profile(.03)
-    #sigma_c_w(np.linspace(.001, .3, 50), label='ld')
-    plt.legend(loc='best')
-    plt.show()
+    pass
