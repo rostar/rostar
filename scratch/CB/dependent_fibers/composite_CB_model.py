@@ -19,6 +19,7 @@ from reinforcement import Reinforcement, WeibullFibers
 from scipy.optimize import fsolve, broyden2
 import time as t
 
+
 class CompositeCrackBridge(HasTraits):
 
     reinforcement_lst = List(Instance(Reinforcement))

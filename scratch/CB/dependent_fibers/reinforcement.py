@@ -11,7 +11,7 @@ can be used by the composite crack bridge model.
 import numpy as np
 from stats.spirrid.rv import RV
 from etsproxy.traits.api import HasTraits, cached_property, \
-    Float, Property, Int
+    Float, Property, Int, Str
 from types import FloatType
 from util.traits.either_type import EitherType
 from scipy.stats import weibull_min
@@ -42,6 +42,7 @@ class WeibullFibers(HasTraits):
 
 class Reinforcement(HasTraits):
 
+    label = Str('reinforcement')
     r = EitherType(klasses=[FloatType, RV])
     V_f = Float
     E_f = Float

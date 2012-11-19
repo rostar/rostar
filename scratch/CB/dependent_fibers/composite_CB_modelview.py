@@ -79,18 +79,20 @@ class CompositeCrackBridgeView(ModelView):
 if __name__ == '__main__':
 
     reinf1 = Reinforcement(r=0.00345,#RV('uniform', loc=0.001, scale=0.005),
-                          tau=RV('uniform', loc=.5, scale=.5),
-                          V_f=0.1,
-                          E_f=170e3,
-                          xi=WeibullFibers(shape=5., scale=0.03, L0=10.),#RV('weibull_min', shape=5., scale=.02),
-                          n_int=10)
+                          tau=RV('uniform', loc=.5, scale=.2),
+                          V_f=0.2,
+                          E_f=70e3,
+                          xi=WeibullFibers(shape=5., scale=0.02, L0=10.),#RV('weibull_min', shape=5., scale=.02),
+                          n_int=15,
+                          label='AR glass')
 
     reinf2 = Reinforcement(r=0.00345,#RV('uniform', loc=0.002, scale=0.002),
                           tau=RV('uniform', loc=.5, scale=.1),
                           V_f=0.3,
                           E_f=200e3,
-                          xi=RV('weibull_min', shape=10., scale=.03),
-                          n_int=10)
+                          xi=RV('weibull_min', shape=10., scale=.035),
+                          n_int=15,
+                          label='carbon')
 
     reinf3 = Reinforcement(r=0.00345,#RV('uniform', loc=0.002, scale=0.002),
                           tau=RV('uniform', loc=1., scale=3.),
@@ -130,7 +132,7 @@ if __name__ == '__main__':
     def sigma_f(w_arr):
         sf_arr = ccb_view.sigma_f_lst(w_arr)
         for i, reinf in enumerate(ccb_view.model.reinforcement_lst):
-            plt.plot(w_arr, sf_arr[:, i])
+            plt.plot(w_arr, sf_arr[:, i], label=reinf.label)
         
     #profile(.03)
     #sigma_c_w(np.linspace(.0, .3, 50), label='ld')
