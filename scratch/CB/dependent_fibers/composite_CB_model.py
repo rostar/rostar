@@ -98,11 +98,6 @@ class CompositeCrackBridge(HasTraits):
     def _get_sorted_nu_r(self):
         return self.sorted_theta[5]
 
-    sorted_V_f_ratio = Property(depends_on='reinforcement_lst+')
-    @cached_property
-    def _get_sorted_V_f_ratio(self):
-        return self.sorted_V_f / self.V_f_tot
-
     sorted_xi_cdf = Property(depends_on='reinforcement_lst+')
     @cached_property
     def _get_sorted_xi_cdf(self):

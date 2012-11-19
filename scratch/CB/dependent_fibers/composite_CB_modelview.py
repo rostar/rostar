@@ -22,8 +22,8 @@ class CompositeCrackBridgeView(ModelView):
         if self.model.w == 0.0:
             self.model.w = 1e-15
         self.model.damage
-        sigma_c = np.sum(self.model._epsf0_arr * self.model.sorted_stats_weights * self.model.sorted_V_f_ratio *
-                      self.model.sorted_nu_r * self.model.sorted_E_f * (1. - self.model.damage)) * self.model.V_f_tot
+        sigma_c = np.sum(self.model._epsf0_arr * self.model.sorted_stats_weights * self.model.sorted_V_f *
+                      self.model.sorted_nu_r * self.model.sorted_E_f * (1. - self.model.damage))
         Kf_broken = np.sum(self.model.sorted_V_f * self.model.sorted_nu_r * \
             self.model.sorted_stats_weights * self.model.sorted_E_f * self.model.damage)
         E_mtrx_arr = (1. - self.model.V_f_tot) * self.model.E_m + Kf_broken
@@ -133,7 +133,7 @@ if __name__ == '__main__':
         sf_arr = ccb_view.sigma_f_lst(w_arr)
         for i, reinf in enumerate(ccb_view.model.reinforcement_lst):
             plt.plot(w_arr, sf_arr[:, i], label=reinf.label)
-        
+
     #profile(.03)
     #sigma_c_w(np.linspace(.0, .3, 50), label='ld')
     sigma_f(np.linspace(.0, .3, 50))
