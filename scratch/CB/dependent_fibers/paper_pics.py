@@ -200,26 +200,39 @@ def sigma_f(w_arr):
     plt.ylim(0)
 
 def errors(k_ratio):
-    E_m = E_f*V_f/k_ratio/(1-V_f)
-    xi = RV('weibull_min', shape=5., scale=.02)
-    reinf = Reinforcement(r=0.003, tau=0.5, V_f=0.3, E_f=200e3, xi=xi, n_int=15, label='carbon')
-    model = CompositeCrackBridge(E_m=E_m,
-                             reinforcement_lst=[reinf],
-                             Ll=1000.,
-                             Lr=1000.)
-    ccb_view = CompositeCrackBridgeView(model=model)
-    sigma_c = []
-    w_arr = np.linspace(0.0, 0.5, 50)
-    for w in w_arr:
-        ccb_view.model.w = w
-        sigma_c.append(ccb_view.sigma_c)
-    plt.plot(w_arr, sigma_c)
+    sigmax_el = []
+    wmax = []
+    for k in k_ratio:
+        E_m = E_f * V_f / k / (1 - V_f)
+        xi = WeibullFibers(shape=5., scale=0.02, L0=10.)#RV('weibull_min', shape=50., scale=.02)
+        r = 0.002#RV('uniform', loc=0.002, scale=.002)
+        tau = RV('weibull_min', shape=5., scale=.5)
+        reinf = Reinforcement(r=r, tau=tau, V_f=0.1, E_f=200e3, xi=xi, n_int=20, label='carbon')
+        model = CompositeCrackBridge(E_m=E_m,
+                                 reinforcement_lst=[reinf],
+                                 Ll=100.,
+                                 Lr=100.)
+        ccb_view = CompositeCrackBridgeView(model=model)
+        sigmax_el.append(ccb_view.sigma_c_max[0])
+        wmax.append(ccb_view.sigma_c_max[1])
+    ccb_view.model.E_m = 10e10
+    rigid_sigma = ccb_view.sigma_c_max[0]
+    rigid_w = ccb_view.sigma_c_max[1]
+
+    plt.plot(k_ratio, np.array(sigmax_el)/rigid_sigma, label='$\sigma_\mathrm{c, max}$', lw=2, color='red')
+    plt.ylabel('$\sigma_\mathrm{c, max, el}/\sigma_\mathrm{c, max, rigid}$ and $w_\mathrm{max, el} / w_\mathrm{max, rigid}$')
+    plt.xlabel('$K_\mathrm{f}/K_\mathrm{m}$')
+    plt.title('effect of matrix stiffness')
+    plt.plot(k_ratio, np.array(wmax)/rigid_w, label='$w_\mathrm{max, el} / w_\mathrm{max, rigid}$', lw=2, color='blue')
+    plt.ylim(0)
 
 #profile(.03)
 #sigma_c_w(np.linspace(.0, .5, 100))
 #sigma_f(np.linspace(.0, .3, 100))
 #rigid_mtrx()
-errors(0.5)
+
+k = np.linspace(0.000001, 2., 10)
+errors(k)
 plt.legend(loc='best')
 plt.show()
   

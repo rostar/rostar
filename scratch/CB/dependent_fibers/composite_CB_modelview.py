@@ -10,14 +10,13 @@ import numpy as np
 from matplotlib import pyplot as plt
 from stats.spirrid.rv import RV
 from reinforcement import Reinforcement, WeibullFibers
-from scipy.optimize import fmin
+from scipy.optimize import fmin, fmin_cg, fmin_ncg, fmin_bfgs, bracket, golden, brent
 
 
 class CompositeCrackBridgeView(ModelView):
 
     model = Instance(CompositeCrackBridge)
-    
-    results = Property(depends_on='model.w, model.Ll, model.Lr, model.reinforcement_lst+')
+    results = Property(depends_on='model.E_m, model.w, model.Ll, model.Lr, model.reinforcement_lst+')
     @cached_property
     def _get_results(self):
         if self.model.w == 0.0:
@@ -32,39 +31,39 @@ class CompositeCrackBridgeView(ModelView):
         w_eval = np.trapz(mu_epsf_arr - self.model._epsm_arr, self.model._x_arr)
         return self.model._x_arr, self.model._epsm_arr, sigma_c, mu_epsf_arr, w_eval
 
-    x_arr = Property(depends_on='model.w, model.Ll, model.Lr, model.reinforcement_lst+')
+    x_arr = Property(depends_on='model.E_m, model.w, model.Ll, model.Lr, model.reinforcement_lst+')
     @cached_property
     def _get_x_arr(self):
         return self.results[0]        
 
-    epsm_arr = Property(depends_on='model.w, model.Ll, model.Lr, model.reinforcement_lst+')
+    epsm_arr = Property(depends_on='model.E_m, model.w, model.Ll, model.Lr, model.reinforcement_lst+')
     @cached_property
     def _get_epsm_arr(self):
         return self.results[1]
 
-    sigma_c = Property(depends_on='model.w, model.Ll, model.Lr, model.reinforcement_lst+')
+    sigma_c = Property(depends_on='model.E_m, model.w, model.Ll, model.Lr, model.reinforcement_lst+')
     @cached_property
     def _get_sigma_c(self):
         return self.results[2]
 
-    mu_epsf_arr = Property(depends_on='model.w, model.Ll, model.Lr, model.reinforcement_lst+')
+    mu_epsf_arr = Property(depends_on='model.E_m, model.w, model.Ll, model.Lr, model.reinforcement_lst+')
     @cached_property
     def _get_mu_epsf_arr(self):
         return self.results[3]
 
-    w_evaluated = Property(depends_on='model.w, model.Ll, model.Lr, model.reinforcement_lst+')
+    w_evaluated = Property(depends_on='model.E_m, model.w, model.Ll, model.Lr, model.reinforcement_lst+')
     @cached_property
     def _get_w_evaluated(self):
         return self.results[4]
     
-    sigma_c_max = Property(depends_on='model.w, model.Ll, model.Lr, model.reinforcement_lst+')
+    sigma_c_max = Property(depends_on='model.E_m, model.w, model.Ll, model.Lr, model.reinforcement_lst+')
     @cached_property
     def _get_sigma_c_max(self):
         def minfunc(w):
             self.model.w = float(w)
             return - self.sigma_c
-        wmax = fmin(minfunc, 0.1)
-        return wmax, self.sigma_c 
+        wmax = fmin(minfunc, 0.0001, maxiter=30)
+        return self.sigma_c, wmax
     
     def sigma_f_lst(self, w_arr):
         sigma_f_arr = np.zeros(len(w_arr) *
@@ -96,11 +95,11 @@ if __name__ == '__main__':
                           n_int=15,
                           label='AR glass')
 
-    reinf2 = Reinforcement(r=0.00345,#RV('uniform', loc=0.002, scale=0.002),
-                          tau=RV('uniform', loc=.5, scale=.1),
+    reinf2 = Reinforcement(r=0.002,#RV('uniform', loc=0.002, scale=0.002),
+                          tau=RV('uniform', loc=.3, scale=.4),
                           V_f=0.3,
                           E_f=200e3,
-                          xi=RV('weibull_min', shape=10., scale=.035),
+                          xi=RV('weibull_min', shape=5., scale=.02),
                           n_int=15,
                           label='carbon')
 
@@ -112,10 +111,10 @@ if __name__ == '__main__':
                           n_int=20)
 
     model = CompositeCrackBridge(E_m=25e3,
-                                 reinforcement_lst=[reinf1, reinf2],
-                                 Ll=3.,
-                                 Lr=5.)
-    
+                                 reinforcement_lst=[reinf2],
+                                 Ll=1000.,
+                                 Lr=1000.)
+
     ccb_view = CompositeCrackBridgeView(model=model)
 
     def profile(w):
@@ -145,8 +144,8 @@ if __name__ == '__main__':
             plt.plot(w_arr, sf_arr[:, i], label=reinf.label)
 
     #profile(.03)
-    plt.plot(ccb_view.sigma_c_max[0], ccb_view.sigma_c_max[1], 'ro')
     sigma_c_w(np.linspace(.0, .3, 50), label='ld')
+    plt.plot(ccb_view.sigma_c_max[1], ccb_view.sigma_c_max[0], 'ro')
     #sigma_f(np.linspace(.0, .3, 50))
-#    plt.legend(loc='best')
-#    plt.show()
+    plt.legend(loc='best')
+    plt.show()

@@ -278,7 +278,7 @@ class CompositeCrackBridge(HasTraits):
             except:
                 print 'broyden2 does not converge fast enough: switched to fsolve for this step'
                 damage = fsolve(self.damage_residuum, 0.2 * np.ones_like(self.sorted_depsf))
-            print 'damage =', np.sum(damage) / len(damage), 'iteration time =', t.clock() - ff, 'sec' 
+            #print 'damage =', np.sum(damage) / len(damage), 'iteration time =', t.clock() - ff, 'sec' 
         return damage
 
 if __name__ == '__main__':
