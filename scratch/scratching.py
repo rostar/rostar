@@ -8,6 +8,9 @@ from scipy.interpolate import griddata
 from mayavi import mlab as m
 from math import pi
 
+import scipy as sp
+print sp.__version__
+
 nr = np.random.randn(1000*500)
 nr = nr.reshape(500,1000)
 nr = nr.cumsum(axis = 1)

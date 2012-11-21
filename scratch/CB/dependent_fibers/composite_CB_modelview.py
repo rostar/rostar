@@ -10,6 +10,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 from stats.spirrid.rv import RV
 from reinforcement import Reinforcement, WeibullFibers
+from scipy.optimize import fmin
 
 
 class CompositeCrackBridgeView(ModelView):
@@ -55,6 +56,15 @@ class CompositeCrackBridgeView(ModelView):
     @cached_property
     def _get_w_evaluated(self):
         return self.results[4]
+    
+    sigma_c_max = Property(depends_on='model.w, model.Ll, model.Lr, model.reinforcement_lst+')
+    @cached_property
+    def _get_sigma_c_max(self):
+        def minfunc(w):
+            self.model.w = float(w)
+            return - self.sigma_c
+        wmax = fmin(minfunc, 0.1)
+        return wmax, self.sigma_c 
     
     def sigma_f_lst(self, w_arr):
         sigma_f_arr = np.zeros(len(w_arr) *
@@ -135,7 +145,8 @@ if __name__ == '__main__':
             plt.plot(w_arr, sf_arr[:, i], label=reinf.label)
 
     #profile(.03)
-    #sigma_c_w(np.linspace(.0, .3, 50), label='ld')
-    sigma_f(np.linspace(.0, .3, 50))
-    plt.legend(loc='best')
-    plt.show()
+    plt.plot(ccb_view.sigma_c_max[0], ccb_view.sigma_c_max[1], 'ro')
+    sigma_c_w(np.linspace(.0, .3, 50), label='ld')
+    #sigma_f(np.linspace(.0, .3, 50))
+#    plt.legend(loc='best')
+#    plt.show()

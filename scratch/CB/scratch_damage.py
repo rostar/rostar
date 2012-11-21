@@ -8,7 +8,7 @@ from matplotlib import pyplot as plt
 import numpy as np
 from scipy.optimize import brentq
 from math import e
-from dependent_fibers.composite_crack_bridge import CompositeCrackBridge, Reinforcement
+from dependent_fibers.composite_CB_model import CompositeCrackBridge, Reinforcement
 
 if __name__ == '__main__':
 
