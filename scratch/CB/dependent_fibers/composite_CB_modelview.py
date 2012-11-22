@@ -28,8 +28,7 @@ class CompositeCrackBridgeView(ModelView):
             self.model.sorted_stats_weights * self.model.sorted_E_f * self.model.damage)
         E_mtrx_arr = (1. - self.model.V_f_tot) * self.model.E_m + Kf_broken
         mu_epsf_arr = (sigma_c - E_mtrx_arr * self.model._epsm_arr) / (self.model.E_c - E_mtrx_arr)
-        w_eval = np.trapz(mu_epsf_arr - self.model._epsm_arr, self.model._x_arr)
-        return self.model._x_arr, self.model._epsm_arr, sigma_c, mu_epsf_arr, w_eval
+        return self.model._x_arr, self.model._epsm_arr, sigma_c, mu_epsf_arr
 
     x_arr = Property(depends_on='model.E_m, model.w, model.Ll, model.Lr, model.reinforcement_lst+')
     @cached_property
@@ -54,8 +53,15 @@ class CompositeCrackBridgeView(ModelView):
     w_evaluated = Property(depends_on='model.E_m, model.w, model.Ll, model.Lr, model.reinforcement_lst+')
     @cached_property
     def _get_w_evaluated(self):
-        return self.results[4]
-    
+        return np.trapz(self.mu_epsf_arr - self.epsm_arr, self.x_arr)
+
+    u_evaluated = Property(depends_on='model.E_m, model.w, model.Ll, model.Lr, model.reinforcement_lst+')
+    @cached_property
+    def _get_u_evaluated(self):
+        u_debonded = np.trapz(self.mu_epsf_arr, self.x_arr)
+        u_compact = self.model.Ll * self.mu_epsf_arr[0] + self.model.Lr * self.mu_epsf_arr[-1]
+        return u_debonded + u_compact
+
     sigma_c_max = Property(depends_on='model.E_m, model.w, model.Ll, model.Lr, model.reinforcement_lst+')
     @cached_property
     def _get_sigma_c_max(self):
@@ -97,7 +103,7 @@ if __name__ == '__main__':
 
     reinf2 = Reinforcement(r=0.002,#RV('uniform', loc=0.002, scale=0.002),
                           tau=RV('uniform', loc=.3, scale=.4),
-                          V_f=0.3,
+                          V_f=0.03,
                           E_f=200e3,
                           xi=RV('weibull_min', shape=5., scale=.02),
                           n_int=15,
@@ -112,8 +118,8 @@ if __name__ == '__main__':
 
     model = CompositeCrackBridge(E_m=25e3,
                                  reinforcement_lst=[reinf2],
-                                 Ll=1000.,
-                                 Lr=1000.)
+                                 Ll=50.,
+                                 Lr=50.)
 
     ccb_view = CompositeCrackBridgeView(model=model)
 
@@ -124,18 +130,23 @@ if __name__ == '__main__':
         plt.xlabel('position [mm]')
         plt.ylabel('strain')
 
-    def sigma_c_w(w_arr, label):
+    def sigma_c_w(w_arr):
         sigma_c = []
         w_err = []
+        u = []
         for w in w_arr:
             ccb_view.model.w = w
             sigma_c.append(ccb_view.sigma_c)
             w_err.append((ccb_view.w_evaluated - ccb_view.model.w) / (ccb_view.model.w + 1e-10))
+            u.append(ccb_view.u_evaluated)
         plt.figure()
         plt.plot(w_arr, w_err, label='error in w')
         plt.legend(loc='best')
         plt.figure()
-        plt.plot(w_arr, sigma_c, lw=2, label=label)
+        plt.plot(w_arr, sigma_c, lw=2, label='rigid')
+        plt.plot(u, sigma_c, lw=2, label='elastic')
+        plt.xlabel('u [mm]')
+        plt.ylabel('$\sigma_c$ [MPa]')
         plt.legend(loc='best')
 
     def sigma_f(w_arr):
@@ -144,7 +155,7 @@ if __name__ == '__main__':
             plt.plot(w_arr, sf_arr[:, i], label=reinf.label)
 
     #profile(.03)
-    sigma_c_w(np.linspace(.0, .3, 50), label='ld')
+    sigma_c_w(np.linspace(.0, .45, 150))
     plt.plot(ccb_view.sigma_c_max[1], ccb_view.sigma_c_max[0], 'ro')
     #sigma_f(np.linspace(.0, .3, 50))
     plt.legend(loc='best')

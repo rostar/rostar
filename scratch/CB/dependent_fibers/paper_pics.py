@@ -95,14 +95,7 @@ def random_domain(w):
     m.surf(e_arr[0], e_arr[1], F*30)
     m.show()
 
-def profile(w):
-    ccb_view.model.w = w
-    plt.plot(ccb_view.x_arr, ccb_view.epsm_arr, label='w_eval=' + str(ccb_view.w_evaluated) + ' w_ctrl=' + str(ccb_view.model.w))
-    plt.plot(ccb_view.x_arr, ccb_view.mu_epsf_arr, label='yarn')
-    plt.xlabel('position [mm]')
-    plt.ylabel('strain')
-
-def sigma_c_w(w_arr):
+def elastic_matrix(w_arr):
     reinf = Reinforcement(r=0.003, tau=0.5, V_f=0.1, E_f=200e3, xi=100., n_int=15, label='carbon')
     model = CompositeCrackBridge(E_m=25e3,
                              reinforcement_lst=[reinf],
@@ -199,6 +192,28 @@ def sigma_f(w_arr):
     plt.ylabel('stress [MPa]')
     plt.ylim(0)
 
+def sigma_c_w(w_arr, r, tau, E_f, E_m, V_f, xi, n_int):
+    reinf = Reinforcement(r=r, tau=tau, E_f=E_f, V_f=V_f,
+                          xi=xi, n_int=n_int)
+    model = CompositeCrackBridge(E_m=E_m,
+                             reinforcement_lst=[reinf],
+                             Ll=1000.,
+                             Lr=1000.)
+    ccb_view = CompositeCrackBridgeView(model=model)
+    sigma_c = []
+    for w in w_arr:
+        ccb_view.model.w = w
+        sigma_c.append(ccb_view.sigma_c)
+    plt.plot(w_arr, sigma_c, lw=2, label='elastic_mtrx')
+
+    cb = CBRigidMatrix()
+    spirrid = SPIRRID(q=cb, sampling_type='PGrid',
+                      evars=dict(w=w_arr),
+                      tvars=dict(r=r, tau=tau, E_f=E_f, V_f=V_f,
+                                 xi=xi),
+                      n_int=n_int)
+    plt.plot(w_arr, E_f * V_f * spirrid.mu_q_arr, lw=2, label='rigid_mtrx')
+
 def errors(k_ratio):
     sigmax_el = []
     wmax = []
@@ -206,7 +221,7 @@ def errors(k_ratio):
         E_m = E_f * V_f / k / (1 - V_f)
         xi = WeibullFibers(shape=5., scale=0.02, L0=10.)#RV('weibull_min', shape=50., scale=.02)
         r = 0.002#RV('uniform', loc=0.002, scale=.002)
-        tau = RV('weibull_min', shape=5., scale=.5)
+        tau = RV('weibull_min', shape=80., scale=.5)
         reinf = Reinforcement(r=r, tau=tau, V_f=0.1, E_f=200e3, xi=xi, n_int=20, label='carbon')
         model = CompositeCrackBridge(E_m=E_m,
                                  reinforcement_lst=[reinf],
@@ -219,20 +234,53 @@ def errors(k_ratio):
     rigid_sigma = ccb_view.sigma_c_max[0]
     rigid_w = ccb_view.sigma_c_max[1]
 
-    plt.plot(k_ratio, np.array(sigmax_el)/rigid_sigma, label='$\sigma_\mathrm{c, max}$', lw=2, color='red')
+    plt.plot(k_ratio, np.array(sigmax_el)/rigid_sigma, label='$\sigma_\mathrm{c, max, el}/\sigma_\mathrm{c, max, rigid}$', lw=2, color='red')
     plt.ylabel('$\sigma_\mathrm{c, max, el}/\sigma_\mathrm{c, max, rigid}$ and $w_\mathrm{max, el} / w_\mathrm{max, rigid}$')
     plt.xlabel('$K_\mathrm{f}/K_\mathrm{m}$')
     plt.title('effect of matrix stiffness')
     plt.plot(k_ratio, np.array(wmax)/rigid_w, label='$w_\mathrm{max, el} / w_\mathrm{max, rigid}$', lw=2, color='blue')
-    plt.ylim(0)
+    plt.ylim(0, 1.3)
 
-#profile(.03)
-#sigma_c_w(np.linspace(.0, .5, 100))
+def profile(wr, we, r, tau, E_f, E_m, V_f, xi, n_int):
+    reinf = Reinforcement(r=r, tau=tau, E_f=E_f, V_f=V_f,
+                          xi=xi, n_int=n_int)
+    model = CompositeCrackBridge(w=we,
+                                 E_m=E_m,
+                                 reinforcement_lst=[reinf],
+                                 Ll=1000., Lr=1000.)
+    ccb_view = CompositeCrackBridgeView(model=model)
+    plt.plot(ccb_view.x_arr, ccb_view.mu_epsf_arr, lw=2, label='el_mtrx_yarn')
+    plt.plot(ccb_view.x_arr, ccb_view.epsm_arr, lw=2, label='el_mtrx_mtrx')
+
+    cb = CBRigidMatrixSP()
+    x_arr = np.hstack((-np.linspace(3.*ccb_view.x_arr[-1], 0., 100),
+                        np.linspace(0.0, 3.*ccb_view.x_arr[-1],100)))
+    spirrid = SPIRRID(q=cb, sampling_type='PGrid',
+                      evars=dict(x=x_arr),
+                      tvars=dict(w=wr, r=r, tau=tau, E_f=E_f, V_f=V_f, xi=xi),
+                      n_int=n_int)
+    plt.plot(x_arr, spirrid.mu_q_arr, lw=2, label='rigid_mtrx_yarn')
+    plt.xlabel('position [mm]')
+    plt.ylabel('strain')
+
+#elastic_matrix(np.linspace(.0, .5, 100))
 #sigma_f(np.linspace(.0, .3, 100))
 #rigid_mtrx()
-
-k = np.linspace(0.000001, 2., 10)
-errors(k)
+plt.subplot(1,3,1)
+errors(np.linspace(0.000001, 2., 20))
+plt.legend(loc='best')
+plt.subplot(1,3,2)
+sigma_c_w(w_arr=np.linspace(.0, .3, 100),
+          r=0.002, tau=RV('weibull_min', shape=5., scale=.5),
+          E_f=200e3, E_m=25e3,
+          V_f=0.05, xi=RV('weibull_min', shape=5., scale=.02),
+          n_int=50)
+plt.legend(loc='best')
+plt.subplot(1,3,3)
+profile(wr=.087, we=0.067, r=0.002, tau=RV('weibull_min', shape=5., scale=.5),
+        E_f=200e3, E_m=25e3,
+        V_f=0.05, xi=RV('weibull_min', shape=5., scale=.02),
+        n_int=50)
 plt.legend(loc='best')
 plt.show()
   

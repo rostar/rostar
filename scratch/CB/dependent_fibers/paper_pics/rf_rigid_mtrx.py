@@ -74,11 +74,23 @@ class CBRigidMatrixSP(CBRigidMatrix):
     def __call__(self, w, x, r, tau, E_f, V_f, xi):
         T = 2. * tau / r
         epsf0 = super(CBRigidMatrixSP, self).__call__(w, r, tau, E_f, V_f, xi)
-        epsfx = epsf0 * (- T / E_f * abs(x))
-        return epsfx * H(epsfx)
+        epsfx = epsf0 - (T / E_f * abs(x))
+        eps = np.sqrt(T * w / E_f)
+        survived_fibers = np.sum(H(xi - eps))/float(len(epsf0.flatten()))
+        print survived_fibers
+        return epsfx * H(epsfx) / survived_fibers
 
 if __name__ == '__main__':
-    cb = CBRigidMatrix()
-    w = np.linspace(0.,0.5, 100)
-    plt.plot(w, 200e3*cb(w, 0.00345, 0.5, 200e3, 0.3, 100.))
-    plt.show()
+    
+    def sigma_w():
+        cb = CBRigidMatrix()
+        w = np.linspace(0.,0.5, 100)
+        plt.plot(w, 200e3*cb(w, 0.00345, 0.5, 200e3, 0.3, 100.))
+        plt.show()
+        
+    def SP():
+        cb = CBRigidMatrixSP()
+        x = np.linspace(0., 2., 100)
+        plt.plot(x, cb(0.01, x, 0.002, 0.5, 200e3, 0.3, 100.))
+        plt.show()
+    SP()
