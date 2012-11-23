@@ -137,7 +137,7 @@ if __name__ == '__main__':
         for w in w_arr:
             ccb_view.model.w = w
             sigma_c.append(ccb_view.sigma_c)
-            w_err.append((ccb_view.w_evaluated - ccb_view.model.w) / (ccb_view.model.w + 1e-10))
+            w_err.append((ccb_view.w_evaluated - ccb_view.model.w) / (ccb_view.model.w))
             u.append(ccb_view.u_evaluated)
         plt.figure()
         plt.plot(w_arr, w_err, label='error in w')

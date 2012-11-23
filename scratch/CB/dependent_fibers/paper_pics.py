@@ -84,7 +84,7 @@ def rigid_mtrx():
 def random_domain(w):
     Ef = 70e3
     Fxi = weibull_min(5., scale = 0.02)
-    r = np.linspace(0., 0.005, 100)
+    r = np.linspace(0.001, 0.005, 100)
     tau = np.linspace(0., 1., 100)
     e_arr = orthogonalize([np.arange(len(r)), np.arange(len(tau))])
 
@@ -93,6 +93,7 @@ def random_domain(w):
     eps0 = np.sqrt(w * 2 * tau / r / Ef)
     F = Fxi.cdf(eps0)
     m.surf(e_arr[0], e_arr[1], F*30)
+    m.surf(e_arr[0], e_arr[1], eps0*300)
     m.show()
 
 def elastic_matrix(w_arr):
@@ -263,25 +264,56 @@ def profile(wr, we, r, tau, E_f, E_m, V_f, xi, n_int):
     plt.xlabel('position [mm]')
     plt.ylabel('strain')
 
+def sigma_c_u(w_arr, r, tau, E_f, E_m, V_f, xi, n_int):
+    reinf = Reinforcement(r=r, tau=tau, E_f=E_f, V_f=V_f,
+                          xi=xi, n_int=n_int)
+    model = CompositeCrackBridge(E_m=E_m,
+                             reinforcement_lst=[reinf],
+                             Ll=30.,
+                             Lr=30.)
+    ccb_view = CompositeCrackBridgeView(model=model)
+    sigma_c = []
+    u = []
+    for w in w_arr:
+        ccb_view.model.w = w
+        u.append(ccb_view.u_evaluated)
+        sigma_c.append(ccb_view.sigma_c)
+    plt.plot(w_arr, sigma_c, lw=1, color='blue')
+    plt.plot(u, sigma_c, lw=1, color='red')
+
+    cb = CBRigidMatrix()
+    spirrid = SPIRRID(q=cb, sampling_type='PGrid',
+                      evars=dict(w=w_arr),
+                      tvars=dict(r=r, tau=tau, E_f=E_f, V_f=V_f,
+                                 xi=xi),
+                      n_int=n_int)
+    plt.plot(w_arr, E_f * V_f * spirrid.mu_q_arr, lw=2, color='black')
+
 #elastic_matrix(np.linspace(.0, .5, 100))
 #sigma_f(np.linspace(.0, .3, 100))
 #rigid_mtrx()
-plt.subplot(1,3,1)
-errors(np.linspace(0.000001, 2., 20))
-plt.legend(loc='best')
-plt.subplot(1,3,2)
-sigma_c_w(w_arr=np.linspace(.0, .3, 100),
-          r=0.002, tau=RV('weibull_min', shape=5., scale=.5),
-          E_f=200e3, E_m=25e3,
-          V_f=0.05, xi=RV('weibull_min', shape=5., scale=.02),
-          n_int=50)
-plt.legend(loc='best')
-plt.subplot(1,3,3)
-profile(wr=.087, we=0.067, r=0.002, tau=RV('weibull_min', shape=5., scale=.5),
-        E_f=200e3, E_m=25e3,
-        V_f=0.05, xi=RV('weibull_min', shape=5., scale=.02),
-        n_int=50)
-plt.legend(loc='best')
-plt.show()
-  
-#random_domain(0.2)
+#plt.subplot(1,3,1)
+#errors(np.linspace(0.000001, 2., 20))
+#plt.legend(loc='best')
+#plt.subplot(1,3,2)
+#sigma_c_w(w_arr=np.linspace(.0, .3, 100),
+#          r=0.002, tau=RV('weibull_min', shape=5., scale=.5),
+#          E_f=200e3, E_m=25e3,
+#          V_f=0.9, xi=RV('weibull_min', shape=5., scale=.02),
+#          n_int=50)
+#plt.legend(loc='best')
+#plt.subplot(1,3,3)
+#profile(wr=.087, we=0.067, r=0.002, tau=RV('weibull_min', shape=5., scale=.5),
+#        E_f=200e3, E_m=25e3,
+#        V_f=0.05, xi=RV('weibull_min', shape=5., scale=.02),
+#        n_int=50)
+#for em in np.linspace(5e3, 100e3, 4):
+#    sigma_c_u(w_arr=np.linspace(.0, .5, 100),
+#          r=0.002, tau=RV('weibull_min', shape=5., scale=.5),
+#          E_f=200e3, E_m=em,
+#          V_f=0.1, xi=RV('weibull_min', shape=5., scale=.02),
+#          n_int=50)
+#plt.legend(loc='best')
+#plt.show()
+
+random_domain(0.15)
