@@ -11,6 +11,7 @@ from matplotlib import pyplot as plt
 from stats.spirrid.rv import RV
 from reinforcement import Reinforcement, WeibullFibers
 from scipy.optimize import fmin, fmin_cg, fmin_ncg, fmin_bfgs, bracket, golden, brent
+from scipy.integrate import cumtrapz
 
 
 class CompositeCrackBridgeView(ModelView):
@@ -26,9 +27,9 @@ class CompositeCrackBridgeView(ModelView):
                       self.model.sorted_nu_r * self.model.sorted_E_f * (1. - self.model.damage))
         Kf_broken = np.sum(self.model.sorted_V_f * self.model.sorted_nu_r * \
             self.model.sorted_stats_weights * self.model.sorted_E_f * self.model.damage)
-        E_mtrx_arr = (1. - self.model.V_f_tot) * self.model.E_m + Kf_broken
-        mu_epsf_arr = (sigma_c - E_mtrx_arr * self.model._epsm_arr) / (self.model.E_c - E_mtrx_arr)
-        return self.model._x_arr, self.model._epsm_arr, sigma_c, mu_epsf_arr
+        E_mtrx = (1. - self.model.V_f_tot) * self.model.E_m + Kf_broken
+        mu_epsf_arr = (sigma_c - E_mtrx * self.model._epsm_arr) / (self.model.E_c - E_mtrx)
+        return self.model._x_arr, self.model._epsm_arr, sigma_c, mu_epsf_arr, E_mtrx
 
     x_arr = Property(depends_on='model.E_m, model.w, model.Ll, model.Lr, model.reinforcement_lst+')
     @cached_property
@@ -59,7 +60,8 @@ class CompositeCrackBridgeView(ModelView):
     @cached_property
     def _get_u_evaluated(self):
         u_debonded = np.trapz(self.mu_epsf_arr, self.x_arr)
-        u_compact = self.model.Ll * self.mu_epsf_arr[0] + self.model.Lr * self.mu_epsf_arr[-1]
+        u_compact = ((self.model.Ll - np.abs(self.x_arr[0])) * self.mu_epsf_arr[0]
+                    + (self.model.Lr - np.abs(self.x_arr[-1])) * self.mu_epsf_arr[-1])
         return u_debonded + u_compact
 
     sigma_c_max = Property(depends_on='model.E_m, model.w, model.Ll, model.Lr, model.reinforcement_lst+')
@@ -90,6 +92,30 @@ class CompositeCrackBridgeView(ModelView):
                               self.model.sorted_E_f * (1. - self.model.damage) * masks[j])
                 sigma_f_arr[i, j] = sigma_fi
         return sigma_f_arr
+
+    Welm = Property(depends_on='model.E_m, model.w, model.Ll, model.Lr, model.reinforcement_lst+')
+    @cached_property
+    def _get_Welm(self):
+        nint = len(self.model.sorted_depsf)
+        Vm = (1 - self.model.V_f_tot) + np.sum((self.model.damage * self.model.sorted_V_f))/nint
+        bonded_l = self.epsm_arr[0]**2 * self.results[4] * Vm * (self.model.Ll - np.abs(self.x_arr[0]))
+        bonded_r = self.epsm_arr[-1]**2 * self.results[4] * Vm * (self.model.Lr - np.abs(self.x_arr[-1]))
+        return np.trapz(self.epsm_arr**2 * self.results[4] * Vm, self.x_arr) + bonded_l + bonded_r 
+
+    Welf = Property(depends_on='model.E_m, model.w, model.Ll, model.Lr, model.reinforcement_lst+')
+    @cached_property
+    def _get_Welf(self):
+        nint = len(self.model.sorted_depsf)
+        Kf = np.sum(self.model.sorted_E_f * self.model.sorted_V_f *
+              self.model.sorted_nu_r * (1-self.model.damage))/nint
+        bonded_l = self.mu_epsf_arr[0] ** 2 * Kf * (self.model.Ll - np.abs(self.x_arr[0]))
+        bonded_r = self.mu_epsf_arr[-1] ** 2 * Kf * (self.model.Lr - np.abs(self.x_arr[-1]))
+        return np.trapz(self.mu_epsf_arr ** 2 * Kf, self.x_arr) + bonded_l + bonded_r
+
+    Wtau = Property(depends_on='model.E_m, model.w, model.Ll, model.Lr, model.reinforcement_lst+')
+    @cached_property
+    def _get_Wtau(self):
+        return self.sigma_c * self.u_evaluated - self.Welf - self.Welm
     
 if __name__ == '__main__':
 
@@ -103,10 +129,10 @@ if __name__ == '__main__':
 
     reinf2 = Reinforcement(r=0.002,#RV('uniform', loc=0.002, scale=0.002),
                           tau=RV('uniform', loc=.3, scale=.4),
-                          V_f=0.03,
+                          V_f=0.1,
                           E_f=200e3,
-                          xi=RV('weibull_min', shape=5., scale=.02),
-                          n_int=15,
+                          xi=RV('weibull_min', shape=5., scale=0.02),
+                          n_int=54,
                           label='carbon')
 
     reinf3 = Reinforcement(r=0.00345,#RV('uniform', loc=0.002, scale=0.002),
@@ -117,9 +143,9 @@ if __name__ == '__main__':
                           n_int=20)
 
     model = CompositeCrackBridge(E_m=25e3,
-                                 reinforcement_lst=[reinf2],
-                                 Ll=50.,
-                                 Lr=50.)
+                                 reinforcement_lst=[reinf1, reinf2],
+                                 Ll=7.,
+                                 Lr=7.)
 
     ccb_view = CompositeCrackBridgeView(model=model)
 
@@ -154,9 +180,34 @@ if __name__ == '__main__':
         for i, reinf in enumerate(ccb_view.model.reinforcement_lst):
             plt.plot(w_arr, sf_arr[:, i], label=reinf.label)
 
+    def energy(w_arr):
+        sigma_c = []
+        Welm = []
+        Welf = []
+        Wtau = []
+        u = []
+        for w in w_arr:
+            ccb_view.model.w = w
+            sigma_c.append(ccb_view.sigma_c)
+            Welm.append(ccb_view.Welm)
+            Welf.append(ccb_view.Welf)
+            Wtau.append(ccb_view.Wtau)
+            u.append(ccb_view.u_evaluated)
+        plt.plot(w_arr, Welm, lw=2, label='Welm')
+        plt.plot(w_arr, Welf, lw=2, label='Welf')
+        plt.plot(w_arr, Wtau, lw=2, label='Wtau')
+        Wtot = np.array(Welf) + np.array(Welm) + np.array(Wtau)
+        plt.plot(w_arr, Wtot, lw=2, color='black', label='total energy')
+        plt.plot(w_arr, np.array(sigma_c) * np.array(u), ls='dashed', lw=3, color='red', label='F*u')
+        plt.xlabel('u [mm]')
+        plt.ylabel('W')
+        plt.legend(loc='best')
+
+    #TODO: check energy for combuned reinf
+    energy(np.linspace(.0, .35, 50))
     #profile(.03)
-    sigma_c_w(np.linspace(.0, .45, 150))
-    plt.plot(ccb_view.sigma_c_max[1], ccb_view.sigma_c_max[0], 'ro')
+    #sigma_c_w(np.linspace(.0, .45, 150))
+    #plt.plot(ccb_view.sigma_c_max[1], ccb_view.sigma_c_max[0], 'ro')
     #sigma_f(np.linspace(.0, .3, 50))
     plt.legend(loc='best')
     plt.show()

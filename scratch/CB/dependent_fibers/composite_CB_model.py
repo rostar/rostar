@@ -136,11 +136,11 @@ class CompositeCrackBridge(HasTraits):
         Kf_broken = np.sum(Kf * damage)
         Kf_add = Kf_intact_bonded + Kf_broken
         Km = (1. - self.V_f_tot) * self.E_m
-        Kc = Km + Kf_add
-        mean_acting_depsm = np.sum(self.sorted_depsf * (self.sorted_depsf < depsf) *
+        E_mtrx = Km + Kf_add
+        mean_acting_T = np.sum(self.sorted_depsf * (self.sorted_depsf < depsf) *
                                    self.sorted_stats_weights * self.sorted_E_f *
                                    self.sorted_V_f * self.sorted_nu_r * (1. - damage))
-        return mean_acting_depsm / Kc
+        return mean_acting_T / E_mtrx
 
     def double_sided(self, defi, x0, demi, em0, um0, damage):
         dxi = (-defi * x0 - demi * x0 + (defi * x0 ** 2 * demi
@@ -181,8 +181,9 @@ class CompositeCrackBridge(HasTraits):
     def damage_residuum(self, iter_damage):
         um_short, em_short, x_short = [0.0], [0.0], [0.0]
         um_long, em_long, x_long = [0.0], [0.0], [0.0]
-        dem_short = [self.dem_depsf(np.infty, iter_damage)]
-        dem_long = [self.dem_depsf(np.infty, iter_damage)]
+        init_dem = self.dem_depsf(np.infty, iter_damage)
+        dem_short = [init_dem]
+        dem_long = [init_dem]
         epsf0 = np.zeros_like(self.sorted_depsf)
         Lmin = min(self.Ll, self.Lr)
         Lmax = max(self.Ll, self.Lr)
