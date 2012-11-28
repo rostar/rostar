@@ -26,7 +26,7 @@ reinf1 = Reinforcement(r=0.00345,#RV('uniform', loc=0.001, scale=0.005),
 
 reinf2 = Reinforcement(r=0.003,#RV('uniform', loc=0.002, scale=0.002),
                       tau=0.5,#RV('uniform', loc=.5, scale=.1),
-                      V_f=0.1,
+                      V_f=0.2,
                       E_f=200e3,
                       xi=RV('weibull_min', shape=5., scale=.02),
                       n_int=15,
@@ -34,52 +34,100 @@ reinf2 = Reinforcement(r=0.003,#RV('uniform', loc=0.002, scale=0.002),
 
 model = CompositeCrackBridge(E_m=25e3,
                              reinforcement_lst=[reinf2],
-                             Ll=1000.,
-                             Lr=1000.)
+                             Ll=50.,
+                             Lr=50.)
 
 ccb_view = CompositeCrackBridgeView(model=model)
 
-r = 0.003
-tau = 0.5
-V_f = 0.1
-E_f = 200e3
-xi = 100.
 
-def rigid_mtrx():
-    cb = CBRigidMatrix()
-    w_arr = np.linspace(0.0, 0.5, 100)
-    plt.plot(w_arr, E_f * V_f * cb(w_arr, r, tau, E_f, V_f, xi), lw=2, label='3.1.1')
-    plt.plot(w_arr, E_f * V_f * cb(w_arr, r, tau, E_f, V_f, 0.02), lw=2, label='3.1.2')
-    spirrid1 = SPIRRID(q=cb, sampling_type='PGrid',
-                      evars=dict(w=w_arr),
-                      tvars=dict(r=r, tau=tau, E_f=E_f, V_f=V_f,
-                                 xi=RV('weibull_min', shape=5.0, scale=0.02)),
-                      n_int=500)
-    plt.plot(w_arr, E_f * V_f * spirrid1.mu_q_arr, lw=2, label='3.1.3')
-    spirrid2 = SPIRRID(q=cb, sampling_type='PGrid',
-                      evars=dict(w=w_arr),
-                      tvars=dict(r=RV('uniform', loc=0.002, scale=0.002),
-                                 tau=RV('uniform', loc=0.3, scale=0.4),
-                                 E_f=E_f, V_f=V_f, xi=xi),
-                      n_int=50)
-    plt.plot(w_arr, E_f * V_f * spirrid2.mu_q_arr, lw=2, label='3.1.4')
-    spirrid3 = SPIRRID(q=cb, sampling_type='PGrid',
-                      evars=dict(w=w_arr),
-                      tvars=dict(r=RV('uniform', loc=0.002, scale=0.002),
-                                 tau=RV('uniform', loc=0.3, scale=0.4),
-                                 E_f=E_f, V_f=V_f, xi=0.02),
-                      n_int=500)
-    plt.plot(w_arr, E_f * V_f * spirrid3.mu_q_arr, lw=2, label='3.1.5')
-    spirrid4 = SPIRRID(q=cb, sampling_type='PGrid',
-                      evars=dict(w=w_arr),
-                      tvars=dict(r=RV('uniform', loc=0.002, scale=0.002),
-                                 tau=RV('uniform', loc=0.3, scale=0.4),
-                                 E_f=E_f, V_f=V_f,
-                                 xi=RV('weibull_min', shape=5.0, scale=0.02)),
-                      n_int=20)
-    plt.plot(w_arr, E_f * V_f * spirrid4.mu_q_arr, lw=2, label='3.1.6')
-    plt.xlabel('w [mm]')
+def ld_rigid_vs_el_mtrx():
+    w_arr = np.linspace(0.0, 0.75, 200)
+    r = 0.003
+    tau = 0.5
+    V_f = 0.11
+    E_f = 200e3
+    n_int = 30
+    E_m = 25e10
+    xi = 0.02
+    Xxi = RV('weibull_min', shape=5., scale=.02)
+    Xr = RV('uniform', loc=.002, scale=.002)
+    Xtau = RV('uniform', loc=.2, scale=.4)
+    reinf1 = Reinforcement(r=r, tau=tau, V_f=V_f, E_f=E_f, xi=xi, n_int=n_int)
+    reinf2 = Reinforcement(r=r, tau=tau, V_f=V_f, E_f=E_f, xi=Xxi, n_int=100)
+    reinf3 = Reinforcement(r=Xr, tau=Xtau, V_f=V_f, E_f=E_f, xi=Xxi, n_int=15)
+    model1 = CompositeCrackBridge(E_m=E_m, reinforcement_lst=[reinf1], Ll=35., Lr=35.)
+    model2 = CompositeCrackBridge(E_m=E_m, reinforcement_lst=[reinf2], Ll=35., Lr=35.)
+    model3 = CompositeCrackBridge(E_m=E_m, reinforcement_lst=[reinf3], Ll=35., Lr=35.)
+    ccb_view1 = CompositeCrackBridgeView(model=model1)
+    ccb_view2 = CompositeCrackBridgeView(model=model2)
+    ccb_view3 = CompositeCrackBridgeView(model=model3)
+    sigma_c1, u1, sigma_c2, u2, sigma_c3, u3 = [], [], [], [], [], []
+    for w in w_arr:
+        ccb_view1.model.w = w/2
+        ccb_view2.model.w = w
+        ccb_view3.model.w = w
+        u1.append(ccb_view1.u_evaluated)
+        sigma_c1.append(ccb_view1.sigma_c)
+        u2.append(ccb_view2.u_evaluated)
+        sigma_c2.append(ccb_view2.sigma_c)
+        u3.append(ccb_view3.u_evaluated)
+        sigma_c3.append(ccb_view3.sigma_c)
+    plt.plot(w_arr / 2., sigma_c1, lw = 2, color='black', label='w')
+    plt.plot(w_arr, sigma_c2, lw = 2, color='black')
+    plt.plot(w_arr, sigma_c3, lw = 2, color='black')
+    plt.plot(u1, sigma_c1, ls='dashed', lw = 3, color='black', label='u')
+    plt.plot(u2, sigma_c2, ls='dashed', lw = 3, color='black')
+    plt.plot(u3, sigma_c3, ls='dashed', lw = 3, color='black')
+    plt.xlabel('w, u [mm]')
     plt.ylabel('$\sigma_c$ [MPa]')
+
+def profiles_rigid_vs_el_mtrx():
+    r = 0.003
+    tau = 0.5
+    V_f = 0.11
+    E_f = 200e3
+    E_m = 25e10
+    Ll = 35.
+    Lr = 35.
+    Xxi = RV('weibull_min', shape=5., scale=.02)
+    Xr = RV('uniform', loc=.002, scale=.002)
+    Xtau = RV('uniform', loc=.2, scale=.4)
+    reinf2 = Reinforcement(r=Xr, tau=Xtau, V_f=V_f, E_f=E_f, xi=Xxi, n_int=15)
+    reinf3 = Reinforcement(r=r, tau=tau, V_f=V_f, E_f=E_f, xi=Xxi, n_int=15)
+    model2 = CompositeCrackBridge(E_m=E_m, reinforcement_lst=[reinf2], Ll=Ll, Lr=Lr)
+    model3 = CompositeCrackBridge(E_m=E_m, reinforcement_lst=[reinf3], Ll=Ll, Lr=Lr)
+    ccb_view2 = CompositeCrackBridgeView(model=model2)
+    ccb_view3 = CompositeCrackBridgeView(model=model3)
+
+    ccb_view2.sigma_c_max
+    ccb_view3.sigma_c_max
+    x2 = np.hstack((-Ll, ccb_view2.x_arr, Lr))
+    mu_epsf2 = np.hstack((ccb_view2.mu_epsf_arr[0], ccb_view2.mu_epsf_arr, ccb_view2.mu_epsf_arr[-1]))
+    epsm2 = np.hstack((ccb_view2.epsm_arr[0], ccb_view2.epsm_arr, ccb_view2.epsm_arr[-1]))
+    x3 = np.hstack((-Ll, ccb_view3.x_arr, Lr))
+    mu_epsf3 = np.hstack((ccb_view3.mu_epsf_arr[0], ccb_view3.mu_epsf_arr, ccb_view3.mu_epsf_arr[-1]))
+    epsm3 = np.hstack((ccb_view3.epsm_arr[0], ccb_view3.epsm_arr, ccb_view3.epsm_arr[-1]))
+    fig = plt.figure()
+    ax = fig.add_subplot(1, 1, 1)
+    ax.plot(x2, mu_epsf2, lw=2, color='black')
+    ax.plot(x2, epsm2, lw=2, color='black')
+    p = ax.fill_between(x2, epsm2, mu_epsf2, facecolor='none')
+    from matplotlib.patches import PathPatch
+    path = p.get_paths()[0]
+    p1 = PathPatch(path, fc="none", hatch="/")
+    ax.add_patch(p1)
+    p1.set_zorder(p.get_zorder()-0.1)
+    #ax.plot(x3, mu_epsf3, lw=2, color='black')
+    #ax.plot(x3, epsm3, lw=2, color='black')
+    p = ax.fill_between(x2, mu_epsf2, facecolor='none')
+    path = p.get_paths()[0]
+    p1 = PathPatch(path, fc="none", hatch="\\")
+    ax.add_patch(p1)
+    p1.set_zorder(p.get_zorder()-0.1)
+    plt.xlabel('z [mm]')
+    plt.xlim(-35, 35)
+    plt.ylim(0)
+    plt.ylabel('$\epsilon$ [-]')
 
 def random_domain(w):
     Ef = 70e3
@@ -95,96 +143,6 @@ def random_domain(w):
     m.surf(e_arr[0], e_arr[1], F*30)
     m.surf(e_arr[0], e_arr[1], eps0*300)
     m.show()
-
-def elastic_matrix(w_arr):
-#    reinf = Reinforcement(r=0.003, tau=0.5, V_f=0.1, E_f=200e3, xi=100., n_int=15, label='carbon')
-#    model = CompositeCrackBridge(E_m=25e3,
-#                             reinforcement_lst=[reinf],
-#                             Ll=1000.,
-#                             Lr=1000.)
-#    ccb_view = CompositeCrackBridgeView(model=model)
-#    sigma_c = []
-#    for w in w_arr:
-#        ccb_view.model.w = w
-#        sigma_c.append(ccb_view.sigma_c)
-#    plt.plot(w_arr, sigma_c, label='3.2.1')
-
-    reinf = Reinforcement(r=0.003, tau=0.5, V_f=0.1, E_f=200e3, xi=0.02, n_int=1, label='carbon')
-    model = CompositeCrackBridge(E_m=25e3,
-                             reinforcement_lst=[reinf],
-                             Ll=10.,
-                             Lr=10.)
-    ccb_view = CompositeCrackBridgeView(model=model)
-    sigma_c = []
-    u = []
-    for w in w_arr:
-        ccb_view.model.w = w
-        u.append(ccb_view.u_evaluated)
-        sigma_c.append(ccb_view.sigma_c)
-    plt.plot(w_arr, sigma_c, label='3.2.2')
-    plt.plot(u, sigma_c, label='3.2.2')
-#
-#    reinf = Reinforcement(r=0.003, tau=0.5, V_f=0.1, E_f=200e3,
-#                          xi=RV('weibull_min', shape=5.0, scale=0.02),
-#                          n_int=50, label='carbon')
-#    model = CompositeCrackBridge(E_m=25e3,
-#                             reinforcement_lst=[reinf],
-#                             Ll=1000.,
-#                             Lr=1000.)
-#    ccb_view = CompositeCrackBridgeView(model=model)
-#    sigma_c = []
-#    for w in w_arr:
-#        ccb_view.model.w = w
-#        sigma_c.append(ccb_view.sigma_c)
-#    plt.plot(w_arr, sigma_c, label='3.2.3')
-#
-#    reinf = Reinforcement(r=RV('uniform', loc=0.002, scale=0.002),
-#                          tau=RV('uniform', loc=0.3, scale=0.4),
-#                          V_f=0.1, E_f=200e3,
-#                          xi=100.,
-#                          n_int=10, label='carbon')
-#    model = CompositeCrackBridge(E_m=25e3,
-#                             reinforcement_lst=[reinf],
-#                             Ll=1000.,
-#                             Lr=1000.)
-#    ccb_view = CompositeCrackBridgeView(model=model)
-#    sigma_c = []
-#    for w in w_arr:
-#        ccb_view.model.w = w
-#        sigma_c.append(ccb_view.sigma_c)
-#    plt.plot(w_arr, sigma_c, label='3.2.4')
-#
-#    reinf = Reinforcement(r=RV('uniform', loc=0.002, scale=0.002),
-#                          tau=RV('uniform', loc=0.3, scale=0.4),
-#                          V_f=0.1, E_f=200e3,
-#                          xi=RV('weibull_min', shape=70.0, scale=0.02),
-#                          n_int=10, label='carbon')
-#    model = CompositeCrackBridge(E_m=25e3,
-#                             reinforcement_lst=[reinf],
-#                             Ll=1000.,
-#                             Lr=1000.)
-#    ccb_view = CompositeCrackBridgeView(model=model)
-#    sigma_c = []
-#    for w in w_arr:
-#        ccb_view.model.w = w
-#        sigma_c.append(ccb_view.sigma_c)
-#    plt.plot(w_arr, sigma_c, label='3.2.5')
-#
-#    reinf = Reinforcement(r=RV('uniform', loc=0.002, scale=0.002),
-#                          tau=RV('uniform', loc=0.3, scale=0.4),
-#                          V_f=0.1, E_f=200e3,
-#                          xi=RV('weibull_min', shape=5.0, scale=0.02),
-#                          n_int=10, label='carbon')
-#    model = CompositeCrackBridge(E_m=25e3,
-#                             reinforcement_lst=[reinf],
-#                             Ll=1000.,
-#                             Lr=1000.)
-#    ccb_view = CompositeCrackBridgeView(model=model)
-#    sigma_c = []
-#    for w in w_arr:
-#        ccb_view.model.w = w
-#        sigma_c.append(ccb_view.sigma_c)
-#    plt.plot(w_arr, sigma_c, label='3.2.6') 
 
 def sigma_f(w_arr):
     sf_arr = ccb_view.sigma_f_lst(w_arr)
@@ -292,7 +250,9 @@ def sigma_c_u(w_arr, r, tau, E_f, E_m, V_f, xi, n_int):
                       n_int=n_int)
     plt.plot(w_arr, E_f * V_f * spirrid.mu_q_arr, lw=2, color='black')
 
-elastic_matrix(np.linspace(.0, .5, 100))
+#ld_rigid_vs_el_mtrx()
+profiles_rigid_vs_el_mtrx()
+#elastic_matrix(np.linspace(.0, .5, 100))
 #sigma_f(np.linspace(.0, .3, 100))
 #rigid_mtrx()
 #plt.subplot(1,3,1)
