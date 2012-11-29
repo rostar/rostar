@@ -41,17 +41,17 @@ ccb_view = CompositeCrackBridgeView(model=model)
 
 
 def ld_rigid_vs_el_mtrx():
-    w_arr = np.linspace(0.0, 0.75, 200)
+    w_arr = np.linspace(0.0, 0.8, 200)
     r = 0.003
-    tau = 0.5
+    tau = 0.3
     V_f = 0.11
     E_f = 200e3
     n_int = 30
-    E_m = 25e10
+    E_m = 25e3
     xi = 0.02
     Xxi = RV('weibull_min', shape=5., scale=.02)
     Xr = RV('uniform', loc=.002, scale=.002)
-    Xtau = RV('uniform', loc=.2, scale=.4)
+    Xtau = RV('uniform', loc=.02, scale=.98)
     reinf1 = Reinforcement(r=r, tau=tau, V_f=V_f, E_f=E_f, xi=xi, n_int=n_int)
     reinf2 = Reinforcement(r=r, tau=tau, V_f=V_f, E_f=E_f, xi=Xxi, n_int=100)
     reinf3 = Reinforcement(r=Xr, tau=Xtau, V_f=V_f, E_f=E_f, xi=Xxi, n_int=15)
@@ -75,15 +75,15 @@ def ld_rigid_vs_el_mtrx():
     plt.plot(w_arr / 2., sigma_c1, lw = 2, color='black', label='w')
     plt.plot(w_arr, sigma_c2, lw = 2, color='black')
     plt.plot(w_arr, sigma_c3, lw = 2, color='black')
-    plt.plot(u1, sigma_c1, ls='dashed', lw = 3, color='black', label='u')
-    plt.plot(u2, sigma_c2, ls='dashed', lw = 3, color='black')
-    plt.plot(u3, sigma_c3, ls='dashed', lw = 3, color='black')
+    plt.plot(u1, sigma_c1, ls='dashed', lw = 2, color='black', label='u')
+    plt.plot(u2, sigma_c2, ls='dashed', lw = 2, color='black')
+    plt.plot(u3, sigma_c3, ls='dashed', lw = 2, color='black')
     plt.xlabel('w, u [mm]')
     plt.ylabel('$\sigma_c$ [MPa]')
 
 def profiles_rigid_vs_el_mtrx():
     r = 0.003
-    tau = 0.5
+    tau = 0.3
     V_f = 0.11
     E_f = 200e3
     E_m = 25e10
@@ -91,22 +91,15 @@ def profiles_rigid_vs_el_mtrx():
     Lr = 35.
     Xxi = RV('weibull_min', shape=5., scale=.02)
     Xr = RV('uniform', loc=.002, scale=.002)
-    Xtau = RV('uniform', loc=.2, scale=.4)
+    Xtau = RV('uniform', loc=.02, scale=.98)
     reinf2 = Reinforcement(r=Xr, tau=Xtau, V_f=V_f, E_f=E_f, xi=Xxi, n_int=15)
-    reinf3 = Reinforcement(r=r, tau=tau, V_f=V_f, E_f=E_f, xi=Xxi, n_int=15)
     model2 = CompositeCrackBridge(E_m=E_m, reinforcement_lst=[reinf2], Ll=Ll, Lr=Lr)
-    model3 = CompositeCrackBridge(E_m=E_m, reinforcement_lst=[reinf3], Ll=Ll, Lr=Lr)
     ccb_view2 = CompositeCrackBridgeView(model=model2)
-    ccb_view3 = CompositeCrackBridgeView(model=model3)
 
     ccb_view2.sigma_c_max
-    ccb_view3.sigma_c_max
     x2 = np.hstack((-Ll, ccb_view2.x_arr, Lr))
     mu_epsf2 = np.hstack((ccb_view2.mu_epsf_arr[0], ccb_view2.mu_epsf_arr, ccb_view2.mu_epsf_arr[-1]))
     epsm2 = np.hstack((ccb_view2.epsm_arr[0], ccb_view2.epsm_arr, ccb_view2.epsm_arr[-1]))
-    x3 = np.hstack((-Ll, ccb_view3.x_arr, Lr))
-    mu_epsf3 = np.hstack((ccb_view3.mu_epsf_arr[0], ccb_view3.mu_epsf_arr, ccb_view3.mu_epsf_arr[-1]))
-    epsm3 = np.hstack((ccb_view3.epsm_arr[0], ccb_view3.epsm_arr, ccb_view3.epsm_arr[-1]))
     fig = plt.figure()
     ax = fig.add_subplot(1, 1, 1)
     ax.plot(x2, mu_epsf2, lw=2, color='black')
@@ -117,13 +110,22 @@ def profiles_rigid_vs_el_mtrx():
     p1 = PathPatch(path, fc="none", hatch="/")
     ax.add_patch(p1)
     p1.set_zorder(p.get_zorder()-0.1)
-    #ax.plot(x3, mu_epsf3, lw=2, color='black')
-    #ax.plot(x3, epsm3, lw=2, color='black')
     p = ax.fill_between(x2, mu_epsf2, facecolor='none')
     path = p.get_paths()[0]
     p1 = PathPatch(path, fc="none", hatch="\\")
     ax.add_patch(p1)
     p1.set_zorder(p.get_zorder()-0.1)
+    
+    reinf1 = Reinforcement(r=r, tau=tau, V_f=V_f, E_f=E_f, xi=Xxi, n_int=15)
+    model1 = CompositeCrackBridge(E_m=E_m, reinforcement_lst=[reinf1], Ll=Ll, Lr=Lr)
+    ccb_view1 = CompositeCrackBridgeView(model=model1)
+    ccb_view1.sigma_c_max
+    x1 = np.hstack((-Ll, ccb_view1.x_arr, Lr))
+    mu_epsf1 = np.hstack((ccb_view1.mu_epsf_arr[0], ccb_view1.mu_epsf_arr, ccb_view1.mu_epsf_arr[-1]))
+    epsm1 = np.hstack((ccb_view1.epsm_arr[0], ccb_view1.epsm_arr, ccb_view1.epsm_arr[-1]))
+    ax.plot(x1, mu_epsf1, lw=2, color='black')
+    ax.plot(x1, epsm1, lw=2, color='black')
+    
     plt.xlabel('z [mm]')
     plt.xlim(-35, 35)
     plt.ylim(0)
@@ -250,8 +252,8 @@ def sigma_c_u(w_arr, r, tau, E_f, E_m, V_f, xi, n_int):
                       n_int=n_int)
     plt.plot(w_arr, E_f * V_f * spirrid.mu_q_arr, lw=2, color='black')
 
-#ld_rigid_vs_el_mtrx()
-profiles_rigid_vs_el_mtrx()
+ld_rigid_vs_el_mtrx()
+#profiles_rigid_vs_el_mtrx()
 #elastic_matrix(np.linspace(.0, .5, 100))
 #sigma_f(np.linspace(.0, .3, 100))
 #rigid_mtrx()
@@ -276,7 +278,7 @@ profiles_rigid_vs_el_mtrx()
 #          E_f=200e3, E_m=em,
 #          V_f=0.1, xi=RV('weibull_min', shape=5., scale=.02),
 #          n_int=50)
-plt.legend(loc='best')
+#plt.legend(loc='best')
 plt.show()
 
 #random_domain(0.15)
