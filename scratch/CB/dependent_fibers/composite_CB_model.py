@@ -257,15 +257,23 @@ class CompositeCrackBridge(HasTraits):
                              em_long[-1], um_short[-1], um_long[-1])
                 epsf0[i] = epsf0_clamped
  
-        self._x_arr = np.hstack((-np.array(x_short)[::-1], np.array(x_long)))
-        self._epsm_arr = np.hstack((np.array(em_short)[::-1], np.array(em_long)))
+        self._x_arr = np.hstack((-np.array(x_short)[::-1][:-1], np.array(x_long)))
+        self._epsm_arr = np.hstack((np.array(em_short)[::-1][:-1], np.array(em_long)))
         self._epsf0_arr = epsf0
         residuum = self.vect_xi_cdf(epsf0, x_short=x_short, x_long=x_long) - iter_damage
         return residuum
 
     _x_arr = Array
+    def __x_arr_default(self):
+        return np.repeat(1e-10, len(self.sorted_depsf))
+
     _epsm_arr = Array
+    def __epsm_arr_default(self):
+        return np.repeat(1e-10, len(self.sorted_depsf))
+
     _epsf0_arr = Array
+    def __epsf0_arr_default(self):
+        return np.repeat(1e-10, len(self.sorted_depsf))
 
     damage = Property(depends_on='w, Ll, Lr, reinforcement+')
     @cached_property
@@ -279,8 +287,9 @@ class CompositeCrackBridge(HasTraits):
             except:
                 print 'broyden2 does not converge fast enough: switched to fsolve for this step'
                 damage = fsolve(self.damage_residuum, 0.2 * np.ones_like(self.sorted_depsf))
-            print 'damage =', np.sum(damage) / len(damage), 'iteration time =', t.clock() - ff, 'sec' 
+            #print 'damage =', np.sum(damage) / len(damage), 'iteration time =', t.clock() - ff, 'sec' 
         return damage
 
 if __name__ == '__main__':
-    pass
+    scb = CompositeCrackBridge()
+    print scb

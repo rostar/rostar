@@ -1,31 +1,25 @@
 import numpy as np
-from scipy.optimize import fsolve
-from scipy.stats import weibull_min
 from matplotlib import pyplot as plt
-from scipy.optimize import broyden2
-from scipy.special import gammainc
-from scipy.interpolate import griddata
-from mayavi import mlab as m
-from math import pi
-import time as t
+from scipy.interpolate import LinearNDInterpolator
+from etsproxy.mayavi import mlab as m
+from stats.spirrid import make_ogrid as orthogonalize
 
-x = np.linspace(-2,2,100)
-y = 4 - x**2
 
-fig = plt.figure()
-ax = fig.add_subplot(1,1,1)
-ax.plot(x,y)
-p = ax.fill_between(x, y, facecolor='none')
-
-from matplotlib.patches import PathPatch
-path = p.get_paths()[0]
-p1 = PathPatch(path, fc="none", hatch="/")
-ax.add_patch(p1)
-p1.set_zorder(p.get_zorder()-0.1)
-
-pp = ax.fill_between(x, y, facecolor='none')
-path = p.get_paths()[0]
-p1 = PathPatch(path, fc="none", hatch="\\")
-ax.add_patch(p1)
-p1.set_zorder(p.get_zorder()-0.1)
-plt.show()
+x1 = np.linspace(-20, 20, 50)
+y1 = np.repeat(1., len(x1))
+x2 = np.linspace(-20.2, 20.2, 70)
+y2 = np.repeat(20., len(x2))
+x3 = np.linspace(-20.9, 20.9, 90)
+y3 = np.repeat(30., len(x3))
+x = np.hstack((x1,x2,x3))
+y = np.hstack((y1,y2,y3))
+points = np.hstack((x,y)).reshape(2, len(x)).T
+z = np.cos(np.abs(y)) * np.sin(x)
+i = LinearNDInterpolator(points, z)
+print i([0.,1.],[1.,1.])
+xx = np.linspace(-20, 20, 100)
+yy = np.linspace(0, 30, 100)
+XX, YY = np.meshgrid(xx,yy)
+e_arr = orthogonalize([xx, yy])
+m.surf(e_arr[0], e_arr[1], i(XX, YY))
+m.show()

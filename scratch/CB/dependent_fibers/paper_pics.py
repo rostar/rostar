@@ -142,8 +142,10 @@ def random_domain(w):
     r = r.reshape(len(r), 1)
     eps0 = np.sqrt(w * 2 * tau / r / Ef)
     F = Fxi.cdf(eps0)
-    m.surf(e_arr[0], e_arr[1], F*30)
-    m.surf(e_arr[0], e_arr[1], eps0*300)
+    a = r * Ef / 2. / tau
+    m.surf(e_arr[0], e_arr[1], 50 * F / np.max(F))
+    m.surf(e_arr[0], e_arr[1], 50 * eps0 / np.max(eps0))
+    m.surf(e_arr[0], e_arr[1], np.nan_to_num(a) / 100.)
     m.show()
 
 def sigma_f(w_arr):
@@ -252,7 +254,7 @@ def sigma_c_u(w_arr, r, tau, E_f, E_m, V_f, xi, n_int):
                       n_int=n_int)
     plt.plot(w_arr, E_f * V_f * spirrid.mu_q_arr, lw=2, color='black')
 
-ld_rigid_vs_el_mtrx()
+#ld_rigid_vs_el_mtrx()
 #profiles_rigid_vs_el_mtrx()
 #elastic_matrix(np.linspace(.0, .5, 100))
 #sigma_f(np.linspace(.0, .3, 100))
@@ -279,6 +281,6 @@ ld_rigid_vs_el_mtrx()
 #          V_f=0.1, xi=RV('weibull_min', shape=5., scale=.02),
 #          n_int=50)
 #plt.legend(loc='best')
-plt.show()
+#plt.show()
 
-#random_domain(0.15)
+random_domain(0.15)

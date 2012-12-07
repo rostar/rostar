@@ -4,13 +4,13 @@ Created on 16.11.2012
 @author: Q
 '''
 from etsproxy.traits.ui.api import ModelView
-from etsproxy.traits.api import Instance, Property, cached_property, Array
+from etsproxy.traits.api import Instance, Property, cached_property, Array, Float, DelegatesTo
 from composite_CB_model import CompositeCrackBridge
 import numpy as np
 from matplotlib import pyplot as plt
 from stats.spirrid.rv import RV
 from reinforcement import Reinforcement, WeibullFibers
-from scipy.optimize import fmin, fmin_cg, fmin_ncg, fmin_bfgs, bracket, golden, brent
+from scipy.optimize import fmin, newton, brentq, fsolve
 from scipy.integrate import cumtrapz
 from mathkit.mfn.mfn_line.mfn_line import MFnLineArray
 
@@ -30,12 +30,15 @@ class CompositeCrackBridgeView(ModelView):
             self.model.sorted_stats_weights * self.model.sorted_E_f * self.model.damage)
         E_mtrx = (1. - self.model.V_f_tot) * self.model.E_m + Kf_broken
         mu_epsf_arr = (sigma_c - E_mtrx * self.model._epsm_arr) / (self.model.E_c - E_mtrx)
-        return self.model._x_arr, self.model._epsm_arr, sigma_c, mu_epsf_arr, E_mtrx
+        if self.model.Ll > self.model.Lr:
+            return -self.model._x_arr[::-1], self.model._epsm_arr[::-1], sigma_c, mu_epsf_arr[::-1], E_mtrx
+        else:
+            return self.model._x_arr, self.model._epsm_arr, sigma_c, mu_epsf_arr, E_mtrx
 
     x_arr = Property(depends_on='model.E_m, model.w, model.Ll, model.Lr, model.reinforcement_lst+')
     @cached_property
     def _get_x_arr(self):
-        return self.results[0]        
+        return self.results[0]
 
     epsm_arr = Property(depends_on='model.E_m, model.w, model.Ll, model.Lr, model.reinforcement_lst+')
     @cached_property
@@ -73,6 +76,12 @@ class CompositeCrackBridgeView(ModelView):
             return - self.sigma_c
         wmax = fmin(minfunc, 0.0001, maxiter=30)
         return self.sigma_c, wmax
+
+    def apply_load(self, sigma):
+        def residuum(w):
+            self.model.w = float(w)
+            return sigma - self.sigma_c
+        brentq(residuum, 0.0, 10.)
 
     def sigma_f_lst(self, w_arr):
         sigma_f_arr = np.zeros(len(w_arr) *
@@ -146,6 +155,12 @@ class CompositeCrackBridgeView(ModelView):
 
     w_arr_energy = Array
 
+    def get_sigma_m_x_input(self, sigma):
+        self.apply_load(sigma)
+        line = MFnLineArray(xdata=self.x_arr,
+                            ydata=self.epsm_arr)
+        return line.get_values(self.x_input)
+
 if __name__ == '__main__':
 
     reinf1 = Reinforcement(r=0.00345,#RV('uniform', loc=0.001, scale=0.005),
@@ -157,8 +172,8 @@ if __name__ == '__main__':
                           label='AR glass')
 
     reinf2 = Reinforcement(r=0.003,#RV('uniform', loc=0.002, scale=0.002),
-                          tau=RV('uniform', loc=.3, scale=.4),
-                          V_f=0.1,
+                          tau=RV('uniform', loc=.3, scale=.05),
+                          V_f=0.5,
                           E_f=200e3,
                           xi=RV('weibull_min', shape=5., scale=0.02),
                           n_int=15,
@@ -168,15 +183,17 @@ if __name__ == '__main__':
                           tau=RV('uniform', loc=1., scale=3.),
                           V_f=0.1,
                           E_f=200e3,
-                          xi=0.03,
+                          xi=100.03,
                           n_int=20)
 
     model = CompositeCrackBridge(E_m=25e3,
-                                 reinforcement_lst=[reinf2],
-                                 Ll=30.,
-                                 Lr=30.)
+                                 reinforcement_lst=[reinf3],
+                                 Ll=1.5,
+                                 Lr=1.)
 
     ccb_view = CompositeCrackBridgeView(model=model)
+    ccb_view.apply_load(1.)
+    print ccb_view.model.w
 
     def profile(w):
         ccb_view.model.w = w
@@ -235,10 +252,10 @@ if __name__ == '__main__':
         plt.ylabel('W')
         plt.legend(loc='best')
 
-    #TODO: check energy for combuned reinf
-    energy(np.linspace(.0, .5, 60))
+    #TODO: check energy for combined reinf
+    #energy(np.linspace(.0, .5, 60))
     #profile(.03)
-    #sigma_c_w(np.linspace(.0, .45, 150))
+    sigma_c_w(np.linspace(.0, .002, 150))
     #plt.plot(ccb_view.sigma_c_max[1], ccb_view.sigma_c_max[0], 'ro')
     #sigma_f(np.linspace(.0, .3, 50))
     plt.legend(loc='best')
