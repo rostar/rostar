@@ -25,6 +25,7 @@ from scratch.CB.dependent_fibers.composite_CB_postprocessor import \
     CompositeCrackBridgeView
 from matplotlib import pyplot as plt
 from scratch.CB.dependent_fibers.reinforcement import Reinforcement
+from scratch.CB.dependent_fibers.composite_CB_model import CompositeCrackBridge
 
 
 class SCM(HasTraits):
@@ -120,7 +121,7 @@ class SCM(HasTraits):
         else:
             return [None]
 
-    E_c = Property(depends_on = '+resinforcement_list, E_m')
+    E_c = Property(depends_on='+reinforcement_list, E_m')
     @cached_property
     def _get_E_c(self):
         Kf = 0.0
@@ -135,10 +136,11 @@ class SCM(HasTraits):
         cb_load = self.cb_list(load)
         if cb_load[0] is not None:
             for cb in cb_load:
+                cb.load = load
                 crack_position_idx = np.argwhere(self.x_arr == cb.position)
                 left = crack_position_idx - len(np.nonzero(cb.x < 0.)[0])
                 right = crack_position_idx + len(np.nonzero(cb.x > 0.)[0]) + 1
-                sigma_m[left:right] = cb.get_sigmam_x(load).T
+                sigma_m[left:right] = cb.get_sigmam_x().T
         return sigma_m
 
     def residuum(self, q):
@@ -167,9 +169,9 @@ class SCM(HasTraits):
                 self.cracks_list.append([new_cb])
             self.sort_cbs()
             self.sigma_c_crack.append(q_min - self.load_sigma_c_max / 1e5)
-            plt.plot(self.x_arr, self.sigma_m(q_min))
-            plt.plot(self.x_arr, self.matrix_strength)
-            plt.show()
+#            plt.plot(self.x_arr, self.sigma_m(q_min))
+#            plt.plot(self.x_arr, self.matrix_strength)
+#            plt.show()
 #            cb_list = self.cracks_list[-1]
 #            cb = [CB for CB in cb_list if
 #                  CB.position == float(crack_position)][0]
@@ -198,7 +200,6 @@ class SCM(HasTraits):
 
 if __name__ == '__main__':
     from stats.spirrid.rv import RV
-    from scratch.CB.dependent_fibers.composite_CB_model import CompositeCrackBridge
     from scratch.CB.dependent_fibers.reinforcement import WeibullFibers
 
     reinf = Reinforcement(r=0.00345,#RV('uniform', loc=0.002, scale=0.002),

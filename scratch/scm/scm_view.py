@@ -5,14 +5,13 @@ Created on Jul 26, 2012
 '''
 
 from etsproxy.traits.api import \
-    Instance, Array, List, cached_property, Property
+    Instance, Array, List, cached_property, Property, Float
 from etsproxy.traits.ui.api import ModelView
-from stats.spirrid.sampling import FunctionRandomization
 from stats.spirrid.rv import RV
 from stats.misc.random_field.random_field_1D import RandomField
 import numpy as np
 from matplotlib import pyplot as plt
-from quaducom.meso.ctt.scm_numerical.scm_model import SCM
+from scratch.scm.scm_dependent import SCM
 
 
 class SCMView(ModelView):
@@ -88,7 +87,6 @@ class SCMView(ModelView):
         return self.model.sigma_m_x / self.model.cb_randomization.tvars['E_m']
 
     sigma_f = Property(Array, depends_on='model.')
-
     @cached_property
     def _get_sigma_f(self):
         V_f = self.model.cb_randomization.tvars['V_f']
@@ -96,13 +94,11 @@ class SCMView(ModelView):
                 self.model.sigma_m_x * (1. - V_f)) / V_f
 
     eps_f = Property(Array, depends_on='model.')
-
     @cached_property
     def _get_eps_f(self):
         return self.sigma_f / self.model.cb_randomization.tvars['E_f']
 
     eps_sigma = Property(depends_on='model.')
-
     @cached_property
     def _get_eps_sigma(self):
         eps = np.trapz(self.eps_f, self.x_area, axis=1) / self.model.length
@@ -115,112 +111,91 @@ class SCMView(ModelView):
         else:
             return eps, self.model.load_sigma_c
 
+    def get_epsc(self, load):
+        if len(self.model.cracks_list) is not 0:
+            idx = np.sum(np.array(self.model.sigma_c_crack) < load) - 1
+            if idx == -1:
+                cb_list = [None]
+            else:
+                print self.model.cracks_list
+                cb_list = self.model.cracks_list[idx]
+        else:
+            cb_list = [None]
+        if cb_list == [None]:
+            epsc = load / self.model.E_c
+        else:
+            u = 0.0
+            for cb in cb_list:
+                cb.load = load
+                u += np.trapz(cb.get_epsf_x(), cb.x)
+                plt.plot(cb.x, cb.get_epsf_x())
+                plt.plot([cb.x[0], cb.x[-1]], [load / self.model.E_c,load / self.model.E_c])
+                plt.show()
+            epsc = u / self.model.length
+        return epsc
+
 if __name__ == '__main__':
-    from quaducom.micro.resp_func.cb_emtrx_clamped_fiber_stress import \
-    CBEMClampedFiberStressSP
-    from quaducom.micro.resp_func.cb_emtrx_clamped_fiber_stress_residual \
-    import CBEMClampedFiberStressResidualSP
-    from etsproxy.mayavi import mlab
-    from stats.spirrid import make_ogrid as orthogonalize
+    from scratch.CB.dependent_fibers.reinforcement import Reinforcement
+    from stats.spirrid.rv import RV
+    from scratch.CB.dependent_fibers.composite_CB_model import CompositeCrackBridge
+    from scratch.CB.dependent_fibers.reinforcement import WeibullFibers
 
-    # filaments
-    r = 0.00345
-    Vf = 0.0103
-    tau = RV('weibull_min', shape=1.5, scale=.2)
-    Ef = 200e3
-    Em = 25e3
-    l = RV('uniform', scale=20., loc=2.)
-    theta = 0.0
-    xi = RV('weibull_min', scale=0.02, shape=5)
-    phi = 1.
-    Pf = RV('uniform', scale=1., loc=0.)
-    m = 5.0
-    s0 = 0.017
-
-    length = 2000.
-    nx = 2000
+    reinf = Reinforcement(r=0.00345,#RV('uniform', loc=0.002, scale=0.002),
+                          tau=RV('uniform', loc=.1, scale=.1),
+                          V_f=0.1,
+                          E_f=200e3,
+                          xi=100.03,
+                          n_int=20)
+    E_m = 25e3
+    length = 20.
+    nx = 500
     random_field = RandomField(seed=True,
-                               lacor=10.,
-                                xgrid=np.linspace(0., length, 1000),
-                                nsim=1,
-                                loc=.0,
-                                shape=15.,
-                                scale=6.,
-                                non_negative_check=True,
-                                distribution='Weibull'
+                               lacor=1.,
+                               xgrid=np.linspace(0., length, 200),
+                               nsim=1,
+                               loc=.0,
+                               shape=15.,
+                               scale=6.,
+                               non_negative_check=True,
+                               distribution='Weibull'
                                )
-
-#    rf = CBEMClampedFiberStressSP()
-#    rand = FunctionRandomization(q=rf,
-#                                 tvars=dict(tau=tau,
-#                                            l=l,
-#                                            E_f=Ef,
-#                                            theta=theta,
-#                                            xi=xi,
-#                                            phi=phi,
-#                                            E_m=Em,
-#                                            r=r,
-#                                            V_f=Vf
-#                                                 ),
-#                                    n_int=20
-#                                    )
-
-    rf = CBEMClampedFiberStressResidualSP()
-    rand = FunctionRandomization(q=rf,
-                                 tvars=dict(tau=tau,
-                                            l=l,
-                                            E_f=Ef,
-                                            theta=theta,
-                                            Pf=Pf,
-                                         phi=phi,
-                                         E_m=Em,
-                                         r=r,
-                                         V_f=Vf,
-                                         m=m,
-                                         s0=s0
-                                         ),
-                                    n_int=20
-                                    )
-
     scm = SCM(length=length,
               nx=nx,
               random_field=random_field,
-              cb_randomization=rand,
-              cb_type='mean',
+              E_m=E_m,
+              reinforcement_lst=[reinf],
               load_sigma_c_min=.1,
-              load_sigma_c_max=18.,
+              load_sigma_c_max=11.,
               load_n_sigma_c=200,
-              n_w=60,
-              n_x=81,
-              n_BC=4
               )
-
     scm_view = SCMView(model=scm)
     scm_view.model.evaluate()
 
     def plot():
-        eps, sigma = scm_view.eps_sigma
-        plt.figure()
-        plt.plot(eps, sigma, color='black', lw=2, label='model')
+        load = np.linspace(1., 12., 30)
+        epsc = []
+        for l in load:
+            epsc.append(scm_view.get_epsc(l))
+        plt.plot(epsc, load, color='black', lw=2, label='model')
         plt.legend(loc='best')
-        plt.xlabel('composite strain [-]')
+        plt.xlabel('eps_c [mm]')
         plt.ylabel('composite stress [MPa]')
-        plt.figure()
-        plt.hist(scm_view.crack_widths(16.), bins=20, label='load = 20 MPa')
-        plt.hist(scm_view.crack_widths(13.), bins=20, label='load = 15 MPa')
-        plt.hist(scm_view.crack_widths(10.), bins=20, label='load = 10 MPa')
-        plt.legend(loc='best')
-        plt.figure()
-        plt.plot(scm.load_sigma_c, scm_view.w_mean,
-                 color='green', lw=2, label='mean crack width')
-        plt.plot(scm.load_sigma_c, scm_view.w_median,
-                 color='blue', lw=2, label='median crack width')
-        plt.plot(scm.load_sigma_c, scm_view.w_mean + scm_view.w_stdev,
-                 color='black', label='stdev')
-        plt.plot(scm.load_sigma_c, scm_view.w_mean - scm_view.w_stdev,
-                 color='black')
-        plt.plot(scm.load_sigma_c, scm_view.w_max,
-                 ls='dashed', color='red', label='max crack width')
-        plt.legend(loc='best')
+#        plt.figure()
+#        plt.hist(scm_view.crack_widths(16.), bins=20, label='load = 20 MPa')
+#        plt.hist(scm_view.crack_widths(13.), bins=20, label='load = 15 MPa')
+#        plt.hist(scm_view.crack_widths(10.), bins=20, label='load = 10 MPa')
+#        plt.legend(loc='best')
+#        plt.figure()
+#        plt.plot(scm.load_sigma_c, scm_view.w_mean,
+#                 color='green', lw=2, label='mean crack width')
+#        plt.plot(scm.load_sigma_c, scm_view.w_median,
+#                 color='blue', lw=2, label='median crack width')
+#        plt.plot(scm.load_sigma_c, scm_view.w_mean + scm_view.w_stdev,
+#                 color='black', label='stdev')
+#        plt.plot(scm.load_sigma_c, scm_view.w_mean - scm_view.w_stdev,
+#                 color='black')
+#        plt.plot(scm.load_sigma_c, scm_view.w_max,
+#                 ls='dashed', color='red', label='max crack width')
+#        plt.legend(loc='best')
         plt.show()
     plot()

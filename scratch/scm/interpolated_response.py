@@ -24,7 +24,7 @@ class InterpolatedCB(HasTraits):
     load_arr = Array
     load = Float
 
-    eps_x_arr_iterpolation = Property(depends_on='cb, Ll, Lr, load_arr')
+    eps_x_arr_iterpolation = Property(depends_on='Ll, Lr, load_arr, x')
     @cached_property
     def _get_eps_x_arr_iterpolation(self):
         self.cb.model.Ll = self.Ll
@@ -53,38 +53,42 @@ class InterpolatedCB(HasTraits):
         interp_epsf = LinearNDInterpolator(coordinates, epsf_values)
         return interp_epsm, interp_epsf
 
-    eps_x_interpolation = Property(depends_on='cb, Ll, Lr, load')
+    eps_x_interpolation = Property(depends_on='cb, Ll, Lr, load, x')
     @cached_property
     def _get_eps_x_interpolation(self):
         self.cb.model.Ll = self.Ll
         self.cb.model.Lr = self.Lr
         self.cb.apply_load(self.load)
-        x_points = np.hstack((-self.Ll, self.cb.x_arr, self.Lr))
-        epsm = np.hstack((self.cb.epsm_arr[0], self.cb.epsm_arr, self.cb.epsm_arr[-1]))
-        epsf = np.hstack((self.cb.mu_epsf_arr[0], self.cb.mu_epsf_arr, self.cb.mu_epsf_arr[-1]))
+        x_points = self.cb.x_arr
+        epsm = self.cb.epsm_arr
+        epsf = self.cb.mu_epsf_arr
+        if -self.Ll != x_points[0]:
+            x_points = np.hstack((-self.Ll, x_points))
+            epsm = np.hstack((self.cb.epsm_arr[0], epsm))
+            epsf = np.hstack((self.cb.mu_epsf_arr[0], epsf))
+        if self.Lr != x_points[-1]:
+            x_points = np.hstack((x_points, self.Lr))
+            epsm = np.hstack((epsm, self.cb.epsm_arr[-1]))
+            epsf = np.hstack((epsf, self.cb.mu_epsf_arr[-1]))
         interp_epsm = MFnLineArray(xdata=x_points, ydata=epsm)
         interp_epsf = MFnLineArray(xdata=x_points, ydata=epsf)
         return interp_epsm, interp_epsf
 
-    def get_epsm_x(self, load):
-        self.load = load
+    def get_epsm_x(self):
         return self.eps_x_interpolation[0].get_values(self.x)
 
-    def get_epsf_x(self, load):
-        self.load = load
+    def get_epsf_x(self):
         return self.eps_x_interpolation[1].get_values(self.x)
 
-    def get_sigmam_x(self, load):
-        return self.get_epsm_x(load) * self.cb.model.E_m
+    def get_sigmam_x(self):
+        return self.get_epsm_x() * self.cb.model.E_m
 
-    def get_epsm_x_arr(self, load_arr):
-        self.load_arr = load_arr
-        sigma, x = np.meshgrid(load_arr, self.x)
+    def get_epsm_x_arr(self):
+        sigma, x = np.meshgrid(self.load_arr, self.x)
         return self.eps_x_arr_iterpolation[0](sigma, x)
 
-    def get_epsf_x_arr(self, load_arr):
-        self.load_arr = load_arr
-        sigma, x = np.meshgrid(load_arr, self.x)
+    def get_epsf_x_arr(self):
+        sigma, x = np.meshgrid(self.load_arr, self.x)
         return self.eps_x_arr_iterpolation[1](sigma, x)
 
     def get_sigmam_x_arr(self, load_arr):
@@ -103,25 +107,33 @@ if __name__ == '__main__':
                           E_f=200e3,
                           xi=100.03,
                           n_int=20)
-    Ll = 17.
-    Lr = 3.
+    Ll = 2.
+    Lr = 1.
     model = CompositeCrackBridge(E_m=25e3, reinforcement_lst=[reinf])
     ccb_view = CompositeCrackBridgeView(model=model)
-    sigma_c_arr = np.linspace(1., 50., 50) 
-    x_arr = np.linspace(-Ll, Lr, 500)
+    sigma_c_arr = np.linspace(1., 50., 50)
+    x_arr = np.linspace(-Ll, Lr, 50)
     icb = InterpolatedCB(cb=ccb_view, Ll=Ll, Lr=Lr, x=x_arr)
-    epsm_arr = icb.get_epsm_x_arr(sigma_c_arr)
-    epsf_arr = icb.get_epsf_x_arr(sigma_c_arr)
-    sigmam_arr = icb.get_sigmam_x_arr(sigma_c_arr)
-    e_arr = orthogonalize([sigma_c_arr, x_arr])
-    epsm_x = icb.get_epsm_x(18.)
-    epsf_x = icb.get_epsf_x(18.)
-    sigmam_x = icb.get_sigmam_x(18.)
-    plt.plot(icb.x, epsf_x)
-    plt.plot(icb.x, epsm_x)
+#    epsm_arr = icb.get_epsm_x_arr(sigma_c_arr)
+#    epsf_arr = icb.get_epsf_x_arr(sigma_c_arr)
+#    sigmam_arr = icb.get_sigmam_x_arr(sigma_c_arr)
+#    e_arr = orthogonalize([sigma_c_arr, x_arr])
+    icb.load = 18.
+    epsm_x = icb.get_epsm_x()
+    epsf_x = icb.get_epsf_x()
+    sigmam_x = icb.get_sigmam_x()
+    #plt.plot(icb.x, epsf_x)
+    #plt.plot(icb.x epsm_x)
+    icb.load = 25.
+    plt.plot(icb.x, sigmam_x)
+    epsm_x = icb.get_epsm_x()
+    epsf_x = icb.get_epsf_x()
+    sigmam_x = icb.get_sigmam_x()
+    #plt.plot(icb.x, epsf_x)
+    #plt.plot(icb.x, epsm_x)
     plt.plot(icb.x, sigmam_x)
     plt.show()
-    m.surf(e_arr[0]/np.max(e_arr[0]), e_arr[1]/np.max(e_arr[1]), epsm_arr * 100)
-    m.surf(e_arr[0]/np.max(e_arr[0]), e_arr[1]/np.max(e_arr[1]), epsf_arr * 100)
-    m.show()
+#    m.surf(e_arr[0]/np.max(e_arr[0]), e_arr[1]/np.max(e_arr[1]), epsm_arr * 100)
+#    m.surf(e_arr[0]/np.max(e_arr[0]), e_arr[1]/np.max(e_arr[1]), epsf_arr * 100)
+#    m.show()
 

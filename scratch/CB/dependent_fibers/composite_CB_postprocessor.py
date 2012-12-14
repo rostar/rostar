@@ -254,8 +254,8 @@ if __name__ == '__main__':
 
     #TODO: check energy for combined reinf
     #energy(np.linspace(.0, .5, 60))
-    #profile(.03)
-    sigma_c_w(np.linspace(.0, .002, 150))
+    profile(.03)
+    #sigma_c_w(np.linspace(.0, .002, 150))
     #plt.plot(ccb_view.sigma_c_max[1], ccb_view.sigma_c_max[0], 'ro')
     #sigma_f(np.linspace(.0, .3, 50))
     plt.legend(loc='best')
