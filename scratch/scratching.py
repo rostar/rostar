@@ -19,13 +19,14 @@ def CDFa(e):
 def PDFa(e):
     T = 2. * tau / r / Ef
     a = e / T
-    return np.exp(-a * (e / s) ** m / (m + 1) / L0) * ((e / s) ** m * m / (T * L0 * (m + 1)))
+    #return np.exp(-a * (e / s) ** m / (m + 1) / L0) * ((e / s) ** m * m / (T * L0 * (m + 1)))
+    return np.exp(-a * (e / s) ** m / L0 / (m + 1)) * (e / s) ** m / (T * L0)
 
 # failure probability between 0 and L
 def CDFL(e, L):
     T = 2. * tau / r / Ef
     a = e / T
-    return 1. - np.exp(-a * (e / s) ** m * (1-(1-L/a)**(m+1)) / (m + 1) / L0)
+    return 1. - np.exp(-a * (e / s) ** m * (1 - (1 - L / a) ** (m + 1)) / (m + 1) / L0)
 
 def scalar_mu_L(e):
     c = 1. / CDFa(e)
@@ -48,9 +49,9 @@ def scalar_mu_L_rr(e):
     PDF = PDFa(e_arr)
     plt.figure()
     plt.plot(e_arr, PDF)
-    plt.show()
+    #plt.show()
     c = 1. / CDFa(e)
-    print np.trapz(PDF, e_arr) / c
+    print 1 / c, np.trapz(PDF, e_arr) * c
     integ = np.trapz(PDF * muL_arr, e_arr)
     return c * integ
 
@@ -61,7 +62,7 @@ def mu_L_rr(e_arr):
     return np.array(muL)
 
 e_arr = np.linspace(0.0001, 0.1, 20)
-plt.plot(e_arr, CDFa(e_arr)/np.max(CDFa(e_arr)) * 10, label='CDF')
+plt.plot(e_arr, CDFa(e_arr) / np.max(CDFa(e_arr)) * 10, label='CDF')
 #plt.plot(e_arr, PDFa(e_arr), label='PDFa')
 #plt.plot(e_arr, CDFL(e_arr, 2.))
 plt.plot(e_arr, mu_L(e_arr), label='mu_L Curtin')
