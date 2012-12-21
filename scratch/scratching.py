@@ -50,29 +50,11 @@ def mu_L(e_arr):
 def mu_L_at_e(e):
     T = 2. * tau / r / Ef
     a = e / T
-    z_arr = np.linspace(0.0, a, 10)
-    z_arr_1 = np.hstack((0.0, z_arr[:-1]))
-    z_arr_2 = np.hstack((z_arr[1:], z_arr[-1]))
-    integ = np.trapz(z_arr * (1 - CDFL(e, z_arr_1)) * CDFw(e - T*z_arr, z_arr[1]-z_arr[0]) * (1. - CDFa(e - T*z_arr_2)), z_arr)
-    c = 1. / np.trapz((1 - CDFL(e, z_arr_1)) * CDFw(e - T * z_arr, z_arr[1]-z_arr[0]) * (1. - CDFa(e - T*z_arr_2)), z_arr)
-    print e, c * integ
-    plt.plot(z_arr, (1 - CDFL(e, z_arr_1)) * CDFw(e - T*z_arr, z_arr[1]-z_arr[0]) * (1. - CDFa(e - T*z_arr_2)) * c, label='1')
     z_arr = np.linspace(0.0, a, 50)
     z_arr_1 = np.hstack((0.0, z_arr[:-1]))
     z_arr_2 = np.hstack((z_arr[1:], z_arr[-1]))
     integ = np.trapz(z_arr * (1 - CDFL(e, z_arr_1)) * CDFw(e - T*z_arr, z_arr[1]-z_arr[0]) * (1. - CDFa(e - T*z_arr_2)), z_arr)
     c = 1. / np.trapz((1 - CDFL(e, z_arr_1)) * CDFw(e - T * z_arr, z_arr[1]-z_arr[0]) * (1. - CDFa(e - T*z_arr_2)), z_arr)
-    print e, c * integ
-    plt.plot(z_arr, (1 - CDFL(e, z_arr_1)) * CDFw(e - T*z_arr, z_arr[1]-z_arr[0]) * (1. - CDFa(e - T*z_arr_2)) * c, label='2')    
-    z_arr = np.linspace(0.0, a, 120)
-    z_arr_1 = np.hstack((0.0, z_arr[:-1]))
-    z_arr_2 = np.hstack((z_arr[1:], z_arr[-1]))
-    integ = np.trapz(z_arr * (1 - CDFL(e, z_arr_1)) * CDFw(e - T*z_arr, z_arr[1]-z_arr[0]) * (1. - CDFa(e - T*z_arr_2)), z_arr)
-    c = 1. / np.trapz((1 - CDFL(e, z_arr_1)) * CDFw(e - T * z_arr, z_arr[1]-z_arr[0]) * (1. - CDFa(e - T*z_arr_2)), z_arr)
-    print e, c * integ
-    plt.plot(z_arr, (1 - CDFL(e, z_arr_1)) * CDFw(e - T*z_arr, z_arr[1]-z_arr[0]) * (1. - CDFa(e - T*z_arr_2)) * c, label='3')  
-    plt.legend()
-    plt.show()
     return c * integ
 
 def scalar_mu_L_rr(e):

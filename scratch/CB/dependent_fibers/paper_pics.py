@@ -9,7 +9,7 @@ import numpy as np
 from scipy.stats import weibull_min
 from stats.spirrid import make_ogrid as orthogonalize
 from composite_CB_model import CompositeCrackBridge
-from composite_CB_modelview import CompositeCrackBridgeView
+from composite_CB_postprocessor import CompositeCrackBridgeView
 from matplotlib import pyplot as plt
 from stats.spirrid.rv import RV
 from reinforcement import Reinforcement, WeibullFibers

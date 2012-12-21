@@ -184,16 +184,27 @@ if __name__ == '__main__':
                           V_f=0.1,
                           E_f=200e3,
                           xi=100.03,
-                          n_int=20)
+                          n_int=500)
 
     model = CompositeCrackBridge(E_m=25e3,
                                  reinforcement_lst=[reinf3],
-                                 Ll=1.5,
-                                 Lr=1.)
+                                 Ll=10.,
+                                 Lr=10.)
 
     ccb_view = CompositeCrackBridgeView(model=model)
     ccb_view.apply_load(1.)
-    print ccb_view.model.w
+
+    def test(w):
+        n_int = ccb_view.model.reinforcement_lst[0].n_int
+        ccb_view.model.w = w
+        diff = np.diff(ccb_view.model.A * 200e3 * 0.00345) / (3.0 / n_int)
+        form = (ccb_view.model.A/(ccb_view.model.B+ccb_view.model.C))[:-1]
+        factor =  np.abs(np.max(form)/np.max(diff))
+        print 'factor =', 1./factor
+        plt.plot(np.linspace(1, 3, n_int-1), diff * factor, label='diff')
+        plt.plot(np.linspace(1, 3, n_int-1), form, label='analyt')
+        plt.xlabel('$\phi$')
+        plt.ylabel('$\mathrm{d}a/\mathrm{d}\phi$')
 
     def profile(w):
         ccb_view.model.w = w
@@ -252,9 +263,10 @@ if __name__ == '__main__':
         plt.ylabel('W')
         plt.legend(loc='best')
 
+    test(0.03)
     #TODO: check energy for combined reinf
     #energy(np.linspace(.0, .5, 60))
-    profile(.03)
+    #profile(.03)
     #sigma_c_w(np.linspace(.0, .002, 150))
     #plt.plot(ccb_view.sigma_c_max[1], ccb_view.sigma_c_max[0], 'ro')
     #sigma_f(np.linspace(.0, .3, 50))

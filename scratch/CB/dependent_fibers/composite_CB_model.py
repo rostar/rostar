@@ -261,7 +261,14 @@ class CompositeCrackBridge(HasTraits):
         self._epsm_arr = np.hstack((np.array(em_short)[::-1][:-1], np.array(em_long)))
         self._epsf0_arr = epsf0
         residuum = self.vect_xi_cdf(epsf0, x_short=x_short, x_long=x_long) - iter_damage
+        self.A = np.array(x_short)[1:] / 200e3 / 0.00345
+        self.B = self.sorted_depsf
+        self.C = np.array(dem_short)[1:]
         return residuum
+
+    A = 0.0
+    B = 0.0
+    C = 0.0
 
     _x_arr = Array
     def __x_arr_default(self):
