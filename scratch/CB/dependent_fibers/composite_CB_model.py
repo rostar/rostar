@@ -187,13 +187,26 @@ class CompositeCrackBridge(HasTraits):
         epsf0 = np.zeros_like(self.sorted_depsf)
         Lmin = min(self.Ll, self.Lr)
         Lmax = max(self.Ll, self.Lr)
+        xx_short = [0.0]
         for i, defi in enumerate(self.sorted_depsf):
             if x_short[-1] < Lmin and x_long[-1] < Lmax:
                 '''double sided pullout'''
                 dxi, dem, emi, umi = self.double_sided(defi,
                                     x_short[-1], dem_short[-1],
                                     em_short[-1], um_short[-1], iter_damage)
-
+                
+                a = x_short[-1]
+                if i == 0.:
+                    dxxi = (self.w / (np.abs(dem_short[0]) + np.abs(defi)))**0.5
+                else:
+                    depsf0 = np.abs((defi - self.sorted_depsf[i-1])) * a
+                    dxxi = - a + (a**2 + depsf0 * a / (defi + dem_short[-1]))**.5
+                    #dv = (defi + self.dem_depsf(defi, 0.0)) * dxxi
+                    #dvv = depsf0 - dv
+                    #print dxxi * dv + a * dv**2/depsf0 - dvv * a * dvv/depsf0
+                    #dxxi = (x_short[i]/0.00345/200e3)/(np.abs(defi) + (dem_short[i]+dem_short[i-1])/2.) * (10./4.)
+                    #print dxxi - dxi, iter_damage
+                xx_short.append(xx_short[-1] + dxxi)
                 if x_short[-1] + dxi < Lmin:
                     # dx increment does not reach the boundary
                     dem_short.append(dem)
@@ -258,6 +271,7 @@ class CompositeCrackBridge(HasTraits):
                 epsf0[i] = epsf0_clamped
  
         self._x_arr = np.hstack((-np.array(x_short)[::-1][:-1], np.array(x_long)))
+        self.xx = np.hstack((-np.array(xx_short)[::-1][:-1], np.array(xx_short)))
         self._epsm_arr = np.hstack((np.array(em_short)[::-1][:-1], np.array(em_long)))
         self._epsf0_arr = epsf0
         residuum = self.vect_xi_cdf(epsf0, x_short=x_short, x_long=x_long) - iter_damage
@@ -266,6 +280,7 @@ class CompositeCrackBridge(HasTraits):
         self.C = np.array(dem_short)[1:]
         return residuum
 
+    xx = 0.0
     A = 0.0
     B = 0.0
     C = 0.0
@@ -298,5 +313,24 @@ class CompositeCrackBridge(HasTraits):
         return damage
 
 if __name__ == '__main__':
-    scb = CompositeCrackBridge()
-    print scb
+    from matplotlib import pyplot as plt
+    reinf = Reinforcement(r=0.00345,#RV('uniform', loc=0.002, scale=0.002),
+                          tau=RV('uniform', loc=1., scale=10.),
+                          V_f=0.1,
+                          E_f=200e3,
+                          xi=100.03,
+                          n_int=4)
+
+    ccb = CompositeCrackBridge(E_m=25e3,
+                                 reinforcement_lst=[reinf],
+                                 Ll=10.,
+                                 Lr=10.,
+                                 w=0.03)
+    ccb.damage
+    plt.plot(ccb._x_arr, ccb._epsm_arr, label='old')
+    plt.plot(ccb.xx, ccb._epsm_arr, lw=3, ls='dashed', label='new')
+    plt.plot(np.zeros_like(ccb._epsf0_arr), ccb._epsf0_arr, 'ro')
+    for i, depsf in enumerate(ccb.sorted_depsf):
+        plt.plot(ccb._x_arr, np.maximum(ccb._epsf0_arr[i] - depsf*np.abs(ccb._x_arr),ccb._epsm_arr))
+    plt.legend(loc='best')
+    plt.show()

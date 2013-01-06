@@ -4,13 +4,13 @@ Created on 16.11.2012
 @author: Q
 '''
 from etsproxy.traits.ui.api import ModelView
-from etsproxy.traits.api import Instance, Property, cached_property, Array, Float, DelegatesTo
+from etsproxy.traits.api import Instance, Property, cached_property, Array
 from composite_CB_model import CompositeCrackBridge
 import numpy as np
 from matplotlib import pyplot as plt
 from stats.spirrid.rv import RV
 from reinforcement import Reinforcement, WeibullFibers
-from scipy.optimize import fmin, newton, brentq, fsolve
+from scipy.optimize import fmin, brentq
 from scipy.integrate import cumtrapz
 from mathkit.mfn.mfn_line.mfn_line import MFnLineArray
 
@@ -184,7 +184,7 @@ if __name__ == '__main__':
                           V_f=0.1,
                           E_f=200e3,
                           xi=100.03,
-                          n_int=500)
+                          n_int=5)
 
     model = CompositeCrackBridge(E_m=25e3,
                                  reinforcement_lst=[reinf3],
@@ -200,8 +200,9 @@ if __name__ == '__main__':
         diff = np.diff(ccb_view.model.A * 200e3 * 0.00345) / (3.0 / n_int)
         form = (ccb_view.model.A/(ccb_view.model.B+ccb_view.model.C))[:-1]
         factor =  np.abs(np.max(form)/np.max(diff))
-        print 'factor =', 1./factor
-        plt.plot(np.linspace(1, 3, n_int-1), diff * factor, label='diff')
+        #print 'factor =', 1./factor
+        print form
+        plt.plot(np.linspace(1, 3, n_int-1), diff, label='diff')
         plt.plot(np.linspace(1, 3, n_int-1), form, label='analyt')
         plt.xlabel('$\phi$')
         plt.ylabel('$\mathrm{d}a/\mathrm{d}\phi$')
@@ -263,10 +264,10 @@ if __name__ == '__main__':
         plt.ylabel('W')
         plt.legend(loc='best')
 
-    test(0.03)
+    #test(0.03)
     #TODO: check energy for combined reinf
     #energy(np.linspace(.0, .5, 60))
-    #profile(.03)
+    profile(.03)
     #sigma_c_w(np.linspace(.0, .002, 150))
     #plt.plot(ccb_view.sigma_c_max[1], ccb_view.sigma_c_max[0], 'ro')
     #sigma_f(np.linspace(.0, .3, 50))

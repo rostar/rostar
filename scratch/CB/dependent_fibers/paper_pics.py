@@ -254,6 +254,14 @@ def sigma_c_u(w_arr, r, tau, E_f, E_m, V_f, xi, n_int):
                       n_int=n_int)
     plt.plot(w_arr, E_f * V_f * spirrid.mu_q_arr, lw=2, color='black')
 
+def integ_domain(isolines):
+    #T = np.linspace(2., 250., isolines)
+    tau = np.linspace(0.01, 0.5)
+    #for t in T:
+    plt.plot(tau, 2 * tau / 100., lw=2., color='black')
+    plt.xlabel('')
+    plt.ylabel('r')
+
 #ld_rigid_vs_el_mtrx()
 #profiles_rigid_vs_el_mtrx()
 #elastic_matrix(np.linspace(.0, .5, 100))
@@ -280,7 +288,7 @@ def sigma_c_u(w_arr, r, tau, E_f, E_m, V_f, xi, n_int):
 #          E_f=200e3, E_m=em,
 #          V_f=0.1, xi=RV('weibull_min', shape=5., scale=.02),
 #          n_int=50)
-#plt.legend(loc='best')
-#plt.show()
-
-random_domain(0.15)
+integ_domain(10)
+plt.legend(loc='best')
+plt.show()
+#random_domain(0.15)
