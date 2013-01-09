@@ -164,35 +164,36 @@ class CompositeCrackBridgeView(ModelView):
 if __name__ == '__main__':
 
     reinf1 = Reinforcement(r=0.00345,#RV('uniform', loc=0.001, scale=0.005),
-                          tau=RV('uniform', loc=.5, scale=.2),
-                          V_f=0.2,
+                          tau=RV('uniform', loc=5., scale=2.),
+                          V_f=0.15,
                           E_f=70e3,
-                          xi=WeibullFibers(shape=5., scale=0.02, L0=10.),#RV('weibull_min', shape=5., scale=.02),
-                          n_int=15,
+                          xi=RV('weibull_min', shape=15., scale=10.01),
+                          n_int=25,
                           label='AR glass')
 
     reinf2 = Reinforcement(r=0.003,#RV('uniform', loc=0.002, scale=0.002),
                           tau=RV('uniform', loc=.3, scale=.05),
                           V_f=0.5,
                           E_f=200e3,
-                          xi=RV('weibull_min', shape=5., scale=0.02),
+                          xi=RV('weibull_min', shape=20., scale=0.02),
                           n_int=15,
                           label='carbon')
 
     reinf3 = Reinforcement(r=0.00345,#RV('uniform', loc=0.002, scale=0.002),
-                          tau=RV('uniform', loc=1., scale=3.),
-                          V_f=0.1,
+                          tau=RV('uniform', loc=1., scale=1.5),
+                          V_f=0.15,
                           E_f=200e3,
-                          xi=100.03,
-                          n_int=5)
+                          xi=RV('weibull_min', shape=25., scale=10.02),
+                          n_int=25,
+                          label='carbon')
 
     model = CompositeCrackBridge(E_m=25e3,
-                                 reinforcement_lst=[reinf3],
+                                 reinforcement_lst=[reinf1, reinf3],
                                  Ll=10.,
                                  Lr=10.)
 
     ccb_view = CompositeCrackBridgeView(model=model)
-    ccb_view.apply_load(1.)
+    #ccb_view.apply_load(1.)
 
     def test(w):
         n_int = ccb_view.model.reinforcement_lst[0].n_int
@@ -209,8 +210,8 @@ if __name__ == '__main__':
 
     def profile(w):
         ccb_view.model.w = w
-        plt.plot(ccb_view.x_arr, ccb_view.epsm_arr, label='w_eval=' + str(ccb_view.w_evaluated) + ' w_ctrl=' + str(ccb_view.model.w))
-        plt.plot(ccb_view.x_arr, ccb_view.mu_epsf_arr, label='yarn')
+        plt.plot(ccb_view.x_arr, ccb_view.epsm_arr, color='blue', lw=2)#, label='w_eval=' + str(ccb_view.w_evaluated) + ' w_ctrl=' + str(ccb_view.model.w))
+        plt.plot(ccb_view.x_arr, ccb_view.mu_epsf_arr, color='red', lw=2)
         plt.xlabel('position [mm]')
         plt.ylabel('strain')
 
@@ -221,15 +222,15 @@ if __name__ == '__main__':
         for w in w_arr:
             ccb_view.model.w = w
             sigma_c.append(ccb_view.sigma_c)
-            w_err.append((ccb_view.w_evaluated - ccb_view.model.w) / (ccb_view.model.w))
-            u.append(ccb_view.u_evaluated)
-        plt.figure()
-        plt.plot(w_arr, w_err, label='error in w')
-        plt.legend(loc='best')
-        plt.figure()
-        plt.plot(w_arr, sigma_c, lw=2, label='rigid')
-        plt.plot(u, sigma_c, lw=2, label='elastic')
-        plt.xlabel('u [mm]')
+            #w_err.append((ccb_view.w_evaluated - ccb_view.model.w) / (ccb_view.model.w))
+            #u.append(ccb_view.u_evaluated)
+        #plt.figure()
+        #plt.plot(w_arr, w_err, label='error in w')
+        #plt.legend(loc='best')
+        #plt.figure()
+        plt.plot(w_arr, sigma_c, lw=2, color='black', label='komb. Bewehrung')
+        #plt.plot(u, sigma_c, lw=2, label='elastic')
+        plt.xlabel('w [mm]')
         plt.ylabel('$\sigma_c$ [MPa]')
         plt.legend(loc='best')
 
@@ -262,14 +263,15 @@ if __name__ == '__main__':
         plt.plot(w_arr, U, lw=3, color='red', label='work of external force')
         plt.xlabel('w [mm]')
         plt.ylabel('W')
+        plt.ylim(0.0)
         plt.legend(loc='best')
 
     #test(0.03)
     #TODO: check energy for combined reinf
-    #energy(np.linspace(.0, .5, 60))
-    profile(.03)
-    #sigma_c_w(np.linspace(.0, .002, 150))
+    #energy(np.linspace(.0, .12, 200))
+    profile(.01)
+    #sigma_c_w(np.linspace(.0, .12, 200))
     #plt.plot(ccb_view.sigma_c_max[1], ccb_view.sigma_c_max[0], 'ro')
-    #sigma_f(np.linspace(.0, .3, 50))
+    #sigma_f(np.linspace(.0, .16, 50))
     plt.legend(loc='best')
     plt.show()

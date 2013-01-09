@@ -288,7 +288,7 @@ def integ_domain(isolines):
 #          E_f=200e3, E_m=em,
 #          V_f=0.1, xi=RV('weibull_min', shape=5., scale=.02),
 #          n_int=50)
-integ_domain(10)
+#integ_domain(10)
 plt.legend(loc='best')
 plt.show()
 #random_domain(0.15)
