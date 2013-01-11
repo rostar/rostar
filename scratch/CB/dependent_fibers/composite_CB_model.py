@@ -201,11 +201,6 @@ class CompositeCrackBridge(HasTraits):
                 else:
                     depsf0 = np.abs((defi - self.sorted_depsf[i-1])) * a
                     dxxi = - a + (a**2 + depsf0 * a / (defi + dem_short[-1]))**.5
-                    #dv = (defi + self.dem_depsf(defi, 0.0)) * dxxi
-                    #dvv = depsf0 - dv
-                    #print dxxi * dv + a * dv**2/depsf0 - dvv * a * dvv/depsf0
-                    #dxxi = (x_short[i]/0.00345/200e3)/(np.abs(defi) + (dem_short[i]+dem_short[i-1])/2.) * (10./4.)
-                    #print dxxi - dxi, iter_damage
                 xx_short.append(xx_short[-1] + dxxi)
                 if x_short[-1] + dxi < Lmin:
                     # dx increment does not reach the boundary
