@@ -194,14 +194,20 @@ class CompositeCrackBridge(HasTraits):
                 dxi, dem, emi, umi = self.double_sided(defi,
                                     x_short[-1], dem_short[-1],
                                     em_short[-1], um_short[-1], iter_damage)
-                
+
                 a = x_short[-1]
                 if i == 0.:
                     dxxi = (self.w / (np.abs(dem_short[0]) + np.abs(defi)))**0.5
                 else:
                     depsf0 = np.abs((defi - self.sorted_depsf[i-1])) * a
                     dxxi = - a + (a**2 + depsf0 * a / (defi + dem_short[-1]))**.5
-                xx_short.append(xx_short[-1] + dxxi)
+                    f = 1./(self.sorted_depsf[:i]*200e3 + 200e3*np.array(dem_short[1:]))
+                    T_arr = (self.sorted_depsf[:i]*200e3)[::-1]
+                    F = np.trapz(f[::-1], T_arr)
+                    dxxi = np.exp(F/2.)
+                    print dxxi
+                xx_short.append(dxxi)
+                #xx_short.append(xx_short[-1] + dxxi)
                 if x_short[-1] + dxi < Lmin:
                     # dx increment does not reach the boundary
                     dem_short.append(dem)
@@ -314,7 +320,7 @@ if __name__ == '__main__':
                           V_f=0.1,
                           E_f=200e3,
                           xi=100.03,
-                          n_int=4)
+                          n_int=10)
 
     ccb = CompositeCrackBridge(E_m=25e3,
                                  reinforcement_lst=[reinf],
