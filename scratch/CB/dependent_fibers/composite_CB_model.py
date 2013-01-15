@@ -199,13 +199,12 @@ class CompositeCrackBridge(HasTraits):
                 if i == 0.:
                     dxxi = (self.w / (np.abs(dem_short[0]) + np.abs(defi)))**0.5
                 else:
-                    depsf0 = np.abs((defi - self.sorted_depsf[i-1])) * a
-                    dxxi = - a + (a**2 + depsf0 * a / (defi + dem_short[-1]))**.5
-                    f = 1./(self.sorted_depsf[:i]*200e3 + 200e3*np.array(dem_short[1:]))
+                    #dTEf = (self.sorted_depsf[i-1] - defi)
+                    #dxxi = - a + (a**2 + dTEf * a**2 / (defi + dem_short[-1]))**.5
+                    f = 1./200e3/(self.sorted_depsf[:i] + np.array(dem_short[1:]))
                     T_arr = (self.sorted_depsf[:i]*200e3)[::-1]
                     F = np.trapz(f[::-1], T_arr)
-                    dxxi = np.exp(F/2.)
-                    print dxxi
+                    dxxi = np.exp(F/2. + np.log(x_short[1]))
                 xx_short.append(dxxi)
                 #xx_short.append(xx_short[-1] + dxxi)
                 if x_short[-1] + dxi < Lmin:
@@ -320,7 +319,7 @@ if __name__ == '__main__':
                           V_f=0.1,
                           E_f=200e3,
                           xi=100.03,
-                          n_int=10)
+                          n_int=100)
 
     ccb = CompositeCrackBridge(E_m=25e3,
                                  reinforcement_lst=[reinf],
