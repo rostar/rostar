@@ -52,8 +52,8 @@ class CBResidual(RF):
     l = Float(10.0, auto_set=False, enter_set=True, input=True,
               distr=['uniform'], desc='free length')
 
-    r = Float(0.013, auto_set=False, input=True,
-              enter_set=True, desc='fiber radius in mm')
+    r = Float(0.013, auto_set=False, enter_set=True, input=True,
+              distr=['uniform', 'norm'], desc='fiber radius')
 
     E_f = Float(72e3, auto_set=False, enter_set=True, input=True,
                   distr=['uniform'])
@@ -73,6 +73,9 @@ class CBResidual(RF):
     V_f = Float(0.0175, auto_set=False, enter_set=True, input=True,
               distr=['uniform'])
 
+    Pf = Float(0.0, auto_set=False, enter_set=True, input=True,
+              distr=['uniform'])
+
     w = Float(auto_set=False, enter_set=True, input=True,
                distr=['uniform'], desc='crack width',
                ctrl_range=(0.0, 1.0, 10))
@@ -86,17 +89,19 @@ class CBResidual(RF):
 
     C_code = Str('')
 
-    def omega(self, f_inf, w, T, E_f, r, m, l0, s0):
+    def omega(self, f_inf, w, T, E_f, r, m, l0, s0, Pf):
         epsf0 = f_inf / (pi * r ** 2) / E_f
-        a = np.sqrt(w * E_f / T)
-        Pf = 1 - np.exp(-(a * (epsf0 / s0) ** m) / (l0 * (m + 1)))
-        return Pf, muL
+        a = epsf0 / T
+        PfL = 1 - np.exp(-(a * (epsf0 / s0) ** m) / (l0 * (m + 1)))
+        PDF = (1./l0) * (epsf0 * (1 - x / a)/s0) ** m * np.exp(-(a * (epsf0 / s0) ** m) / (l0 * (m + 1)))
+        muL = np.trapz(x * PDF, x)
+        return PfL, muL
 
-    def __call__(self, w, tau, E_f, V_f, r, m, l0, s0):
+    def __call__(self, w, tau, E_f, V_f, r, m, l0, s0, Pf):
         #defining variables
         T = 2. * tau / r
-        f_inf = np.sqrt(T * w / E_f) * pi * r ** 2 * E_f
-        omega, muL = self.omega(f_inf, w, T, E_f, r, m, l0, s0)
+        f_inf = np.sqrt(T * w / E_f) * pi * r ** 2 * E_f * np.ones_like(Pf)
+        omega, muL = self.omega(f_inf, w, T, E_f, r, m, l0, s0, Pf)
         f = f_inf * (1 - omega) + muL * 2 * pi * r * tau * omega
         return f
 
@@ -104,13 +109,13 @@ from stats.spirrid.spirrid import SPIRRID
 from stats.spirrid.rv import RV
 
 
-def CB_composite_stress(w, tau, E_f, V_f, r, m, l0, s0, n_int):
+def CB_composite_stress(w, tau, E_f, V_f, r, m, l0, s0, Pf, n_int):
     cb = CBResidual()
     s = SPIRRID(q=cb,
                 sampling_type='PGrid',
                 evars=dict(w=w),
                 tvars=dict(tau=tau, E_f=E_f, V_f=V_f, r=r,
-                           m=m, l0=l0, s0=s0),
+                           m=m, l0=l0, s0=s0, Pf=Pf),
                 n_int=n_int)
 
     if isinstance(r, RV):
@@ -130,11 +135,12 @@ if __name__ == '__main__':
     E_f = 72e3
     V_f = 0.1
     r = RV('uniform', loc=0.002, scale=0.004)
+    Pf = RV('uniform', loc=0.0, scale=1.0)
     m = 5.
     l0 = 100.
     s0 = 0.017
     n_int = 50
     #cb = CBResidual()
-    #plt.plot(w, cb(w, 0.5, E_f, V_f, r, m, l0, s0) / (pi * r ** 2))
+    #plt.plot(w, cb(w, 0.5, E_f, V_f, r, m, l0, s0, Pf) / (pi * r ** 2))
     #plt.show()
-    CB_composite_stress(w, tau, E_f, V_f, r, m, l0, s0, n_int)
+    CB_composite_stress(w, tau, E_f, V_f, r, m, l0, s0, Pf, n_int)

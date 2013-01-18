@@ -32,6 +32,37 @@ def CDFL(e, L):
     a = e / T
     return 1. - np.exp(-a * (e / s) ** m * (1 - (1 - L / a) ** (m + 1)) / (m + 1) / L0)
 
+def PDFL(e, L):
+    T = 2. * tau / r / Ef
+    a = e / T
+    f1 = np.exp(-a * (e / s) ** m * (1 - (1 - L / a) ** (m + 1)) / (m + 1) / L0)
+    f2 = 1. / L0 * (e * (1 - L / a) / s) ** m
+    return f2 * f1
+
+def muL(e):
+    T = 2. * tau / r / Ef
+    a = e / T
+    L_arr = np.linspace(0., a, 100)
+    pdfL = PDFL(e, L_arr) / CDFa(e)
+    mul = np.trapz(pdfL * L_arr, L_arr)
+    return mul
+
+def muLate(e):
+    muL_lst = []
+    e_arr = np.linspace(0.0001, e, 100)
+    for ei in e_arr:
+        muL_lst.append(muL(ei))
+    muL_arr = np.array(muL_lst)
+    PDFa_arr = PDFa(e_arr) / CDFa(e)
+    muLate_value = np.trapz(muL_arr * PDFa_arr, e_arr)
+    return muLate_value
+
+def muLate_arr(e_arr):
+    muLate_lst = []
+    for eii in e_arr:
+        muLate_lst.append(muLate(eii))
+    return np.array(muLate_lst)
+
 def scalar_mu_L(e):
     c = 1. / CDFa(e)
     T = 2. * tau / r / Ef
@@ -90,7 +121,7 @@ def simulation(e):
     try:
         epsu = brentq(residuum, 0.0000001, e)
         idx = np.argmin(fu_arr - (epsu - T*z_arr))
-        return z_arr[idx] 
+        return z_arr[idx]
     except:
         pass
     return None
@@ -141,9 +172,10 @@ def MC2(n, e_arr):
 
 e_arr = np.linspace(0.001, 0.07, 100)
 e_arr2 = np.linspace(0.015, 0.07, 20)
+plt.plot(e_arr, muLate_arr(e_arr))
 #plt.plot(e_arr2, MC(2000, e_arr2), 'ro', label='MC')
 #plt.plot(e_arr, MC2(500, e_arr), 'bo')
-plt.plot(e_arr, CDFa(e_arr) / np.max(CDFa(e_arr)) * 10, label='10xCDF')
+#plt.plot(e_arr, CDFa(e_arr) / np.max(CDFa(e_arr)) * 10, label='10xCDF')
 #plt.plot(e_arr, PDFa(e_arr), label='PDFa')
 #plt.plot(e_arr, CDFL(e_arr, 2.))
 plt.plot(e_arr, mu_L(e_arr), label='mu_L Curtin')
