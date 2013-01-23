@@ -29,15 +29,28 @@ def PDFa(e):
     a = e / T
     return np.exp(-a * 2 * (e / s) ** m / L0 / (m + 1)) * 2 * (e / s) ** m / (T * L0)
 
-e_arr = np.linspace(0.001, 0.05, 100)
-plt.plot(e_arr[1:], cumtrapz(PDFa(e_arr), e_arr))
-
 # failure probability between 0 and L at e
 def CDF_L(e, L):
     T = 2. * tau / r / Ef
     a = e / T
     Pf = 1. - np.exp(-a * (e / s) ** m * (1 - (1 - L / a) ** (m + 1)) / (m + 1) / L0)
     return Pf / CDFa(e)
+
+def h(e, de, x, dx):
+    a = e / 2. / tau * r * Ef
+    h_xe = (1 - CDFa(e)) * (1. - x/a) * m * dx / L0 / s * (e*(1-x/a)/s)**(m-1) * H(a - x)
+    return h_xe * dx * de
+
+from stats.spirrid import make_ogrid as orthogonalize
+from mayavi import mlab
+e_arr = np.linspace(0.0001, 0.04, 200).reshape(200, 1)
+x_arr = np.linspace(0.0, 120., 500).reshape(1, 500)
+mu_q = h(e_arr, 0.04/200., x_arr, 120. / 500.)
+print np.sum(mu_q)
+ctrl_arr = orthogonalize([np.arange(len(e_arr.flatten())), np.arange(len(x_arr.flatten()))])
+mlab.surf(e_arr[0], e_arr[1], mu_q)
+mlab.surf(e_arr[0], e_arr[1], mu_q)
+mlab.show()
 
 def simulation(e):
     T = 2. * tau / r / Ef
@@ -86,7 +99,6 @@ def MC_CDFa(n, e_arr):
     
     cdf = []
     for ei in e_arr:
-        print np.sum(np.array(eu) < ei)
         cdf.append(np.sum(np.array(eu) < ei))
     return np.array(cdf)/float(n)
     
@@ -107,10 +119,8 @@ def MUL_at_e(e):
 l_arr = np.linspace(0.0, 90., 50)
 e_arr = np.linspace(0.001, 0.05, 100)
 e_arr2 = np.linspace(0.015, 0.07, 20)
-plt.plot(e_arr, MC_CDFa(5000, e_arr))
 plt.plot(e_arr, CDFa(e_arr))
 plt.xlabel('eps crack')
 plt.ylabel('mu_L')
-#plt.plot(e_arr, e_arr / 2. / tau * r * Ef, label='a')
 plt.legend(loc='best')
 plt.show()
