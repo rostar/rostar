@@ -38,19 +38,35 @@ def CDF_L(e, L):
 
 def h(e, de, x, dx):
     a = e / 2. / tau * r * Ef
-    h_xe = (1 - CDFa(e)) * (1. - x/a) * m * dx / L0 / s * (e*(1-x/a)/s)**(m-1) * H(a - x)
-    return h_xe * dx * de
+    s_mod = s * (100. / 1.196143) ** (1./m) #0.04847
+    h_xe = (1 - CDFa(e)) * H(a - x) * e ** (m - 1) * 2 * (1. - x/a) ** (m) * m / s_mod ** m
+    return h_xe * x * dx * de
 
+from scipy.optimize import fsolve
+
+def find_s():
+    def residuum(c):
+        e_arr = np.linspace(0.0001, 0.04, 2000).reshape(2000, 1)
+        x_arr = np.linspace(0.0, 80., 2000).reshape(1, 2000)
+        mu_q = h(e_arr, 0.04/2000., x_arr, 80. / 2000., c)
+        return np.sum(mu_q) - 1.0
+    print fsolve(residuum, 0.02)
+
+#find_s()
 from stats.spirrid import make_ogrid as orthogonalize
 from mayavi import mlab
 e_arr = np.linspace(0.0001, 0.04, 200).reshape(200, 1)
-x_arr = np.linspace(0.0, 120., 500).reshape(1, 500)
-mu_q = h(e_arr, 0.04/200., x_arr, 120. / 500.)
+x_arr = np.linspace(0.0, 80., 200).reshape(1, 200)
+mu_q = h(e_arr, 0.04/200., x_arr, 80. / 200.)
 print np.sum(mu_q)
 ctrl_arr = orthogonalize([np.arange(len(e_arr.flatten())), np.arange(len(x_arr.flatten()))])
-mlab.surf(e_arr[0], e_arr[1], mu_q)
-mlab.surf(e_arr[0], e_arr[1], mu_q)
+mlab.surf(e_arr[0], e_arr[1], mu_q * 50000.)
 mlab.show()
+#mu_q = h(e_arr, 0.04/200., x_arr, 60. / 300.)
+#pdf_x = np.trapz(mu_q, e_arr.flatten(), axis = 0)
+#plt.plot(x_arr.flatten(), pdf_x.flatten())
+#print np.trapz(pdf_x.flatten(), x_arr.flatten())
+#plt.show()
 
 def simulation(e):
     T = 2. * tau / r / Ef
