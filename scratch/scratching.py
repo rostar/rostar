@@ -11,7 +11,7 @@ Ef = 200e3
 r = 0.003
 tau = 0.1
 m = 5.
-s = 0.03
+s = 0.02
 L0 = 100.
 
 def CDFw(e, L):
@@ -38,8 +38,8 @@ def CDF_L(e, L):
 
 def h(e, de, x, dx):
     a = e / 2. / tau * r * Ef
-    h_xe = (1 - CDFa(e)) * H(a - x) / s ** m * 2 * (e * (1. - x/a)) ** (m-1) * m # * e ** (m - 1) * 2 * ((1. - x/a)/s) ** (m) * m
-    return h_xe / L0
+    h_xe = (1 - CDFa(e)) * H(a - x) / s ** m * 2 / L0 * (e * (1. - x/a)) ** (m-1) * m
+    return h_xe
 
 from scipy.optimize import fsolve
 from scipy.special import gammainc, gamma
@@ -64,9 +64,9 @@ h = h(e_arr.reshape(ne, 1), de, x_arr.reshape(1, nx), dx)
 pdf_x = np.trapz(h, e_arr.flatten(), axis=0)
 print 'sum = ', np.trapz(pdf_x.flatten(), x_arr.flatten())
 print 'mu_L =', np.trapz(pdf_x.flatten() * x_arr, x_arr.flatten())
-#ctrl_arr = orthogonalize([np.arange(len(e_arr.flatten())), np.arange(len(x_arr.flatten()))])
-#mlab.surf(e_arr[0], e_arr[1], h / np.max(h) * nx)
-#mlab.show()
+ctrl_arr = orthogonalize([np.arange(len(e_arr.flatten())), np.arange(len(x_arr.flatten()))])
+mlab.surf(e_arr[0], e_arr[1], h / np.max(h) * nx)
+mlab.show()
 #plt.plot(x_arr.flatten(), pdf_x.flatten())
 #plt.show()
 
