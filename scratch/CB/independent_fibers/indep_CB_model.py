@@ -92,13 +92,13 @@ class CBResidual(RF):
         T = 2. * tau / r
         ef0_inf = np.sqrt(T * w / E_f)
         # strain at fiber breakage
-        ef0_break = (-0.5 * np.log(1.-Pf) * T * l0 * (m+1) * s0**m) ** (1./(m+1))
+        ef0_break = (-0.5 * np.log(1.-Pf) * T / E_f * l0 * (m+1) * s0**m) ** (1./(m+1))
         # debonded length at fiber breakage
         a_break = ef0_break * E_f / T
         #mean pullout length of broken fibers
         mu_Lpo = a_break / (m + 1)
         # strain carried by broken fibers
-        ef0_residual = T / E_f * mu_Lpo
+        ef0_residual = T / E_f * mu_Lpo #* (mu_Lpo - w) * H(mu_Lpo - w)
 
         ef0_tot = ef0_inf * H(ef0_break - ef0_inf) + ef0_residual * H(ef0_inf - ef0_break)
         return ef0_tot * E_f * V_f * r**2
@@ -158,7 +158,7 @@ class CBResidual2(RF):
         T = 2. * tau / r
         ef0_inf = np.sqrt(T * w / E_f)
         # strain at fiber breakage
-        ef0_break = (-0.5 * np.log(1.-Pf) * T * l0 * (m+1) * s0**m) ** (1./(m+1))
+        ef0_break = (-0.5 * np.log(1.-Pf) * T / E_f * l0 * (m+1) * s0**m) ** (1./(m+1))
         # debonded length at fiber breakage
         a_break = ef0_break * E_f / T
         #mean pullout length of broken fibers
@@ -166,7 +166,7 @@ class CBResidual2(RF):
         # strain carried by broken fibers
         ef0_residual = T / E_f * mu_Lpo
 
-        ef0_tot = ef0_inf * H(ef0_break - ef0_inf)
+        ef0_tot = ef0_inf * H(ef0_break - ef0_inf)# + ef0_residual * H(ef0_inf - ef0_break)
         return ef0_tot * E_f * V_f * r**2
 
 from stats.spirrid.spirrid import SPIRRID
@@ -178,7 +178,7 @@ def CB_composite_stress(w, tau, E_f, V_f, r, m, l0, s0, Pf, n_int):
     s = SPIRRID(q=cb,
                 sampling_type='PGrid',
                 evars=dict(w=w),
-                tvars=dict(tau=tau, E_f=E_f, V_f=V_f, r=r,
+                tvars=dict(tau=RV('weibull_min', shape=2., scale=.03), E_f=E_f, V_f=V_f, r=r,
                            m=m, l0=l0, s0=s0, Pf=Pf),
                 n_int=n_int)
     if isinstance(r, RV):
@@ -187,12 +187,13 @@ def CB_composite_stress(w, tau, E_f, V_f, r, m, l0, s0, Pf, n_int):
     else:
         Er = r ** 2
     sigma_c = s.mu_q_arr / Er
-    plt.plot(w, sigma_c, color='red', lw=2, label='pullout')
-    cb = CBResidual2()
+    plt.plot(w, sigma_c, lw=2, label='m_tau = 2')
+
+    cb = CBResidual()
     s = SPIRRID(q=cb,
                 sampling_type='PGrid',
                 evars=dict(w=w),
-                tvars=dict(tau=tau, E_f=E_f, V_f=V_f, r=r,
+                tvars=dict(tau=RV('weibull_min', shape=5., scale=.03), E_f=E_f, V_f=V_f, r=r,
                            m=m, l0=l0, s0=s0, Pf=Pf),
                 n_int=n_int)
     if isinstance(r, RV):
@@ -201,22 +202,39 @@ def CB_composite_stress(w, tau, E_f, V_f, r, m, l0, s0, Pf, n_int):
     else:
         Er = r ** 2
     sigma_c = s.mu_q_arr / Er
-    plt.plot(w, sigma_c, color='black', lw=2, label='no pullout')
+    plt.plot(w, sigma_c, lw=2, label='m_tau = 5')
+    
+    cb = CBResidual()
+    s = SPIRRID(q=cb,
+                sampling_type='PGrid',
+                evars=dict(w=w),
+                tvars=dict(tau=RV('weibull_min', shape=10., scale=.03), E_f=E_f, V_f=V_f, r=r,
+                           m=m, l0=l0, s0=s0, Pf=Pf),
+                n_int=n_int)
+    if isinstance(r, RV):
+        r_arr = np.linspace(r.ppf(0.001), r.ppf(0.999), 300)
+        Er = np.trapz(r_arr ** 2 * r.pdf(r_arr), r_arr)
+    else:
+        Er = r ** 2
+    sigma_c = s.mu_q_arr / Er
+    plt.plot(w, sigma_c, lw=2, label='m_tau = 10')   
+
     plt.xlabel('w [mm]')
-    plt.ylabel('epsfmax [-]')
+    plt.ylabel('sigma_c [MPa]')
+    plt.legend(loc='best')
     plt.show()
 
 if __name__ == '__main__':
-    w = np.linspace(0, 2., 500)
-    tau = RV('uniform', loc=1., scale=5.5)
-    E_f = 72e3
-    V_f = 0.1
-    r = RV('uniform', loc=0.002, scale=0.002)
+    w = np.linspace(0, 5.5, 300)
+    tau = RV('weibull_min', shape=3., scale=.03)
+    E_f = 200e3
+    V_f = 0.01
+    r = 0.003#RV('uniform', loc=0.001, scale=0.005)
     m = 5.
     l0 = 100.
-    s0 = 0.005
-    Pf = RV('uniform', loc=0., scale=1.0)
-    n_int = 30
+    s0 = 0.01
+    Pf = 0.5#RV('uniform', loc=0., scale=1.0)
+    n_int = 500
     #cb = CBResidual()
     #plt.plot(w, cb(w, 0.5, E_f, V_f, r, m, l0, s0, Pf) / (pi * r ** 2))
     #plt.show()

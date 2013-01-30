@@ -10,7 +10,7 @@ def H(x):
 Ef = 200e3
 r = 0.003
 tau = 0.1
-m = 7.
+m = 5.
 s = 0.02
 L0 = 100.
 
@@ -38,7 +38,7 @@ def PPFa(p):
 def CDF_L(e, L):
     T = 2. * tau / r / Ef
     a = e / T
-    Pf = 1. - np.exp(-a * (e / s) ** m * (1 - (1 - L / a) ** (m + 1)) / (m + 1) / L0)
+    Pf = 1. - np.exp(-2 * a * (e / s) ** m * (1 - (1 - L / a) ** (m + 1)) / (m + 1) / L0)
     return Pf / CDFa(e)
 
 def h(e, x):
@@ -51,7 +51,6 @@ def pdfL(e, x):
     a = e / 2. / tau * r * Ef
     h_xe = (1 - CDFa(e)) * H(a - x) * 2 * m * (e * (1. - x/a)) ** (m-1) / L0 / s ** m
     pdf = m*T * (1-x/a)**(m-1) / e * H(a - x)
-    print 'mean,', T * a**2/e/(m+1), a, a/(T * a**2/e/(m+1))
     return pdf #h_xe / PDFa(e)
 
 def muLate(e):
@@ -67,19 +66,29 @@ def evans(T):
     alpha = (T/suma)**(m+1)
     return L0/2. * ((s* Ef)/suma)**m * gamma((m+2)/(m+1)) * gammainc((m+2)/(m+1), alpha) / CDFa(T/Ef)
 
-def evans2(e):
-    T = 2. * tau / r / Ef
+def muH(e):
+    T = 2. * tau / r
     n = (m+1)
-    c = 2. / L0 / T / n / s**m
-    C = 2. / L0 / T**2 / n / s**m
-    print C * ( + 0.*(c*0.**n)**(-1./n) * gamma(1./n)) / (c * n**2)
-    return - C * (n * e * np.exp(-c*e**n) + e*(c*e**n)**(-1./n) * (gamma(1./n) - gamma(1./n) * gammainc(1./n, c*e**n))) / (c * n**2)
+    a = e * Ef / T
+    c = 2. * Ef / T / L0 / n / s**m
+    ga = gamma(1./n) - gamma(1./n) * gammainc(1./n, c*e**n)
+    epsxi = -c**(-1./n)/n * ga - e*np.exp(-c*e**n)
+    eps0 = -c**(-1./n)/n * gamma(1./n)
+    #return (epsxi - eps0) * Ef / T / n / CDFa(e)
+    I = 1./(n*c**(1./n))*gamma(1./n) * gammainc(1./n, c*e**n) - e*np.exp(-c*e**n)
+    return I * Ef / T / n / CDFa(e)
 
-e_arr = np.linspace(0.005, 0.05, 100)
+def point(e):
+    T = 2. * tau / r
+    n = (m + 1)
+    c = 2. * Ef / T / L0 / n / s ** m
+    return Ef/T*c * np.trapz(e**n * np.exp(-c*e**n), e) / CDFa(e[-1])
+
+e_arr = np.linspace(0.00, 0.05, 100)
 plt.plot(e_arr, evans(e_arr * Ef))
-#print evans2(e_arr)
-#plt.plot(e_arr, evans2(e_arr), lw=3, ls='dashed')
-#plt.show()
+plt.plot(e_arr, muH(e_arr))
+plt.plot(e_arr[-1], point(e_arr), 'ro')
+plt.show()
 
 from stats.spirrid import make_ogrid as orthogonalize
 from mayavi import mlab
