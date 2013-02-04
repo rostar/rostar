@@ -1,8 +1,7 @@
 import numpy as np
 from matplotlib import pyplot as plt
 from scipy.stats import weibull_min
-from scipy.optimize import brentq
-from scipy.integrate import cumtrapz
+from scipy.special import gammainc, gamma
 
 def H(x):
     return x >= 0.0
@@ -25,9 +24,9 @@ def CDFa(e):
 
 # failure probability density between 0 and a at e
 def PDFa(e):
-    T = 2. * tau / r / Ef
-    a = e / T
-    return np.exp(-a * 2 * (e / s) ** m / (m + 1) / L0) * 2 * (e / s) ** m / (T * L0)
+    T = 2. * tau / r
+    a = e * Ef / T
+    return 2 * (e / s) ** m / (T/Ef * L0) * np.exp(-a * 2 * (e / s) ** m / (m + 1) / L0)
 
 # percent point function
 def PPFa(p):
@@ -42,10 +41,11 @@ def CDF_L(e, L):
     return Pf / CDFa(e)
 
 def mean_xi():
-    xi_arr = np.linspace(PPFa(0.0001), PPFa(0.9999), 500)
-    return np.trapz(PDFa(xi_arr) * xi_arr, xi_arr)
-
-print CDFa(mean_xi())
+    T = 2. * tau / r
+    n = (m+1)
+    c = 2. * Ef / T / L0 / n / s**m
+    mu_xi = c**(-1./n)/n * gamma(1./n)
+    return mu_xi 
 
 def h(e, x):
     a = e / 2. / tau * r * Ef
@@ -64,9 +64,6 @@ def muLate(e):
     a = e / T
     return a/(m+1)
 
-from scipy.optimize import fsolve
-from scipy.special import gammainc, gamma
-
 def evans(T):
     suma = (L0/r*(s* Ef)**m*tau*(m+1))**(1./(m+1.))
     alpha = (T/suma)**(m+1)
@@ -75,13 +72,8 @@ def evans(T):
 def muH(e):
     T = 2. * tau / r
     n = (m+1)
-    a = e * Ef / T
     c = 2. * Ef / T / L0 / n / s**m
-    ga = gamma(1./n) - gamma(1./n) * gammainc(1./n, c*e**n)
-    epsxi = -c**(-1./n)/n * ga - e*np.exp(-c*e**n)
-    eps0 = -c**(-1./n)/n * gamma(1./n)
-    #return (epsxi - eps0) * Ef / T / n / CDFa(e)
-    I = 1./(n*c**(1./n))*gamma(1./n) * gammainc(1./n, c*e**n) - e*np.exp(-c*e**n)
+    I = c**(-1./n)/n * gamma(1./n) * gammainc(1./n, c*e**n) - e*np.exp(-c*e**n)
     return I * Ef / T / n / CDFa(e)
 
 def point(e):
@@ -90,11 +82,11 @@ def point(e):
     c = 2. * Ef / T / L0 / n / s ** m
     return Ef/T*c * np.trapz(e**n * np.exp(-c*e**n), e) / CDFa(e[-1])
 
-#e_arr = np.linspace(0.00, 0.05, 100)
-#plt.plot(e_arr, evans(e_arr * Ef))
-#plt.plot(e_arr, muH(e_arr))
-#plt.plot(e_arr[-1], point(e_arr), 'ro')
-#plt.show()
+e_arr = np.linspace(0.00, 0.05, 100)
+plt.plot(e_arr, evans(e_arr * Ef))
+plt.plot(e_arr, muH(e_arr))
+plt.plot(e_arr[-1], point(e_arr), 'ro')
+plt.show()
 
 from stats.spirrid import make_ogrid as orthogonalize
 from mayavi import mlab

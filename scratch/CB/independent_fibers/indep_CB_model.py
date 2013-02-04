@@ -153,6 +153,6 @@ if __name__ == '__main__':
     Pf = RV('uniform', loc=0., scale=1.0)
     n_int = 300
     #cb = CBResidual()
-    #plt.plot(w, cb(w, 0.5, E_f, V_f, r, m,  L_0, s, Pf) / (pi * r ** 2))
+    #plt.plot(w, cb(w, 0.5, E_f, V_f, r, m,  L_0, s, Pf) / r ** 2)
     #plt.show()
     CB_composite_stress(w, tau, E_f, V_f, r, m, L_0, s, Pf, n_int)
