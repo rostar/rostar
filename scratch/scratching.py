@@ -9,9 +9,9 @@ def H(x):
 
 Ef = 200e3
 r = 0.003
-tau = 0.1
-m = 5.
-s = 0.02
+tau = 5.01
+m = 10.9
+s = 0.015
 L0 = 100.
 
 def CDFw(e, L):
@@ -31,8 +31,8 @@ def PDFa(e):
 
 # percent point function
 def PPFa(p):
-    T = 2. * tau / r / Ef
-    return (-0.5 * np.log(1.-p) * T * L0 * (m+1) * s**m) ** (1./(m+1))
+    T = 2. * tau / r
+    return (-0.5 * np.log(1.-p) * T / Ef * L0 * (m+1) * s**m) ** (1./(m+1))
 
 # failure probability between 0 and L at e
 def CDF_L(e, L):
@@ -40,6 +40,12 @@ def CDF_L(e, L):
     a = e / T
     Pf = 1. - np.exp(-2 * a * (e / s) ** m * (1 - (1 - L / a) ** (m + 1)) / (m + 1) / L0)
     return Pf / CDFa(e)
+
+def mean_xi():
+    xi_arr = np.linspace(PPFa(0.0001), PPFa(0.9999), 500)
+    return np.trapz(PDFa(xi_arr) * xi_arr, xi_arr)
+
+print CDFa(mean_xi())
 
 def h(e, x):
     a = e / 2. / tau * r * Ef
@@ -84,11 +90,11 @@ def point(e):
     c = 2. * Ef / T / L0 / n / s ** m
     return Ef/T*c * np.trapz(e**n * np.exp(-c*e**n), e) / CDFa(e[-1])
 
-e_arr = np.linspace(0.00, 0.05, 100)
-plt.plot(e_arr, evans(e_arr * Ef))
-plt.plot(e_arr, muH(e_arr))
-plt.plot(e_arr[-1], point(e_arr), 'ro')
-plt.show()
+#e_arr = np.linspace(0.00, 0.05, 100)
+#plt.plot(e_arr, evans(e_arr * Ef))
+#plt.plot(e_arr, muH(e_arr))
+#plt.plot(e_arr[-1], point(e_arr), 'ro')
+#plt.show()
 
 from stats.spirrid import make_ogrid as orthogonalize
 from mayavi import mlab
@@ -171,13 +177,13 @@ def MC_CDFa(n, e_arr):
         cdf.append(np.sum(np.array(eu) < ei))
     return np.array(cdf)/float(n)
 
-l_arr = np.linspace(0.0, 90., 50)
-e_arr = np.linspace(0.001, 0.05, 100)
-e_arr2 = np.linspace(0.015, 0.07, 20)
-mc, fact = MC(10000, e_arr)
-plt.plot(e_arr, mc, 'ro')
-plt.plot(e_arr, fact, 'bo')
-plt.xlabel('eps crack')
-plt.ylabel('mu_L')
-plt.legend(loc='best')
-plt.show()
+#l_arr = np.linspace(0.0, 90., 50)
+#e_arr = np.linspace(0.001, 0.05, 100)
+#e_arr2 = np.linspace(0.015, 0.07, 20)
+#mc, fact = MC(10000, e_arr)
+#plt.plot(e_arr, mc, 'ro')
+#plt.plot(e_arr, fact, 'bo')
+#plt.xlabel('eps crack')
+#plt.ylabel('mu_L')
+#plt.legend(loc='best')
+#plt.show()
