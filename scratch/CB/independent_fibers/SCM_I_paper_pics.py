@@ -13,7 +13,7 @@ E_f = 200e3
 V_f = 0.01
 r = 0.003
 tau = .3
-#m = 5.
+m = 5.
 s = 0.015
 L_0 = 100.
 Pf = RV('uniform', loc=0.0, scale=1.0)
@@ -34,34 +34,66 @@ def median_strength_vs_T(T_arr, m_arr):
 
 from scipy.special import gamma
 def random_xi(w_arr, m_arr):
-    T = 2. * tau / r
-    m_ref = 5.0
-    n_ref = (m_ref+1)
-    c_ref = 2. * E_f / T / L_0 / n_ref / s**m_ref
-    mu_xi_ref = c_ref**(-1./n_ref)/n_ref * gamma(1./n_ref)
-    median_xi_ref = (-0.5 * np.log(1.-.5) * T / E_f * L_0 * (n_ref) * s**m_ref) ** (1./(n_ref))
-    xi_ref = mu_xi_ref
-    for mi in m_arr:
-        ni = mi+1
-        si = (xi_ref * ni / gamma(1./ni))**(ni/mi) * (2 * E_f/ni/L_0/T)**(1./mi)
-        CDF = 1. - np.exp(-xi_ref * E_f / T * 2 * (xi_ref / si) ** mi / ni / L_0)
-        cb = CBResidual(include_pullout=False)
-        determ = cb(w_arr, tau, E_f, V_f, r, mi, L_0, si, CDF) / r**2
-        plt.plot(w_arr, determ, label='determ m = ' + str(mi))
+#    T = 2. * tau / r
+#    m_ref = 5.0
+#    n_ref = (m_ref+1)
+#    c_ref = 2. * E_f / T / L_0 / n_ref / s**m_ref
+#    mu_xi_ref = c_ref**(-1./n_ref)/n_ref * gamma(1./n_ref)
+#    median_xi_ref = (-0.5 * np.log(1.-.5) * T / E_f * L_0 * (n_ref) * s**m_ref) ** (1./(n_ref))
+#    xi_ref = mu_xi_ref
+#    for mi in m_arr:
+#        ni = mi+1
+#        si = (xi_ref * ni / gamma(1./ni))**(ni/mi) * (2 * E_f/ni/L_0/T)**(1./mi)
+#        CDF = 1. - np.exp(-xi_ref * E_f / T * 2 * (xi_ref / si) ** mi / ni / L_0)
+#        cb = CBResidual(include_pullout=False)
+#        determ = cb(w_arr, tau, E_f, V_f, r, mi, L_0, si, CDF) / r**2
+#        plt.plot(w_arr, determ, label='determ m = ' + str(mi))
        
-        spirrid = SPIRRID(q=CBResidual(include_pullout=True),
-                    sampling_type='PGrid',
-                    evars=dict(w=w_arr),
-                    tvars=dict(tau=tau, E_f=E_f, V_f=V_f, r=r,
-                               m=mi, L_0=L_0, s=si, Pf=Pf),
-                    n_int=5000)
-        if isinstance(r, RV):
-            r_arr = np.linspace(r.ppf(0.001), r.ppf(0.999), 300)
-            Er = np.trapz(r_arr ** 2 * r.pdf(r_arr), r_arr)
-        else:
-            Er = r ** 2
-        sigma_c = spirrid.mu_q_arr / Er
-        plt.plot(w_arr, sigma_c, lw=2, label='m = ' + str(mi))
+    spirrid = SPIRRID(q=CBResidual(include_pullout=True),
+                sampling_type='PGrid',
+                evars=dict(w=w_arr),
+                tvars=dict(tau=0.1, E_f=E_f, V_f=V_f, r=r,
+                           m=m, L_0=L_0, s=s, Pf=Pf),
+                n_int=5000)
+    if isinstance(r, RV):
+        r_arr = np.linspace(r.ppf(0.001), r.ppf(0.999), 300)
+        Er = np.trapz(r_arr ** 2 * r.pdf(r_arr), r_arr)
+    else:
+        Er = r ** 2
+    sigma_c = spirrid.mu_q_arr / Er
+    plt.plot(w_arr, sigma_c, lw=2, label='m = ' + str(m))
+    print np.max(sigma_c)/sigma_c[-1] 
+
+    spirrid = SPIRRID(q=CBResidual(include_pullout=True),
+                sampling_type='PGrid',
+                evars=dict(w=w_arr),
+                tvars=dict(tau=1.0, E_f=E_f, V_f=V_f, r=r,
+                           m=m, L_0=L_0, s=s, Pf=Pf),
+                n_int=5000)
+    if isinstance(r, RV):
+        r_arr = np.linspace(r.ppf(0.001), r.ppf(0.999), 300)
+        Er = np.trapz(r_arr ** 2 * r.pdf(r_arr), r_arr)
+    else:
+        Er = r ** 2
+    sigma_c = spirrid.mu_q_arr / Er
+    plt.plot(w_arr, sigma_c, lw=2, label='m = ' + str(m))
+    print np.max(sigma_c)/sigma_c[-1]
+
+    spirrid = SPIRRID(q=CBResidual(include_pullout=True),
+                sampling_type='PGrid',
+                evars=dict(w=w_arr),
+                tvars=dict(tau=5.0, E_f=E_f, V_f=V_f, r=r,
+                           m=m, L_0=L_0, s=s, Pf=Pf),
+                n_int=5000)
+    if isinstance(r, RV):
+        r_arr = np.linspace(r.ppf(0.001), r.ppf(0.999), 300)
+        Er = np.trapz(r_arr ** 2 * r.pdf(r_arr), r_arr)
+    else:
+        Er = r ** 2
+    sigma_c = spirrid.mu_q_arr / Er
+    plt.plot(w_arr, sigma_c, lw=2, label='m = ' + str(m))
+    print np.max(sigma_c)/sigma_c[-1]
+        
     plt.title('constant mean')
     plt.xlabel('crack opening w[mm]')
     plt.ylabel('composite stress [MPa]')
@@ -71,7 +103,7 @@ def random_xi(w_arr, m_arr):
 
 T_arr = 2 * np.linspace(0.05, .7, 100) / r
 m_arr = np.array([1., 7.0, 15.])
-w_arr = np.linspace(0, .7, 300)
+w_arr = np.linspace(0, 2.7, 1000)
 #median_strength_vs_T(T_arr, m_arr)
 random_xi(w_arr, m_arr)
 #from scipy.stats import weibull_min
