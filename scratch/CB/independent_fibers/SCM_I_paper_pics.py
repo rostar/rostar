@@ -103,7 +103,7 @@ def random_xi(w_arr, m_arr):
 
 T_arr = 2 * np.linspace(0.05, .7, 100) / r
 m_arr = np.array([1., 7.0, 15.])
-w_arr = np.linspace(0, 2.7, 1000)
+w_arr = np.linspace(0, 2.7, 300)
 #median_strength_vs_T(T_arr, m_arr)
 random_xi(w_arr, m_arr)
 #from scipy.stats import weibull_min
