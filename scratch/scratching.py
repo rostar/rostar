@@ -2,6 +2,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 from scipy.stats import weibull_min
 from scipy.special import gammainc, gamma
+from scipy.integrate import cumtrapz
 
 def H(x):
     return x >= 0.0
@@ -56,8 +57,12 @@ def pdfL(e, x):
     T = 2. * tau / r / Ef
     a = e / 2. / tau * r * Ef
     h_xe = (1 - CDFa(e)) * H(a - x) * 2 * m * (e * (1. - x/a)) ** (m-1) / L0 / s ** m
-    pdf = m*T * (1-x/a)**(m-1) / e * H(a - x)
+    pdf = m/a * (1-x/a)**(m-1) * H(a - x)
     return pdf #h_xe / PDFa(e)
+
+def cdfL(e, x):
+    a = e / 2. / tau * r * Ef
+    return 1 - (1 - x/a)**m
 
 def muLate(e):
     T = 2. * tau / r / Ef

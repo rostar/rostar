@@ -12,121 +12,136 @@ import numpy as np
 E_f = 200e3
 V_f = 0.01
 r = 0.003
-tau = .3
+tau = .5
 m = 5.
-s = 0.015
-L_0 = 100.
+sV0 = 3.e-3
 Pf = RV('uniform', loc=0.0, scale=1.0)
 
-def median_strength_vs_T(T_arr, m_arr):
-    #inverted CDFa with p = 0.5 (median strength)
-    T_arr = T_arr
-    p = 0.5
-    for mi in m_arr:
-        median_eps_scaling = (-0.5 * np.log(1. - p) * T_arr / E_f * L_0 * (mi+1) * s**mi) ** (1./(mi+1)) 
-        a_xi = median_eps_scaling * E_f / T_arr
-        plt.plot(T_arr, median_eps_scaling, lw=2, label='m = ' + str(mi))
-    a_xi = np.linspace(10., 100., 50)
-    anal = (s**2.0 * L_0 * (3.0) * np.log(2) / 2. / a_xi)**(0.5)
-    #plt.plot(a_xi, anal, 'ro')
-    plt.legend(loc='best')
+def H(x):
+    return x >= 0.0
+
+def Fig1_general_diagram():
+    w_arr = np.linspace(0,1.0,1000)
+    cb = CBResidual(include_pullout=True)
+    total = SPIRRID(q=cb,
+                sampling_type='PGrid',
+                evars=dict(w=w_arr),
+                tvars=dict(tau=tau, E_f=E_f, V_f=V_f, r=r,
+                           m=m, sV0=sV0, Pf=Pf),
+                n_int=1000)
+    if isinstance(r, RV):
+        r_arr = np.linspace(r.ppf(0.001), r.ppf(0.999), 300)
+        Er = np.trapz(r_arr ** 2 * r.pdf(r_arr), r_arr)
+    else:
+        Er = r ** 2
+    total = total.mu_q_arr / Er    
+    plt.plot(w_arr, total, lw=2, color='black')
+    
+    cb = CBResidual(include_pullout=False)
+    broken = SPIRRID(q=cb,
+                sampling_type='PGrid',
+                evars=dict(w=w_arr),
+                tvars=dict(tau=tau, E_f=E_f, V_f=V_f, r=r,
+                           m=m, sV0=sV0, Pf=Pf),
+                n_int=1000)
+    if isinstance(r, RV):
+        r_arr = np.linspace(r.ppf(0.001), r.ppf(0.999), 300)
+        Er = np.trapz(r_arr ** 2 * r.pdf(r_arr), r_arr)
+    else:
+        Er = r ** 2
+    broken = broken.mu_q_arr / Er    
+    plt.plot(w_arr, broken, lw=2, ls='dashed', color='black')
+    plt.plot(w_arr, total-broken, lw=2, ls='dashed', color='black')   
+    plt.ylim(0, 30)
+    plt.xlim(0, .9)
+    plt.xlabel('w [mm]')
+    plt.ylabel('sigma_c [MPa]')
     plt.show()
 
-from scipy.special import gamma
-def random_xi(w_arr, m_arr):
-#    T = 2. * tau / r
-#    m_ref = 5.0
-#    n_ref = (m_ref+1)
-#    c_ref = 2. * E_f / T / L_0 / n_ref / s**m_ref
-#    mu_xi_ref = c_ref**(-1./n_ref)/n_ref * gamma(1./n_ref)
-#    median_xi_ref = (-0.5 * np.log(1.-.5) * T / E_f * L_0 * (n_ref) * s**m_ref) ** (1./(n_ref))
-#    xi_ref = mu_xi_ref
-#    for mi in m_arr:
-#        ni = mi+1
-#        si = (xi_ref * ni / gamma(1./ni))**(ni/mi) * (2 * E_f/ni/L_0/T)**(1./mi)
-#        CDF = 1. - np.exp(-xi_ref * E_f / T * 2 * (xi_ref / si) ** mi / ni / L_0)
-#        cb = CBResidual(include_pullout=False)
-#        determ = cb(w_arr, tau, E_f, V_f, r, mi, L_0, si, CDF) / r**2
-#        plt.plot(w_arr, determ, label='determ m = ' + str(mi))
-       
-    spirrid = SPIRRID(q=CBResidual(include_pullout=True),
-                sampling_type='PGrid',
-                evars=dict(w=w_arr),
-                tvars=dict(tau=0.1, E_f=E_f, V_f=V_f, r=r,
-                           m=m, L_0=L_0, s=s, Pf=Pf),
-                n_int=5000)
+from math import pi
+from scipy.optimize import fsolve
+def Fig2_rand_xi():
+    def get_scale(mu_xi, m):
+        def optimize(s):
+            p = np.linspace(0., .9999, 1000)
+            T = 2. * tau / r
+            ef0_break = (-0.5 * np.log(1.-p) * T / E_f * (m+1) * s**m) ** (1./(m+1))
+            return np.trapz(1-p, ef0_break) - mu_xi
+        return fsolve(optimize, mu_xi)
+    
+    T = 2. * tau / r
+    p = np.linspace(0., .999999, 1000)
+    w_arr = np.linspace(0,1.0,1000)
+    cb = CBResidual(include_pullout=True)
     if isinstance(r, RV):
         r_arr = np.linspace(r.ppf(0.001), r.ppf(0.999), 300)
         Er = np.trapz(r_arr ** 2 * r.pdf(r_arr), r_arr)
     else:
         Er = r ** 2
-    sigma_c = spirrid.mu_q_arr / Er
-    plt.plot(w_arr, sigma_c, lw=2, label='m = ' + str(m))
-    print np.max(sigma_c)/sigma_c[-1] 
-
-    spirrid = SPIRRID(q=CBResidual(include_pullout=True),
+    for mi in [4., 12., 100.]:
+        s = get_scale(0.02, mi)
+        sV0 = float(s * (pi*r**2)**(1./mi))
+#        ef0_break = (-0.5 * np.log(1.-p) * T / E_f * (mi+1) * s**mi) ** (1./(mi+1))
+#        mu_e = np.trapz(1-p, ef0_break)
+#        plt.plot(ef0_break, p, lw=2, color='black')
+#        plt.ylim(0,1.1)
+        total = SPIRRID(q=cb,
                 sampling_type='PGrid',
                 evars=dict(w=w_arr),
-                tvars=dict(tau=1.0, E_f=E_f, V_f=V_f, r=r,
-                           m=m, L_0=L_0, s=s, Pf=Pf),
-                n_int=5000)
-    if isinstance(r, RV):
-        r_arr = np.linspace(r.ppf(0.001), r.ppf(0.999), 300)
-        Er = np.trapz(r_arr ** 2 * r.pdf(r_arr), r_arr)
-    else:
-        Er = r ** 2
-    sigma_c = spirrid.mu_q_arr / Er
-    plt.plot(w_arr, sigma_c, lw=2, label='m = ' + str(m))
-    print np.max(sigma_c)/sigma_c[-1]
-
-    spirrid = SPIRRID(q=CBResidual(include_pullout=True),
-                sampling_type='PGrid',
-                evars=dict(w=w_arr),
-                tvars=dict(tau=5.0, E_f=E_f, V_f=V_f, r=r,
-                           m=m, L_0=L_0, s=s, Pf=Pf),
-                n_int=5000)
-    if isinstance(r, RV):
-        r_arr = np.linspace(r.ppf(0.001), r.ppf(0.999), 300)
-        Er = np.trapz(r_arr ** 2 * r.pdf(r_arr), r_arr)
-    else:
-        Er = r ** 2
-    sigma_c = spirrid.mu_q_arr / Er
-    plt.plot(w_arr, sigma_c, lw=2, label='m = ' + str(m))
-    print np.max(sigma_c)/sigma_c[-1]
-        
-    plt.title('constant mean')
-    plt.xlabel('crack opening w[mm]')
-    plt.ylabel('composite stress [MPa]')
-    plt.legend(loc='best')
+                tvars=dict(tau=tau, E_f=E_f, V_f=V_f, r=r,
+                           m=mi, sV0=sV0, Pf=Pf),
+                n_int=1000)
+        result = total.mu_q_arr / Er    
+        plt.plot(w_arr, result, lw=2, color='black')
+    plt.xlabel('w [mm]')
+    plt.ylabel('sigma_c [MPa]')
+    plt.xlim(0,0.85)
+    plt.ylim(0,45.)
     plt.show()
- 
 
-T_arr = 2 * np.linspace(0.05, .7, 100) / r
-m_arr = np.array([1., 7.0, 15.])
-w_arr = np.linspace(0, 2.7, 300)
-#median_strength_vs_T(T_arr, m_arr)
-random_xi(w_arr, m_arr)
-#from scipy.stats import weibull_min
-#l_arr = np.linspace(5.0,150.,100)
-#med1 = []
-#med2 = []
-#med3 = []
-#mu1 = []
-#mu2 = []
-#mu3 = []
-#for l in l_arr:
-#    med1.append(weibull_min(0.5, scale = (100./l)**(1./0.5)*0.02).ppf(0.5))
-#    med2.append(weibull_min(2., scale = (100./l)**(1./2.)*0.02).ppf(0.5))
-#    med3.append(weibull_min(10., scale = (100./l)**(1./10.)*0.02).ppf(0.5))
-#    mu1.append(weibull_min(0.5, scale = (100./l)**(1./0.5)*0.02).stats('m'))
-#    mu2.append(weibull_min(2., scale = (100./l)**(1./2.)*0.02).stats('m'))
-#    mu3.append(weibull_min(10., scale = (100./l)**(1./10.)*0.02).stats('m'))
-#plt.plot(l_arr, med1)
-#plt.plot(l_arr, med2)
-#plt.plot(l_arr, med3)
-##plt.plot(l_arr, mu1, lw=2)
-##plt.plot(l_arr, mu2, lw=2)
-##plt.plot(l_arr, mu3, lw=2)
-#print 100. * np.log(2)
-#plt.ylim(0,0.2)
-#plt.show()
+from scipy.special import gammainc, gamma
+def Fig3_rand_xi_T():
+    n = m+1
+    tau = np.linspace(0.2, 2.0, 10)
+    T = 2. * tau / r
+    s = sV0 / (pi * r ** 2)**(1./m)
+    c = 2*E_f/n/s**m/T
+    gam = gamma(1./n) * gammainc(1./n, 1./m)
+    intact = E_f * V_f * (m*c)**(-1./n) * np.exp(-1./m)
+    broken = E_f * V_f * (1./(n**2 * c **(1./n)) * gam - 1./(n*(m*c)**(1./n)) * np.exp(-1./m))
+    strength = intact + broken
+    plt.plot(T, strength, lw=2, color='black')
+    plt.show()
+
+def Fig4_discrete_r():
+    for ri in [0.001, 0.003, 0.0015]: 
+        m = 4.
+        n = m+1
+        T = 2. * tau / ri
+        w_arr = np.linspace(0,.65,1000)
+        xi_med = ((np.log(2.)*tau*n*sV0**m)/(ri**3 * E_f * pi))**(1./n)
+        epsf0 = np.sqrt(T * w_arr / E_f)
+        sigmac = E_f * V_f * epsf0 * H(xi_med - epsf0)
+        #plt.plot(w_arr, sigmac, lw=2, color='black')
+    
+    fig = plt.figure()
+    ax1 = fig.add_subplot(111)
+    ax2 = ax1.twinx()
+
+    for mi in [4.0, 5.0, 6.0]:
+        r_arr = np.linspace(0.001, 0.020, 500)
+        wstar = E_f/2./tau*r_arr *((np.log(2.)*tau*(mi+1)*sV0**mi)/(r_arr**3 * E_f * pi))**(2./(mi+1))
+        xi_med = ((np.log(2.)*tau*(mi+1)*sV0**mi)/(r_arr**3 * E_f * pi))**(1./(mi+1))
+        strength = E_f * V_f * xi_med    
+        ax1.plot(r_arr, strength, lw=2, color='black')
+        ax2.plot(r_arr, wstar, lw=2, color='black', ls='dashed')
+    plt.xlim(0,0.02)
+    plt.ylim(0)
+    plt.show()
+
+
+
+#Fig1_general_diagram()
+#Fig2_rand_xi()
+#Fig3_rand_xi_T()
+Fig4_discrete_r()
