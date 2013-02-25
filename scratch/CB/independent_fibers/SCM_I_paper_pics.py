@@ -132,9 +132,9 @@ def Fig4_discrete_r():
         r_arr = np.linspace(0.001, 0.020, 500)
         wstar = E_f/2./tau*r_arr *((np.log(2.)*tau*(mi+1)*sV0**mi)/(r_arr**3 * E_f * pi))**(2./(mi+1))
         xi_med = ((np.log(2.)*tau*(mi+1)*sV0**mi)/(r_arr**3 * E_f * pi))**(1./(mi+1))
-        strength = E_f * V_f * xi_med    
-        ax1.plot(r_arr, strength, lw=2, color='black')
-        ax2.plot(r_arr, wstar, lw=2, color='black', ls='dashed')
+        strength = E_f * V_f * xi_med
+        ax1.loglog(r_arr, strength, lw=2, color='black')
+        ax2.loglog(r_arr, wstar, lw=2, color='black', ls='dashed')
     plt.xlim(0,0.02)
     plt.ylim(0)
     plt.show()
