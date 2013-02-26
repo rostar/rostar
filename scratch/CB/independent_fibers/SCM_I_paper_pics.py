@@ -139,9 +139,32 @@ def Fig4_discrete_r():
     plt.ylim(0)
     plt.show()
 
-
+def Fig5_rand_r():
+    w_arr = np.linspace(0,1.0,1000)
+    cb = CBResidual(include_pullout=True)
+    if isinstance(r, RV):
+        r_arr = np.linspace(r.ppf(0.001), r.ppf(0.999), 300)
+        Er = np.trapz(r_arr ** 2 * r.pdf(r_arr), r_arr)
+    else:
+        Er = r ** 2
+    for ri in [RV('weibull_min', shape=3., scale=.002),
+               RV('uniform', loc=0.00, scale=.002),
+               RV('uniform', loc=0.001, scale=.005)]:
+        total = SPIRRID(q=cb,
+                sampling_type='PGrid',
+                evars=dict(w=w_arr),
+                tvars=dict(tau=tau, E_f=E_f, V_f=V_f, r=ri,
+                           m=3.0, sV0=sV0, Pf=0.5),
+                n_int=1000)
+        result = total.mu_q_arr / Er    
+        plt.plot(w_arr, result, lw=2, color='black')
+    plt.xlabel('w [mm]')
+    plt.ylabel('sigma_c [MPa]')
+    plt.show()
+    
 
 #Fig1_general_diagram()
 #Fig2_rand_xi()
 #Fig3_rand_xi_T()
-Fig4_discrete_r()
+#Fig4_discrete_r()
+Fig5_rand_r()
