@@ -114,7 +114,7 @@ def Fig3_rand_xi_T():
     plt.show()
 
 def Fig4_discrete_r():
-    for ri in [0.001, 0.003, 0.0015]: 
+    for ri in [0.005, 0.01, 0.015]: 
         m = 4.
         n = m+1
         T = 2. * tau / ri
@@ -122,8 +122,9 @@ def Fig4_discrete_r():
         xi_med = ((np.log(2.)*tau*n*sV0**m)/(ri**3 * E_f * pi))**(1./n)
         epsf0 = np.sqrt(T * w_arr / E_f)
         sigmac = E_f * V_f * epsf0 * H(xi_med - epsf0)
-        #plt.plot(w_arr, sigmac, lw=2, color='black')
-    
+        plt.plot(w_arr, sigmac, lw=2, color='black')
+    plt.show()
+
     fig = plt.figure()
     ax1 = fig.add_subplot(111)
     ax2 = ax1.twinx()
@@ -140,28 +141,27 @@ def Fig4_discrete_r():
     plt.show()
 
 def Fig5_rand_r():
-    w_arr = np.linspace(0,1.0,1000)
+    w_arr = np.linspace(0, .6, 1000)
     cb = CBResidual(include_pullout=True)
-    if isinstance(r, RV):
-        r_arr = np.linspace(r.ppf(0.001), r.ppf(0.999), 300)
-        Er = np.trapz(r_arr ** 2 * r.pdf(r_arr), r_arr)
-    else:
-        Er = r ** 2
-    for ri in [RV('weibull_min', shape=3., scale=.002),
-               RV('uniform', loc=0.00, scale=.002),
-               RV('uniform', loc=0.001, scale=.005)]:
+    for i, ri in enumerate([RV('norm', loc=0.01, scale=.0001),
+                            RV('norm', loc=0.01, scale=.002),
+                            RV('norm', loc=0.01, scale=.003)]):
         total = SPIRRID(q=cb,
                 sampling_type='PGrid',
                 evars=dict(w=w_arr),
                 tvars=dict(tau=tau, E_f=E_f, V_f=V_f, r=ri,
-                           m=3.0, sV0=sV0, Pf=0.5),
-                n_int=1000)
-        result = total.mu_q_arr / Er    
+                           m=4.0, sV0=sV0, Pf=0.5),
+                n_int=500)
+        if isinstance(ri, RV):
+            r_arr = np.linspace(ri.ppf(0.001), ri.ppf(0.999), 300)
+            Er = np.trapz(r_arr ** 2 * ri.pdf(r_arr), r_arr)
+        else:
+            Er = ri ** 2
+        result = total.mu_q_arr / Er
         plt.plot(w_arr, result, lw=2, color='black')
     plt.xlabel('w [mm]')
     plt.ylabel('sigma_c [MPa]')
     plt.show()
-    
 
 #Fig1_general_diagram()
 #Fig2_rand_xi()
