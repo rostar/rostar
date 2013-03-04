@@ -19,9 +19,9 @@ def CDFw(e, L):
 
 # failure probability between 0 and a at e
 def CDFa(e):
-    T = 2. * tau / r / Ef
+    T = 2. * tau / r
     a = e / T
-    return 1. - np.exp(-a * 2 * (e / s) ** m / (m + 1) / L0)
+    return 1 - np.exp(-a * 2 * Ef * (e / s) ** m / (m + 1) / L0)
 
 # failure probability density between 0 and a at e
 def PDFa(e):
@@ -78,7 +78,7 @@ def muH(e):
     T = 2. * tau / r
     n = (m+1)
     c = 2. * Ef / T / L0 / n / s**m
-    I = c**(-1./n)/n * gamma(1./n) * gammainc(1./n, c*e**n) - e*np.exp(-c*e**n)
+    I = c**(-1./n)/n * gamma(1./n) * gammainc(1./n, c*e**n) - e*(1-CDFa(e))
     return I * Ef / T / n / CDFa(e)
 
 def point(e):
