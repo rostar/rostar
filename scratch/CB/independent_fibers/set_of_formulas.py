@@ -53,7 +53,7 @@ def h(e, x):
     h_xe = (1 - CDFa(e)) * H(a - x) * 2 * m * (e * (1. - x/a)) ** (m-1) / L0 / s ** m 
     return h_xe
 
-def pdfL(e, x):
+def g_z(e, x):
     T = 2. * tau / r / Ef
     a = e / 2. / tau * r * Ef
     h_xe = (1 - CDFa(e)) * H(a - x) * 2 * m * (e * (1. - x/a)) ** (m-1) / L0 / s ** m
@@ -80,38 +80,6 @@ def muH(e):
     c = 2. * Ef / T / L0 / n / s**m
     I = c**(-1./n)/n * gamma(1./n) * gammainc(1./n, c*e**n) - e*(1-CDFa(e))
     return I * Ef / T / n / CDFa(e)
-
-def point(e):
-    T = 2. * tau / r
-    n = (m + 1)
-    c = 2. * Ef / T / L0 / n / s ** m
-    return Ef/T*c * np.trapz(e**n * np.exp(-c*e**n), e) / CDFa(e[-1])
-
-e_arr = np.linspace(0.00, 0.05, 100)
-plt.plot(e_arr, evans(e_arr * Ef))
-plt.plot(e_arr, muH(e_arr))
-plt.plot(e_arr[-1], point(e_arr), 'ro')
-plt.show()
-
-from stats.spirrid import make_ogrid as orthogonalize
-from mayavi import mlab
-nx = 200
-ne = 200
-e_arr = np.linspace(0.0001, 0.04, ne)
-x_arr = np.linspace(0.0, 80., nx)
-#plt.plot([0.035], np.trapz(pdfL(0.035, x_arr) * x_arr, x_arr), 'go')
-ee_arr = np.linspace(0.0, 0.05, ne)
-#plt.plot([0.05], np.trapz(muLate(ee_arr) * PDFa(ee_arr), ee_arr), 'bo')
-#print 'mean num', np.trapz(pdfL(0.035, x_arr) * x_arr, x_arr)
-#h = h(e_arr.reshape(ne, 1), x_arr.reshape(1, nx))
-#pdf_x = np.trapz(h, e_arr.flatten(), axis=0)
-#print 'sum = ', np.trapz(pdf_x.flatten(), x_arr.flatten())
-#print 'mu_L =', np.trapz(pdf_x.flatten() * x_arr, x_arr.flatten())
-#ctrl_arr = orthogonalize([np.arange(len(e_arr.flatten())), np.arange(len(x_arr.flatten()))])
-#mlab.surf(e_arr[0], e_arr[1], h / np.max(h) * nx)
-#mlab.show()
-#plt.plot(x_arr.flatten(), pdf_x.flatten())
-#plt.show()
 
 def simulation(e_max):
     T = 2. * tau / r / Ef
@@ -174,13 +142,10 @@ def MC_CDFa(n, e_arr):
         cdf.append(np.sum(np.array(eu) < ei))
     return np.array(cdf)/float(n)
 
-#l_arr = np.linspace(0.0, 90., 50)
-#e_arr = np.linspace(0.001, 0.05, 100)
-#e_arr2 = np.linspace(0.015, 0.07, 20)
-#mc, fact = MC(10000, e_arr)
-#plt.plot(e_arr, mc, 'ro')
-#plt.plot(e_arr, fact, 'bo')
-#plt.xlabel('eps crack')
-#plt.ylabel('mu_L')
-#plt.legend(loc='best')
-#plt.show()
+e_arr = np.linspace(0.02, 0.05, 100)
+z_arr = np.linspace(0.01, 10, 200)
+plt.plot(z_arr, g_z(z_arr, 0.03))
+#plt.plot(e_arr, evans(e_arr * Ef))
+#plt.plot(e_arr, muH(e_arr))
+#plt.plot(e_arr, MC(20000, e_arr)[0])
+plt.show()
