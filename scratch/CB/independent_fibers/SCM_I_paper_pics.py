@@ -220,7 +220,7 @@ def Fig7_rand_tau():
 #Fig2_rand_xi()
 #Fig3_rand_xi_T()
 #Fig4_discrete_r()
-#Fig5_rand_r()
+Fig5_rand_r()
 #Fig6_discrete_tau()
-Fig7_rand_tau()
+#Fig7_rand_tau()
 
