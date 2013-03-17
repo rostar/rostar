@@ -224,7 +224,7 @@ def Fig_g_ell():
     a = e / 2. / tau * r * E_f
     print a/4., a/5., a/6.
     z_arr = np.linspace(0.0, a, 500)
-    m1 = 4.0
+    m1 = .8
     pdf = m1/a * (1-z_arr/a)**(m1-1)
     plt.plot(z_arr, pdf, lw=2, color='black')
     m2 = 5.0
@@ -246,7 +246,7 @@ def Fig_mu_ell():
         T = 2. * tau / r
         a = e / T
         return 1 - np.exp(-a * 2 * E_f * (e / s) ** mm / (mm + 1))
-    w_arr = np.linspace(0.0, .8, 500)
+    w_arr = np.linspace(0.0, 50.8, 500)
     T = 2. * tau / r
     e_arr = np.sqrt(T*w_arr/E_f)
     def mu_ell(mm):
@@ -264,8 +264,8 @@ def Fig_mu_ell():
     ax2.plot(w_arr, CDFa(e_arr, 6.0), lw=2, ls='dashed', color='black')
     plt.show()
 
-#Fig_mu_ell()
-Fig_g_ell()
+Fig_mu_ell()
+#Fig_g_ell()
 #Fig1_general_diagram()
 #Fig2_rand_xi()
 #Fig3_rand_xi_T()
