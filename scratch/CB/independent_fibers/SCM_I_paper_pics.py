@@ -216,11 +216,61 @@ def Fig7_rand_tau():
     plt.ylabel('sigma_c [MPa]')
     plt.show()
 
+def Fig_g_ell():
+    r = 0.01
+    w = 0.1
+    T = 2. * tau / r
+    e = np.sqrt(T*w/E_f)
+    a = e / 2. / tau * r * E_f
+    print a/4., a/5., a/6.
+    z_arr = np.linspace(0.0, a, 500)
+    m1 = 4.0
+    pdf = m1/a * (1-z_arr/a)**(m1-1)
+    plt.plot(z_arr, pdf, lw=2, color='black')
+    m2 = 5.0
+    pdf = m2/a * (1-z_arr/a)**(m2-1)
+    plt.plot(z_arr, pdf, lw=2, color='black')
+    m3 = 6.0
+    pdf = m3/a * (1-z_arr/a)**(m3-1)
+    plt.plot(z_arr, pdf, lw=2, color='black')
+    plt.ylim(0,0.5)
+    plt.show()
+
+def Fig_mu_ell():
+    r = 0.01
+    fig = plt.figure()
+    ax1 = fig.add_subplot(111)
+    ax2 = ax1.twinx()
+    def CDFa(e, mm):
+        s = sV0*(3.14159*r**2)**(-1./mm)
+        T = 2. * tau / r
+        a = e / T
+        return 1 - np.exp(-a * 2 * E_f * (e / s) ** mm / (mm + 1))
+    w_arr = np.linspace(0.0, .8, 500)
+    T = 2. * tau / r
+    e_arr = np.sqrt(T*w_arr/E_f)
+    def mu_ell(mm):
+        s = sV0*(3.14159*r**2)**(-1./mm)
+        n = (mm+1)
+        c = 2. * E_f / T / n / s**mm
+        I = c**(-1./n)/n * gamma(1./n) * gammainc(1./n, c*e_arr**n) - e_arr*(1-CDFa(e_arr, mm))
+        mu_ell = I * E_f / T / n / CDFa(e_arr, mm)
+        ax1.plot(w_arr, mu_ell, lw=2, color='black')
+    mu_ell(4.0)
+    ax2.plot(w_arr, CDFa(e_arr, 4.0), lw=2, ls='dashed', color='black')
+    mu_ell(5.0)
+    ax2.plot(w_arr, CDFa(e_arr, 5.0), lw=2, ls='dashed', color='black')
+    mu_ell(6.0)
+    ax2.plot(w_arr, CDFa(e_arr, 6.0), lw=2, ls='dashed', color='black')
+    plt.show()
+
+#Fig_mu_ell()
+Fig_g_ell()
 #Fig1_general_diagram()
 #Fig2_rand_xi()
 #Fig3_rand_xi_T()
 #Fig4_discrete_r()
-Fig5_rand_r()
+#Fig5_rand_r()
 #Fig6_discrete_tau()
 #Fig7_rand_tau()
 
