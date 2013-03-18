@@ -9,8 +9,8 @@ def H(x):
 
 Ef = 200e3
 r = 0.003
-tau = 5.01
-m = 10.9
+tau = .5
+m = 5.0
 s = 0.015
 L0 = 100.
 
@@ -93,59 +93,39 @@ def simulation(e_max):
     if max_diff > 0.0:
         L = z_arr[np.argmax(eps - fu_arr)]
         eu = e_max - max_diff
-        return L, eu, eu / T / L
+        return L, eu
     else:
-        return None, None, None
+        return None, None
 
 def MC(n, e_arr):
     Ls = []
     es = []
-    fact = []
     for i in range(n):
-        l, e, f = simulation(e_arr[-1])
+        l, e = simulation(e_arr[-1])
         if l == None:
             pass
         else:
             Ls.append(l)
             es.append(e)
-            fact.append(f)
     es = np.array(es)
     Ls = np.array(Ls)
-    Fa = np.array(fact)
     muL = []
-    muLL = []
-    for ei in e_arr:
+    fact = []
+    for i, ei in enumerate(e_arr):
         mask = es < ei
+        mask2 = es > e_arr[i-1]
         muL.append(np.mean(Ls[mask]))
-        muLL.append(np.mean(Fa[mask]))
-    return muL, muLL
+        a = ei * r * Ef / 2. / tau
+        mean = np.mean(Ls[mask * mask2])
+        fact.append(np.mean(a) / mean)
+    mask3 = np.isnan(fact) == False
+    print 'mean L/a ratio =', np.mean(np.array(fact)[mask3])
+    return muL
 
-from scipy.optimize import fsolve
-
-def MC_CDFa(n, e_arr):
-    nx = 1000.
-    emax = e_arr[-1]
-    T = 2. * tau / r / Ef
-    amax = emax / T
-    dx = amax/nx
-    z_arr = np.linspace(amax/2./nx, amax - amax/2./nx, nx)
-    eu = []
-    def residuum(ef0, fu):
-        return np.min(fu - ef0 + T * z_arr)
-    for i in range(n):
-        fu_arr = weibull_min(m, scale=s * (dx/L0)**(-1./m)).ppf(np.minimum(np.random.rand(nx),
-                                                                       np.random.rand(nx)))
-        eu.append(fsolve(residuum, 0.001, args=(fu_arr)))
-
-    cdf = []
-    for ei in e_arr:
-        cdf.append(np.sum(np.array(eu) < ei))
-    return np.array(cdf)/float(n)
-
-e_arr = np.linspace(0.02, 0.05, 100)
-z_arr = np.linspace(0.01, 10, 200)
-plt.plot(z_arr, g_z(z_arr, 0.03))
+e_arr = np.linspace(0.02, 0.03, 50)
+#z_arr = np.linspace(0.01, 10, 200)
+#plt.plot(z_arr, g_z(z_arr, 0.03))
 #plt.plot(e_arr, evans(e_arr * Ef))
-#plt.plot(e_arr, muH(e_arr))
-#plt.plot(e_arr, MC(20000, e_arr)[0])
+plt.plot(e_arr, muH(e_arr))
+plt.plot(e_arr, MC(5000, e_arr))
 plt.show()
