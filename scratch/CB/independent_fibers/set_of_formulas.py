@@ -10,7 +10,7 @@ def H(x):
 Ef = 200e3
 r = 0.003
 tau = .5
-m = 5.0
+m = .5
 s = 0.015
 L0 = 100.
 
@@ -116,16 +116,21 @@ def MC(n, e_arr):
         mask2 = es > e_arr[i-1]
         muL.append(np.mean(Ls[mask]))
         a = ei * r * Ef / 2. / tau
-        mean = np.mean(Ls[mask * mask2])
+        pullouts = Ls[mask * mask2]
+        mean = np.mean(pullouts)
+        if len(pullouts) != 0:
+            plt.hist(pullouts, bins=30, normed=True)
+            plt.plot(np.linspace(0,a/1.5,50), g_z(ei, np.linspace(0,a/1.5,50)))
+            plt.show()
         fact.append(np.mean(a) / mean)
     mask3 = np.isnan(fact) == False
     print 'mean L/a ratio =', np.mean(np.array(fact)[mask3])
     return muL
 
-e_arr = np.linspace(0.02, 0.03, 50)
+e_arr = np.linspace(0.02, 0.04, 50)
 #z_arr = np.linspace(0.01, 10, 200)
 #plt.plot(z_arr, g_z(z_arr, 0.03))
 #plt.plot(e_arr, evans(e_arr * Ef))
 plt.plot(e_arr, muH(e_arr))
-plt.plot(e_arr, MC(5000, e_arr))
+plt.plot(e_arr, MC(20000, e_arr))
 plt.show()
