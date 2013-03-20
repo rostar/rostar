@@ -218,13 +218,17 @@ def Fig7_rand_tau():
 
 def Fig_g_ell():
     r = 0.01
-    w = 0.1
+    w = 0.9
     T = 2. * tau / r
     e = np.sqrt(T*w/E_f)
     a = e / 2. / tau * r * E_f
-    print a/4., a/5., a/6.
     z_arr = np.linspace(0.0, a, 500)
-    m1 = .8
+    m0 = .7
+    s = sV0 / (pi * r ** 2)**(1./m)
+    print m0/a, 2*m0/s**m
+    pdf = m0/a * (1-z_arr/a)**(m0-1)
+    plt.plot(z_arr, pdf, lw=2, ls='dashed', color='black')
+    m1 = 4.0
     pdf = m1/a * (1-z_arr/a)**(m1-1)
     plt.plot(z_arr, pdf, lw=2, color='black')
     m2 = 5.0
@@ -233,7 +237,7 @@ def Fig_g_ell():
     m3 = 6.0
     pdf = m3/a * (1-z_arr/a)**(m3-1)
     plt.plot(z_arr, pdf, lw=2, color='black')
-    plt.ylim(0,0.5)
+    plt.ylim(0, 0.5)
     plt.show()
 
 def Fig_mu_ell():
@@ -243,10 +247,11 @@ def Fig_mu_ell():
     ax2 = ax1.twinx()
     def CDFa(e, mm):
         s = sV0*(3.14159*r**2)**(-1./mm)
+        print s
         T = 2. * tau / r
         a = e / T
         return 1 - np.exp(-a * 2 * E_f * (e / s) ** mm / (mm + 1))
-    w_arr = np.linspace(0.0, 50.8, 500)
+    w_arr = np.linspace(0.0, 0.8, 500)
     T = 2. * tau / r
     e_arr = np.sqrt(T*w_arr/E_f)
     def mu_ell(mm):

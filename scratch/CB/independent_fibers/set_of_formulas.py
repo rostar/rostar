@@ -11,8 +11,9 @@ Ef = 200e3
 r = 0.003
 tau = .5
 m = .5
-s = 0.015
-L0 = 100.
+s = 50.
+L0 = 1.
+sV0 = 4.5e-3
 
 def CDFw(e, L):
     return 1 - np.exp(-L/L0 * (e/s)**m)
@@ -23,11 +24,23 @@ def CDFa(e):
     a = e / T
     return 1 - np.exp(-a * 2 * Ef * (e / s) ** m / (m + 1) / L0)
 
+# failure probability between 0 and a at e
+def CDFa2(e):
+    T = 2. * tau / r
+    s0 = ((T * (m+1) * sV0**m)/(2. * Ef * 3.14159 * r))**(1./(m+1))
+    return 1 - np.exp(-(e / s0) ** (m+1))
+
 # failure probability density between 0 and a at e
 def PDFa(e):
     T = 2. * tau / r
     a = e * Ef / T
     return 2 * (e / s) ** m / (T/Ef * L0) * np.exp(-a * 2 * (e / s) ** m / (m + 1) / L0)
+
+# failure probability density between 0 and a at e
+def PDFa2(e):
+    T = 2. * tau / r
+    s0 = ((T * (m+1) * sV0**m)/(2. * Ef * 3.14159 * r))**(1./(m+1))
+    return (m+1)/s0 * (e/s0)**m * (1 - CDFa2(e))
 
 # percent point function
 def PPFa(p):
@@ -48,17 +61,22 @@ def mean_xi():
     mu_xi = c**(-1./n)/n * gamma(1./n)
     return mu_xi 
 
+def mean_xi2():
+    T = 2. * tau / r
+    s0 = ((T * (m+1) * sV0**m)/(2. * Ef * 3.14159 * r))**(1./(m+1))
+    mu_xi = s0 * gamma(1+1./(m+1))
+    return mu_xi 
+
 def h(e, x):
     a = e / 2. / tau * r * Ef
     h_xe = (1 - CDFa(e)) * H(a - x) * 2 * m * (e * (1. - x/a)) ** (m-1) / L0 / s ** m 
     return h_xe
 
 def g_z(e, x):
-    T = 2. * tau / r / Ef
-    a = e / 2. / tau * r * Ef
-    h_xe = (1 - CDFa(e)) * H(a - x) * 2 * m * (e * (1. - x/a)) ** (m-1) / L0 / s ** m
+    T = 2. * tau / r
+    a = e * Ef / T
     pdf = m/a * (1-x/a)**(m-1) * H(a - x)
-    return pdf #h_xe / PDFa(e)
+    return pdf
 
 def cdfL(e, x):
     a = e / 2. / tau * r * Ef
@@ -79,6 +97,13 @@ def muH(e):
     n = (m+1)
     c = 2. * Ef / T / L0 / n / s**m
     I = c**(-1./n)/n * gamma(1./n) * gammainc(1./n, c*e**n) - e*(1-CDFa(e))
+    return I * Ef / T / n / CDFa(e)
+
+def muH2(e):
+    T = 2. * tau / r
+    n = (m+1)
+    s0 = ((T * (m+1) * sV0**m)/(2. * Ef * 3.14159 * r))**(1./(m+1))
+    I = s0 * gamma(1. + 1./n) * gammainc(1. + 1./n, (e/s0)**n)
     return I * Ef / T / n / CDFa(e)
 
 def simulation(e_max):
@@ -127,10 +152,11 @@ def MC(n, e_arr):
     print 'mean L/a ratio =', np.mean(np.array(fact)[mask3])
     return muL
 
-e_arr = np.linspace(0.02, 0.04, 50)
+e_arr = np.linspace(0.0, 0.2, 100)
 #z_arr = np.linspace(0.01, 10, 200)
 #plt.plot(z_arr, g_z(z_arr, 0.03))
 #plt.plot(e_arr, evans(e_arr * Ef))
 plt.plot(e_arr, muH(e_arr))
-plt.plot(e_arr, MC(20000, e_arr))
+plt.plot(e_arr, muH2(e_arr), ls='dashed', lw=2)
+#plt.plot(e_arr, MC(20000, e_arr))
 plt.show()
