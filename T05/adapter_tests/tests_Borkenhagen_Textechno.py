@@ -4,7 +4,7 @@ Created on Aug 8, 2011
 @author: rostar
 '''
 
-from enthought.traits.api import \
+from etsproxy.traits.api import \
     HasTraits, Str, List, Tuple
 
 import numpy as np
@@ -13,7 +13,7 @@ from scipy.interpolate import RectBivariateSpline as spline
 
 from mpl_toolkits.mplot3d import axes3d
 import matplotlib.pyplot as plt
-import enthought.mayavi.mlab as m
+import etsproxy.mayavi.mlab as m
 
 def orthogonalize( arr_list ):
     '''Orthogonalize a list of one-dimensional arrays.
@@ -132,9 +132,9 @@ class AdapterTests( HasTraits ):
     force = List
     cov = List
 
-    def se_plot( self ):
+    def se_plot( self, A ):
         l = self.lengths
-        strength = np.array( self.force ) / 0.89
+        strength = np.array( self.force ) / A
         stdev = np.array( self.cov ) / 100. * strength
         plt.loglog( l, strength, color = 'black', lw = 2 )
         plt.errorbar( elinewidth = 2, x = l, y = strength,
@@ -179,7 +179,7 @@ if __name__ == '__main__':
         at.lengths = [50., 70, 100, 150, 200, 250, 350, 500]
         at.force = [920.04, 912.50, 913.92, 911.31, 922.06, 898.67, 893.16, 878.78]
         at.cov = [4.30, 4.44, 3.14, 2.89, 4.76, 4.39, 5.17, 4.40]
-        at.se_plot()
+        at.se_plot(0.89)
 
     def glas1200params():
 
@@ -211,7 +211,7 @@ if __name__ == '__main__':
         at.lengths = [50., 70, 100, 150, 200, 250, 350, 500]
         at.force = [579.36, 570.41, 578.92, 572.17, 580.79, 567.55, 574.63, 550.96]
         at.cov = [2.74, 2.78, 4.31, 3.57, 4.47, 4.20, 4.63, 5.32]
-        at.se_plot()
+        at.se_plot(0.45)
 
     def carbon1600params():
 
@@ -243,7 +243,7 @@ if __name__ == '__main__':
         at.lengths = [50., 70, 100, 150, 200, 250, 350, 500]
         at.force = [1720.37, 1737.90, 1714.25, 1526.31, 1477.59, 1381.55, 1269.31, 1246.36]
         at.cov = [5.16, 3.13, 4.37, 7.14, 8.69, 9.23, 7.12, 10.81]
-        at.se_plot()
+        at.se_plot(0.89)
 
     def carbon800params():
 
@@ -271,9 +271,9 @@ if __name__ == '__main__':
         at.lengths = [50., 70, 100, 150, 200, 250, 350, 500]
         at.force = [990.08, 936.61, 880.82, 846.06, 819.32, 719.08, 708.00, 656.11]
         at.cov = [3.44, 5.07, 5.75, 9.94, 8.98, 8.30, 7.28, 9.16]
-        at.se_plot()
+        at.se_plot(0.45)
 
-    glas2400params()
+    #glas2400params()
     #glas2400se()
     #glas1200params()
     #glas1200se()
@@ -281,4 +281,4 @@ if __name__ == '__main__':
     #carbon1600params()
     #carbon1600se()
     #carbon800params()
-    #carbon800se()
+    carbon800se()

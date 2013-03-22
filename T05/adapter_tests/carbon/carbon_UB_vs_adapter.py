@@ -62,7 +62,7 @@ def SEtwist():
     plt.ylim(0)
     plt.title('size effect Adapter vs UB with twist, l = 135 mm')
 
-screening()
+#screening()
 SE()
 SEtwist()
 plt.show()

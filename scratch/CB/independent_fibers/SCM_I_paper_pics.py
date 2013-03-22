@@ -68,7 +68,6 @@ def Fig2_rand_xi():
             ef0_break = (-0.5 * np.log(1.-p) * T / E_f * (m+1) * s**m) ** (1./(m+1))
             return np.trapz(1-p, ef0_break) - mu_xi
         return fsolve(optimize, mu_xi)
-    
     T = 2. * tau / r
     p = np.linspace(0., .999999, 1000)
     w_arr = np.linspace(0,1.0,1000)
@@ -81,18 +80,25 @@ def Fig2_rand_xi():
     for mi in [4., 12., 100.]:
         s = get_scale(0.02, mi)
         sV0 = float(s * (pi*r**2)**(1./mi))
-#        ef0_break = (-0.5 * np.log(1.-p) * T / E_f * (mi+1) * s**mi) ** (1./(mi+1))
-#        mu_e = np.trapz(1-p, ef0_break)
-#        plt.plot(ef0_break, p, lw=2, color='black')
-#        plt.ylim(0,1.1)
-        total = SPIRRID(q=cb,
-                sampling_type='PGrid',
-                evars=dict(w=w_arr),
-                tvars=dict(tau=tau, E_f=E_f, V_f=V_f, r=r,
-                           m=mi, sV0=sV0, Pf=Pf),
-                n_int=1000)
-        result = total.mu_q_arr / Er    
-        plt.plot(w_arr, result, lw=2, color='black')
+#         analytical solution
+        s0 = ((T * (mi+1) * sV0**mi)/(2. * E_f * pi * r ** 2))**(1./(mi+1))
+        k = np.sqrt(T/E_f)
+        ef0 = k*np.sqrt(w_arr)
+        G = 1 - np.exp(-(ef0/s0)**(mi+1))
+        mu_int = ef0 * E_f * V_f * (1-G)
+        I = s0 * gamma(1 + 1./(mi+1)) * gammainc(1 + 1./(mi+1), (ef0/s0)**(mi+1))
+        mu_broken = E_f * V_f * I / (mi+1)
+        plt.plot(w_arr, mu_int + mu_broken, lw = 2, color = 'black')
+#        wstar = (s0**(mi+1)/k**(mi+1)/mi)**(2./(mi+1))
+#        numerical
+#        total = SPIRRID(q=cb,
+#                sampling_type='PGrid',
+#                evars=dict(w=w_arr),
+#                tvars=dict(tau=tau, E_f=E_f, V_f=V_f, r=r,
+#                           m=mi, sV0=sV0, Pf=Pf),
+#                n_int=1000)
+#        result = total.mu_q_arr / Er
+#        plt.plot(w_arr, result, lw=3, color='red', ls = 'dashed', label='numerical')
     plt.xlabel('w [mm]')
     plt.ylabel('sigma_c [MPa]')
     plt.xlim(0,0.85)
@@ -114,15 +120,19 @@ def Fig3_rand_xi_T():
     plt.show()
 
 def Fig4_discrete_r():
-    for ri in [0.005, 0.01, 0.015]: 
-        m = 4.
-        n = m+1
+    for ri in [0.005, 0.01, 0.015]:
+        mi = 4.0
         T = 2. * tau / ri
-        w_arr = np.linspace(0,.65,1000)
-        xi_med = ((np.log(2.)*tau*n*sV0**m)/(ri**3 * E_f * pi))**(1./n)
-        epsf0 = np.sqrt(T * w_arr / E_f)
-        sigmac = E_f * V_f * epsf0 * H(xi_med - epsf0)
-        plt.plot(w_arr, sigmac, lw=2, color='black')
+        w_arr = np.linspace(0,.8,1000)
+#         analytical solution
+        s0 = ((T * (mi+1) * sV0**mi)/(2. * E_f * pi * ri ** 2))**(1./(mi+1))
+        k = np.sqrt(T/E_f)
+        ef0 = k*np.sqrt(w_arr)
+        G = 1 - np.exp(-(ef0/s0)**(mi+1))
+        mu_int = ef0 * E_f * V_f * (1-G)
+        I = s0 * gamma(1 + 1./(mi+1)) * gammainc(1 + 1./(mi+1), (ef0/s0)**(mi+1))
+        mu_broken = E_f * V_f * I / (mi+1)
+        plt.plot(w_arr, mu_int + mu_broken, lw = 2, color = 'black')
     plt.show()
 
     fig = plt.figure()
@@ -130,27 +140,31 @@ def Fig4_discrete_r():
     ax2 = ax1.twinx()
 
     for mi in [4.0, 5.0, 6.0]:
-        r_arr = np.linspace(0.001, 0.020, 500)
-        wstar = E_f/2./tau*r_arr *((np.log(2.)*tau*(mi+1)*sV0**mi)/(r_arr**3 * E_f * pi))**(2./(mi+1))
-        xi_med = ((np.log(2.)*tau*(mi+1)*sV0**mi)/(r_arr**3 * E_f * pi))**(1./(mi+1))
-        strength = E_f * V_f * xi_med
+        r_arr = np.linspace(0.001, 0.01, 500)
+        T = 2. * tau / r_arr
+        k = np.sqrt(T/E_f)
+        s0 = ((T * (mi+1) * sV0**mi)/(2. * E_f * pi * r_arr ** 2))**(1./(mi+1))
+        wstar = (s0**(mi+1)/k**(mi+1)/mi)**(2./(mi+1))
+        A = E_f * V_f * (m**(-1./(m+1.)) * np.exp(-1./m))
+        strength = A * s0
         ax1.loglog(r_arr, strength, lw=2, color='black')
+        ax1.set_ylim(10,100)
         ax2.loglog(r_arr, wstar, lw=2, color='black', ls='dashed')
     plt.xlim(0,0.02)
     plt.ylim(0)
     plt.show()
 
 def Fig5_rand_r():
-    w_arr = np.linspace(0, .6, 1000)
+    w_arr = np.linspace(0, .8, 1000)
     cb = CBResidual(include_pullout=True)
-    for i, ri in enumerate([RV('norm', loc=0.01, scale=.0001),
+    for i, ri in enumerate([RV('norm', loc=0.01, scale=.0005),
                             RV('norm', loc=0.01, scale=.002),
                             RV('norm', loc=0.01, scale=.003)]):
         total = SPIRRID(q=cb,
                 sampling_type='PGrid',
                 evars=dict(w=w_arr),
                 tvars=dict(tau=tau, E_f=E_f, V_f=V_f, r=ri,
-                           m=4.0, sV0=sV0, Pf=0.5),
+                           m=4.0, sV0=sV0, Pf=Pf),
                 n_int=500)
         if isinstance(ri, RV):
             r_arr = np.linspace(ri.ppf(0.001), ri.ppf(0.999), 300)
@@ -269,13 +283,13 @@ def Fig_mu_ell():
     ax2.plot(w_arr, CDFa(e_arr, 6.0), lw=2, ls='dashed', color='black')
     plt.show()
 
-Fig_mu_ell()
+#Fig_mu_ell()
 #Fig_g_ell()
 #Fig1_general_diagram()
 #Fig2_rand_xi()
 #Fig3_rand_xi_T()
 #Fig4_discrete_r()
-#Fig5_rand_r()
+Fig5_rand_r()
 #Fig6_discrete_tau()
 #Fig7_rand_tau()
 

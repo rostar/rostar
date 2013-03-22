@@ -57,7 +57,7 @@ if __name__ == '__main__':
         else:
             plt.plot(l, fa, 'ko')
         plt.errorbar(l, fa, color = 'red', yerr = np.array(fa) / 100. * cva,
-                     lw = 2, label = 'neuentwickelte Klemmen')
+                     lw = 2, label = 'Adapter')
     
     if harz == True:
         if loglog == True:

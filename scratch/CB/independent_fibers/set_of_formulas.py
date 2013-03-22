@@ -13,7 +13,7 @@ tau = .5
 m = .5
 s = 50.
 L0 = 1.
-sV0 = 4.5e-3
+sV0 = 4.e-8
 
 def CDFw(e, L):
     return 1 - np.exp(-L/L0 * (e/s)**m)
@@ -27,7 +27,7 @@ def CDFa(e):
 # failure probability between 0 and a at e
 def CDFa2(e):
     T = 2. * tau / r
-    s0 = ((T * (m+1) * sV0**m)/(2. * Ef * 3.14159 * r))**(1./(m+1))
+    s0 = ((T * (m+1) * sV0**m)/(2. * Ef * 3.14159 * r ** 2))**(1./(m+1))
     return 1 - np.exp(-(e / s0) ** (m+1))
 
 # failure probability density between 0 and a at e
@@ -39,7 +39,7 @@ def PDFa(e):
 # failure probability density between 0 and a at e
 def PDFa2(e):
     T = 2. * tau / r
-    s0 = ((T * (m+1) * sV0**m)/(2. * Ef * 3.14159 * r))**(1./(m+1))
+    s0 = ((T * (m+1) * sV0**m)/(2. * Ef * 3.14159 * r ** 2))**(1./(m+1))
     return (m+1)/s0 * (e/s0)**m * (1 - CDFa2(e))
 
 # percent point function
@@ -63,7 +63,7 @@ def mean_xi():
 
 def mean_xi2():
     T = 2. * tau / r
-    s0 = ((T * (m+1) * sV0**m)/(2. * Ef * 3.14159 * r))**(1./(m+1))
+    s0 = ((T * (m+1) * sV0**m)/(2. * Ef * 3.14159 * r ** 2))**(1./(m+1))
     mu_xi = s0 * gamma(1+1./(m+1))
     return mu_xi 
 
@@ -156,7 +156,9 @@ e_arr = np.linspace(0.0, 0.2, 100)
 #z_arr = np.linspace(0.01, 10, 200)
 #plt.plot(z_arr, g_z(z_arr, 0.03))
 #plt.plot(e_arr, evans(e_arr * Ef))
-plt.plot(e_arr, muH(e_arr))
-plt.plot(e_arr, muH2(e_arr), ls='dashed', lw=2)
+plt.plot(e_arr, PDFa(e_arr))
+plt.plot(e_arr, PDFa2(e_arr), ls='dashed', lw=2)
+#plt.plot(e_arr, muH(e_arr))
+#plt.plot(e_arr, muH2(e_arr), ls='dashed', lw=2)
 #plt.plot(e_arr, MC(20000, e_arr))
 plt.show()

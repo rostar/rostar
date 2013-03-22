@@ -51,12 +51,12 @@ Rel_strength = A_strength / B_strength - 1.0
 if __name__ == '__main__':
 
     plt.plot(lengths, A_strength[:, 0], 'ko')
-    plt.errorbar(x=lengths, y=A_strength[:,0], label='neuentwickelte Klemmen',
+    plt.errorbar(x=lengths, y=A_strength[:,0], label='Adapter',
            yerr = A_COV[:,0] * A_strength[:,0]/100., lw = 2, color = 'red')
     plt.plot(lengths, B_strength[:,0], 'ko')
-    plt.errorbar(x = lengths, y = B_strength[:,0], label = 'Standardmethode',
+    plt.errorbar(x = lengths, y = B_strength[:,0], label = 'Statimat + UB',
            yerr = B_COV[:,0] * B_strength[:,0]/100., lw=2, color = 'black', ls = 'solid')
-    
+
     #plt.plot(lengths, A_strength[:,1],
     #                lw = 2, color = 'red', label = '10 twists')
     #
