@@ -3,6 +3,7 @@ from matplotlib import pyplot as plt
 from scipy.stats import weibull_min
 from scipy.special import gammainc, gamma
 from scipy.integrate import cumtrapz
+from math import pi
 
 def H(x):
     return x >= 0.0
@@ -101,8 +102,8 @@ def muH(e):
 
 def muH2(e):
     T = 2. * tau / r
-    n = (m+1)
-    s0 = ((T * (m+1) * sV0**m)/(2. * Ef * 3.14159 * r))**(1./(m+1))
+    n = m+1
+    s0 = ((T * (m+1) * sV0**m)/(2. * Ef * pi * r ** 2))**(1./(m+1))
     I = s0 * gamma(1. + 1./n) * gammainc(1. + 1./n, (e/s0)**n)
     return I * Ef / T / n / CDFa(e)
 
@@ -156,9 +157,9 @@ e_arr = np.linspace(0.0, 0.2, 100)
 #z_arr = np.linspace(0.01, 10, 200)
 #plt.plot(z_arr, g_z(z_arr, 0.03))
 #plt.plot(e_arr, evans(e_arr * Ef))
-plt.plot(e_arr, PDFa(e_arr))
-plt.plot(e_arr, PDFa2(e_arr), ls='dashed', lw=2)
-#plt.plot(e_arr, muH(e_arr))
-#plt.plot(e_arr, muH2(e_arr), ls='dashed', lw=2)
+#plt.plot(e_arr, PDFa(e_arr))
+#plt.plot(e_arr, PDFa2(e_arr), ls='dashed', lw=2)
+plt.plot(e_arr, muH(e_arr))
+plt.plot(e_arr, muH2(e_arr), ls='dashed', lw=2)
 #plt.plot(e_arr, MC(20000, e_arr))
 plt.show()
