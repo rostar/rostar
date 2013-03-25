@@ -56,7 +56,7 @@ from math import pi
 from scipy.optimize import fsolve
 def rand_xi():
     E_f, V_f, r, tau, sV0 = 200e3, 0.01, 0.01, .1, 3.e-3
-    w_arr = np.linspace(0, 1.2, 300)
+    w_arr = np.linspace(0, 2.2, 300)
     def get_scale(mu_xi, m):
         def optimize(s):
             p = np.linspace(0., .9999, 1000)
@@ -78,6 +78,7 @@ def rand_xi():
         I = s0 * gamma(1 + 1./(mi+1)) * gammainc(1 + 1./(mi+1), (ef0/s0)**(mi+1))
         mu_broken = E_f * V_f * I / (mi+1)
         plt.plot(w_arr, mu_int + mu_broken, lw = 2, color = 'black')
+        #plt.plot(ef0, G, lw = 2, color = 'black')
 #        wstar = (s0**(mi+1)/k**(mi+1)/mi)**(2./(mi+1))
 #        numerical
 #        Pf = RV('uniform', loc=0.0, scale=1.0)
@@ -97,13 +98,13 @@ def rand_xi():
 #        plt.plot(w_arr, result, lw=3, color='red', ls = 'dashed', label='numerical')
     plt.xlabel('w [mm]')
     plt.ylabel('sigma_c [MPa]')
-    plt.xlim(0, 1.25)
+    plt.xlim(0, 2.1)
     plt.ylim(0,16)
     plt.show()
 
 from scipy.special import gammainc, gamma
 
-def discrete_r():
+def deterministic_r():
     E_f, V_f, tau, m, sV0 = 200e3, 0.01, .1, 7.0, 3.e-3
     for ri in [0.005, 0.01, 0.015]:
         T = 2. * tau / ri
@@ -167,7 +168,7 @@ def rand_r():
     plt.xlim(0, 1.25)
     plt.show()
 
-def discrete_tau():
+def deterministic_tau():
     E_f, V_f, r, m, sV0 = 200e3, 0.01, 0.01, 7., 3.e-3
     w_arr = np.linspace(0, 1.2, 300)
     for taui in [0.05, .1, .2]:
@@ -283,9 +284,9 @@ def mu_ell():
 
 #general_diagram()
 #rand_xi()
-#discrete_r()
+#deterministic_r()
 #rand_r()
-#discrete_tau()
-#rand_tau()
-g_ell()
-mu_ell()
+#deterministic_tau()
+rand_tau()
+#g_ell()
+#mu_ell()
