@@ -282,11 +282,11 @@ def mu_ell():
     ax2.plot(w_arr, CDFa(e_arr, 7.0), lw=2, ls='dashed', color='black')
     plt.show()
 
-#general_diagram()
+general_diagram()
 #rand_xi()
 #deterministic_r()
 #rand_r()
 #deterministic_tau()
-rand_tau()
+#rand_tau()
 #g_ell()
 #mu_ell()
