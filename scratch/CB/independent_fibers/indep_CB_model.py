@@ -50,35 +50,22 @@ class CBResidual(RF):
     tau = Float(2.5, auto_set=False, enter_set=True, input=True,
                 distr=['uniform', 'norm'])
 
-    l = Float(10.0, auto_set=False, enter_set=True, input=True,
-              distr=['uniform'], desc='free length')
-
     r = Float(0.013, auto_set=False, enter_set=True, input=True,
               distr=['uniform', 'norm'], desc='fiber radius')
 
     E_f = Float(72e3, auto_set=False, enter_set=True, input=True,
                   distr=['uniform'])
 
-    E_m = Float(30e3, auto_set=False, enter_set=True, input=True,
-                  distr=['uniform'])
-
-    v_0 = Float(1., auto_set=False, enter_set=True, input=True,
-                  distr=['uniform'])
-
     m = Float(5., auto_set=False, enter_set=True, input=True,
                   distr=['uniform'])
 
-    s = Float(0.02, auto_set=False, enter_set=True, input=True,
+    sV0 = Float(3.e-3, auto_set=False, enter_set=True, input=True,
                   distr=['uniform'])
 
     V_f = Float(0.0175, auto_set=False, enter_set=True, input=True,
               distr=['uniform'])
 
     w = Float(auto_set=False, enter_set=True, input=True,
-               distr=['uniform'], desc='crack width',
-               ctrl_range=(0.0, 1.0, 10))
-
-    x = Float(auto_set=False, enter_set=True, input=True,
                distr=['uniform'], desc='crack width',
                ctrl_range=(0.0, 1.0, 10))
     
@@ -93,10 +80,10 @@ class CBResidual(RF):
         #strain and debonded length of intact fibers
         T = 2. * tau / r
         ef0_inf = np.sqrt(T * w / E_f)
-        #scale parameter with respect to a reference length 1
-        s = sV0 / (pi * r ** 2)**(1./m)
+        #scale parameter with respect to a reference volume
+        s0 = ((T * (m+1) * sV0**m)/(2. * E_f * pi * r ** 2))**(1./(m+1))
         # strain at fiber breakage
-        ef0_break = (-0.5 * np.log(1.-Pf) * T / E_f * (m+1) * s**m) ** (1./(m+1))
+        ef0_break = s0 * (-np.log(1.-Pf)) ** (1./(m+1))
         # debonded length at fiber breakage
         a_break = ef0_break * E_f / T
         #mean pullout length of broken fibers
