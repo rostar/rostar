@@ -55,22 +55,12 @@ def general_diagram():
 from math import pi
 from scipy.optimize import fsolve
 def rand_xi():
-    E_f, V_f, r, tau, sV0 = 200e3, 0.01, 0.01, .1, 3.e-3
+    E_f, V_f, r, tau = 200e3, 0.01, 0.01, .1
     w_arr = np.linspace(0, 2.2, 300)
-    def get_scale(mu_xi, m):
-        def optimize(s):
-            p = np.linspace(0., .9999, 1000)
-            T = 2. * tau / r
-            ef0_break = (-0.5 * np.log(1.-p) * T / E_f * (m+1) * s**m) ** (1./(m+1))
-            return np.trapz(1-p, ef0_break) - mu_xi
-        return fsolve(optimize, mu_xi)
     T = 2. * tau / r
-    p = np.linspace(0., .999999, 1000)
     for mi in [3., 7., 100.]:
-        s = get_scale(0.008, mi)
-        sV0 = float(s * (pi*r**2)**(1./mi))
-#         analytical solution
-        s0 = ((T * (mi+1) * sV0**mi)/(2. * E_f * pi * r ** 2))**(1./(mi+1))
+        mu_xi = 0.008
+        s0 = mu_xi / gamma(1. + 1./(1. + mi))
         k = np.sqrt(T/E_f)
         ef0 = k*np.sqrt(w_arr)
         G = 1 - np.exp(-(ef0/s0)**(mi+1))
@@ -284,9 +274,9 @@ def mu_ell():
     plt.show()
 
 #general_diagram()
-#rand_xi()
+rand_xi()
 #deterministic_r()
-rand_r()
+#rand_r()
 #deterministic_tau()
 #rand_tau()
 #g_ell()
