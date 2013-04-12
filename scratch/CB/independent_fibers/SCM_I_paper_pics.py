@@ -28,9 +28,9 @@ def general_diagram():
         Er = np.trapz(r_arr ** 2 * r.pdf(r_arr), r_arr)
     else:
         Er = r ** 2
-    total = total.mu_q_arr / Er    
+    total = total.mu_q_arr / Er
     plt.plot(w_arr, total, lw=2, color='black')
-    
+
     cb = CBResidual(include_pullout=False)
     broken = SPIRRID(q=cb,
                 sampling_type='PGrid',
@@ -119,11 +119,10 @@ def deterministic_r():
     for mi in [4.0, 5.0, 7.0]:
         r_arr = np.linspace(0.001, 0.01, 100)
         T = 2. * tau / r_arr
-        k = np.sqrt(T/E_f)
         s0 = ((T * (mi+1) * sV0**mi)/(2. * E_f * pi * r_arr ** 2))**(1./(mi+1))
-        wstar = (s0**(mi+1)/k**(mi+1)/mi)**(2./(mi+1))
-        A = E_f * V_f * (m**(-1./(m+1.)) * np.exp(-1./m))
-        strength = A * s0
+        wstar = E_f / T * s0**2 * mi**(-2./(mi+1))
+        zeta = mi**(-1./(mi+1.)) * np.exp(-1./mi) + 1. / (mi + 1.) * gamma(1 + 1./(mi+1)) * gammainc(1 + 1./(mi+1), 1./mi)
+        strength = E_f * V_f * s0 * zeta
         ax1.loglog(r_arr, strength, lw=2, color='black')
         ax1.set_ylim(10,100)
         ax2.loglog(r_arr, wstar, lw=2, color='black', ls='dashed')
@@ -180,13 +179,12 @@ def deterministic_tau():
     ax2 = ax1.twinx()
 
     for mi in [4.0, 5.0, 7.0]:
-        tau_arr = np.linspace(0.05, .2, 500)
+        tau_arr = np.linspace(0.05, .2, 5)
         T = 2. * tau_arr / r
-        k = np.sqrt(T/E_f)
         s0 = ((T * (mi+1) * sV0**mi)/(2. * E_f * pi * r ** 2))**(1./(mi+1))
-        wstar = (s0**(mi+1)/k**(mi+1)/mi)**(2./(mi+1))
-        A = E_f * V_f * (m**(-1./(m+1.)) * np.exp(-1./m))
-        strength = A * s0
+        wstar = E_f / T * s0**2 * mi**(-2./(mi+1))
+        zeta = mi**(-1./(mi+1.)) * np.exp(-1./mi) + 1. / (mi + 1.) * gamma(1 + 1./(mi+1)) * gammainc(1 + 1./(mi+1), 1./mi)
+        strength = E_f * V_f * s0 * zeta
         ax1.loglog(tau_arr, strength, lw=2, color='black')
         ax1.set_ylim(0,15)
         ax2.loglog(tau_arr, wstar, lw=2, color='black', ls='dashed')
@@ -274,8 +272,8 @@ def mu_ell():
     plt.show()
 
 #general_diagram()
-rand_xi()
-#deterministic_r()
+#rand_xi()
+deterministic_r()
 #rand_r()
 #deterministic_tau()
 #rand_tau()
