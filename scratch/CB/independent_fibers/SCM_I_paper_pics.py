@@ -273,9 +273,9 @@ def mu_ell():
 
 #general_diagram()
 #rand_xi()
-deterministic_r()
+#deterministic_r()
 #rand_r()
-#deterministic_tau()
+deterministic_tau()
 #rand_tau()
 #g_ell()
 #mu_ell()
