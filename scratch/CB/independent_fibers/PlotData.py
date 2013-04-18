@@ -37,10 +37,10 @@ def sigma_m( m ):
     surface.actor.property.diffuse_color = ( 0.0, 0.0, 0.0 )
     surface.actor.property.ambient_color = ( 0.0, 0.0, 0.0 )
     surface.actor.property.color = ( 0.0, 0.0, 0.0 )
-    surface.actor.property.line_width = 0.
+    surface.actor.property.line_width = 1.
     warp_scalar = engine.scenes[0].children[0].children[0]
     module_manager = engine.scenes[0].children[0].children[0].children[0].children[0]
-    warp_scalar.filter.normal = np.array( [ 0. , 0. , 0.8] )
+    warp_scalar.filter.normal = np.array( [ 0. , 0. , 0.2] )
     module_manager.scalar_lut_manager.scalar_bar.global_warning_display = 1
     module_manager.scalar_lut_manager.scalar_bar.position2 = np.array( [ 0.8 , 0.17] )
     module_manager.scalar_lut_manager.scalar_bar.position = np.array( [ 0.1 , 0.01] )
@@ -52,15 +52,14 @@ def sigma_m( m ):
     module_manager.vector_lut_manager.data_range = np.array( [ 0., 1.] )
     module_manager.vector_lut_manager.default_data_range = np.array( [ 0., 1.] )
     scene.scene.isometric_view()
-    '''
-    scene.scene.camera.position = [2.1019824395330113, 3.4412083803001199, 9.2652167065891948]
-    scene.scene.camera.focal_point = [0.25000005000000058, 0.25000005000000058, 7.9146823883056641]
+
+    scene.scene.camera.position = [1.2836424071875543, 1.4371492101974028, 4.0390558511994534]
+    scene.scene.camera.focal_point = [0.17361105930834225, 0.21417386120592863, 3.4874067491767562]
     scene.scene.camera.view_angle = 30.0
-    scene.scene.camera.view_up = [-0.08443004777305628, -0.34639439482532713, 0.93428180452507725]
-    scene.scene.camera.clipping_range = [2.609149769436097, 5.6000551428161911]
+    scene.scene.camera.view_up = [-0.21371002618964222, -0.23386371429877953, 0.94849132196367569]
+    scene.scene.camera.clipping_range = [0.79163912587841923, 2.7365159886347699]
     scene.scene.camera.compute_view_plane_normal()
-    scene.scene.render()
-    '''
+
     #mlab.surf( x_axis2, y_axis2, res2 )
     #mlab.xlabel( "rand tau" )
     #mlab.ylabel( "rand r" )
@@ -103,10 +102,16 @@ def w_m( m ):
     module_manager.vector_lut_manager.data_range = np.array( [ 0., 1.] )
     module_manager.vector_lut_manager.default_data_range = np.array( [ 0., 1.] )
     scene.scene.isometric_view()
-    
+
+    scene.scene.camera.position = [1.2836424071875543, 1.4371492101974028, 4.0390558511994534]
+    scene.scene.camera.focal_point = [0.17361105930834225, 0.21417386120592863, 3.4874067491767562]
+    scene.scene.camera.view_angle = 30.0
+    scene.scene.camera.view_up = [-0.21371002618964222, -0.23386371429877953, 0.94849132196367569]
+    scene.scene.camera.clipping_range = [0.79163912587841923, 2.7365159886347699]
+    scene.scene.camera.compute_view_plane_normal()
 
     mlab.show()
 
 m = 7.0
-#sigma_m( m )
-w_m( m )
+sigma_m( m )
+#w_m( m )

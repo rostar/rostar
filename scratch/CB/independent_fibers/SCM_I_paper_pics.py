@@ -43,13 +43,13 @@ def general_diagram():
         Er = np.trapz(r_arr ** 2 * r.pdf(r_arr), r_arr)
     else:
         Er = r ** 2
-    broken = broken.mu_q_arr / Er    
+    broken = broken.mu_q_arr / Er
     plt.plot(w_arr, broken, lw=2, ls='dashed', color='black')
     plt.plot(w_arr, total-broken, lw=2, ls='dashed', color='black')   
-    plt.ylim(0, 16)
-    plt.xlim(0, 1.25)
-    plt.xlabel('w [mm]')
-    plt.ylabel('sigma_c [MPa]')
+    plt.ylim(0, 10)
+    plt.xlim(0, .8)
+    plt.xlabel('$w\, [\mathrm{mm}]$')
+    plt.ylabel('$\mu_{\sigma_\mathrm{c},\mathbf{X}}\,[\mathrm{MPa}]$')
     plt.show()
 
 from math import pi
@@ -67,8 +67,8 @@ def rand_xi():
         mu_int = ef0 * E_f * V_f * (1-G)
         I = s0 * gamma(1 + 1./(mi+1)) * gammainc(1 + 1./(mi+1), (ef0/s0)**(mi+1))
         mu_broken = E_f * V_f * I / (mi+1)
-        plt.plot(w_arr, mu_int + mu_broken, lw = 2, color = 'black')
-        #plt.plot(ef0, G, lw = 2, color = 'black')
+        #plt.plot(w_arr, mu_int + mu_broken, lw = 2, color = 'black')
+        plt.plot(ef0 * 1000, G, lw = 2, color = 'black')
 #        wstar = (s0**(mi+1)/k**(mi+1)/mi)**(2./(mi+1))
 #        numerical
 #        Pf = RV('uniform', loc=0.0, scale=1.0)
@@ -86,10 +86,13 @@ def rand_xi():
 #                n_int=1000)
 #        result = total.mu_q_arr / Er
 #        plt.plot(w_arr, result, lw=3, color='red', ls = 'dashed', label='numerical')
-    plt.xlabel('w [mm]')
-    plt.ylabel('sigma_c [MPa]')
-    plt.xlim(0, 2.1)
-    plt.ylim(0,16)
+    #plt.xlabel('$w\, [\mathrm{mm}]$')
+    #plt.ylabel('$\mu_{\sigma_\mathrm{c},\\xi}\,[\mathrm{MPa}]$')
+    plt.xlabel('$\\xi$')
+    plt.ylabel('$G_\\xi\,[\mathrm{-}]$')
+    #plt.xlim(0, 2.0)
+    #plt.ylim(0, 16)
+    plt.tight_layout()
     plt.show()
 
 from scipy.special import gammainc, gamma
@@ -108,8 +111,11 @@ def deterministic_r():
         I = s0 * gamma(1 + 1./(m+1)) * gammainc(1 + 1./(m+1), (ef0/s0)**(m+1))
         mu_broken = E_f * V_f * I / (m+1)
         plt.plot(w_arr, mu_int + mu_broken, lw = 2, color = 'black')
-    plt.ylim(0, 16)
-    plt.xlim(0, 1.25)
+    plt.xlabel('$w\, [\mathrm{mm}]$')
+    plt.ylabel('$\mu_{\sigma_\mathrm{c},\\xi}\,[\mathrm{MPa}]$')
+    plt.ylim(0, 12)
+    plt.xlim(0, 1.)
+    plt.tight_layout()
     plt.show()
 
     fig = plt.figure()
@@ -124,10 +130,14 @@ def deterministic_r():
         zeta = mi**(-1./(mi+1.)) * np.exp(-1./mi) + 1. / (mi + 1.) * gamma(1 + 1./(mi+1)) * gammainc(1 + 1./(mi+1), 1./mi)
         strength = E_f * V_f * s0 * zeta
         ax1.loglog(r_arr, strength, lw=2, color='black')
-        ax1.set_ylim(10,100)
+        ax1.set_ylim(7,100)
         ax2.loglog(r_arr, wstar, lw=2, color='black', ls='dashed')
         ax2.set_ylim(0.1,1)
     plt.xlim(0,0.01)
+    ax1.set_xlabel('$r\,[\mu \mathrm{m}]$')
+    ax1.set_ylabel('$\mu^\star_{\sigma_\mathrm{c},\\xi}\,[\mathrm{MPa}]$')
+    ax2.set_ylabel('$w^\star_{\\xi}\,[\mathrm{mm}]$')
+    plt.tight_layout()
     plt.show()
 
 def rand_r():
@@ -151,10 +161,10 @@ def rand_r():
             Er = ri ** 2
         result = total.mu_q_arr / Er
         plt.plot(w_arr, result, lw=2, color='black')
-    plt.xlabel('w [mm]')
-    plt.ylabel('sigma_c [MPa]')
-    plt.ylim(0, 16)
-    plt.xlim(0, 1.25)
+    plt.xlabel('$w\, [\mathrm{mm}]$')
+    plt.ylabel('$\mu_{\sigma_\mathrm{c},\\xi r}\,[\mathrm{MPa}]$')
+    plt.ylim(0, 10)
+    plt.xlim(0, 1.)
     plt.show()
 
 def deterministic_tau():
@@ -170,8 +180,11 @@ def deterministic_tau():
         I = s0 * gamma(1 + 1./(m+1)) * gammainc(1 + 1./(m+1), (ef0/s0)**(m+1))
         mu_broken = E_f * V_f * I / (m+1)
         plt.plot(w_arr, mu_int + mu_broken, lw = 2, color = 'black')
-    plt.ylim(0, 16)
-    plt.xlim(0, 1.25)
+    plt.xlabel('$w\, [\mathrm{mm}]$')
+    plt.ylabel('$\mu_{\sigma_\mathrm{c},\\xi}\,[\mathrm{MPa}]$')
+    plt.ylim(0, 12)
+    plt.xlim(0, 1.)
+    plt.tight_layout()
     plt.show()
 
     fig = plt.figure()
@@ -191,6 +204,10 @@ def deterministic_tau():
         ax2.set_ylim(0.1,1.)
     plt.xlim(0.05,.2)
     plt.ylim(0)
+    ax1.set_xlabel('$\\tau \,[\mathrm{N/mm^2}]$')
+    ax1.set_ylabel('$\mu^\star_{\sigma_\mathrm{c},\\xi}\,[\mathrm{MPa}]$')
+    ax2.set_ylabel('$w^\star_{\\xi}\,[\mathrm{mm}]$')
+    plt.tight_layout()
     plt.show()
 
 def rand_tau():
@@ -214,10 +231,10 @@ def rand_tau():
             Er = r ** 2
         result = total.mu_q_arr / Er
         plt.plot(w_arr, result, lw=2, color='black')
-    plt.xlabel('w [mm]')
-    plt.ylabel('sigma_c [MPa]')
-    plt.ylim(0, 16)
-    plt.xlim(0, 1.25)
+    plt.xlabel('$w\, [\mathrm{mm}]$')
+    plt.ylabel('$\mu_{\sigma_\mathrm{c},\\xi \\tau}\,[\mathrm{MPa}]$')
+    plt.ylim(0, 10)
+    plt.xlim(0, 1.)
     plt.show()
 
 def g_ell():
@@ -271,11 +288,18 @@ def mu_ell():
     plt.xlim(0,1.2)
     plt.show()
 
+from matplotlib import rc
+import matplotlib
+rc('font',**{'family':'sans-serif','sans-serif':['Helvetica']})
+## for Palatino and other serif fonts use:
+#rc('font',**{'family':'serif','serif':['Palatino']})
+rc('text', usetex=True)
+matplotlib.rcParams.update({'font.size': 21})
 #general_diagram()
 #rand_xi()
 #deterministic_r()
-#rand_r()
 deterministic_tau()
+#rand_r()
 #rand_tau()
 #g_ell()
 #mu_ell()
