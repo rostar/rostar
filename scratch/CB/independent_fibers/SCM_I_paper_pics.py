@@ -258,6 +258,8 @@ def g_ell():
     plt.plot(z_arr, pdf, lw=2, color='black')
     plt.ylim(0, 0.15)
     #plt.xlim(0, 20.)
+    plt.xlabel('$z\, [\mathrm{mm}]$')
+    plt.ylabel('$g_\\xi(z|\\xi)$')
     plt.show()
 
 def mu_ell():
@@ -286,6 +288,9 @@ def mu_ell():
     mu_ell(7.0)
     ax2.plot(w_arr, CDFa(e_arr, 7.0), lw=2, ls='dashed', color='black')
     plt.xlim(0,1.2)
+    ax1.set_xlabel('$w\, [\mathrm{mm}]$')
+    ax1.set_ylabel('$\mu_L\, [\mathrm{mm}]$')
+    ax2.set_ylabel('$G_\\xi\,[-]$')
     plt.show()
 
 from matplotlib import rc
@@ -298,8 +303,8 @@ matplotlib.rcParams.update({'font.size': 21})
 #general_diagram()
 #rand_xi()
 #deterministic_r()
-deterministic_tau()
+#deterministic_tau()
 #rand_r()
 #rand_tau()
 #g_ell()
-#mu_ell()
+mu_ell()
