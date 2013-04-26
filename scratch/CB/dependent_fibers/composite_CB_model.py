@@ -11,7 +11,7 @@ CompositeCrackBridge class.
 @author: rostar
 '''
 import numpy as np
-from stats.spirrid.rv import RV
+from spirrid.rv import RV
 from etsproxy.traits.api import HasTraits, cached_property, \
     Float, Property, Instance, List, Array
 from types import FloatType
@@ -138,9 +138,23 @@ class CompositeCrackBridge(HasTraits):
         Km = (1. - self.V_f_tot) * self.E_m
         E_mtrx = Km + Kf_add
         mean_acting_T = np.sum(self.sorted_depsf * (self.sorted_depsf < depsf) *
-                                   self.sorted_stats_weights * self.sorted_E_f *
-                                   self.sorted_V_f * self.sorted_nu_r * (1. - damage))
+                                   Kf * (1. - damage))
         return mean_acting_T / E_mtrx
+
+    def dem_depsf_vect(self, depsf, damage):
+        '''evaluates the deps_m given deps_f
+        at that point and the damage array'''
+        Kf = self.sorted_V_f * self.sorted_nu_r * \
+            self.sorted_stats_weights * self.sorted_E_f
+        Kf_intact_bonded = np.cumsum((Kf * (1. - damage))[::-1])
+        Kf_broken = np.sum(Kf * damage)
+        Kf_add = Kf_intact_bonded + Kf_broken
+        Km = (1. - self.V_f_tot) * self.E_m
+        E_mtrx = Km + Kf_add
+        E_mtrx = np.hstack((Km, E_mtrx))
+        mu_T = np.cumsum((self.sorted_depsf * Kf * (1. - damage))[::-1])[::-1]
+        mu_T = np.hstack((mu_T, np.array([0.0])))
+        return mu_T / E_mtrx
 
     def double_sided(self, defi, x0, demi, em0, um0, damage):
         dxi = (-defi * x0 - demi * x0 + (defi * x0 ** 2 * demi
@@ -188,34 +202,18 @@ class CompositeCrackBridge(HasTraits):
         Lmin = min(self.Ll, self.Lr)
         Lmax = max(self.Ll, self.Lr)
         xx_short = [0.0]
-#        amin = (self.w / (np.abs(dem_short[0]) + np.abs(self.sorted_depsf[0])))**0.5
-#        dems = self.dem_depsf(self.sorted_depsf, iter_damage)
-#         f = 1./200e3/(self.sorted_depsf[1:] + np.array(dems)[:-2])
-# 
-#         T_arr = (self.sorted_depsf*200e3)[::-1]
-#         F = cumtrapz(f[::-1], T_arr[1:])
-#         dxs = np.exp(F/2.) * np.exp(np.log(amin))
-#         dxs = np.hstack((amin,dxs))
-#         print dxs
+        amin = (self.w / (np.abs(dem_short[0]) + np.abs(self.sorted_depsf[0])))**0.5
+        dems = self.dem_depsf_vect(self.sorted_depsf, iter_damage)
+        f = 1./200e3/(self.sorted_depsf + np.array(dems)[1:])
+        T_arr = (self.sorted_depsf*200e3)[::-1]
+        F = np.hstack((np.array([0.0]), cumtrapz(f, T_arr)))
+        dxs = np.exp(F/2.) * np.exp(np.log(amin))
         for i, defi in enumerate(self.sorted_depsf):
             if x_short[-1] < Lmin and x_long[-1] < Lmax:
                 '''double sided pullout'''
                 dxi, dem, emi, umi = self.double_sided(defi,
                                     x_short[-1], dem_short[-1],
                                     em_short[-1], um_short[-1], iter_damage)
-
-                a = x_short[-1]
-                if i == 0.:
-                    dxxi = (self.w / (np.abs(dem_short[0]) + np.abs(defi)))**0.5
-                else:
-                    #dTEf = (self.sorted_depsf[i-1] - defi)
-                    #dxxi = - a + (a**2 + dTEf * a**2 / (defi + dem_short[-1]))**.5
-                    f = 1./200e3/(self.sorted_depsf[:i] + np.array(dem_short[1:]))
-                    T_arr = (self.sorted_depsf[:i]*200e3)[::-1]
-                    F = np.trapz(f[::-1], T_arr)
-                    dxxi = np.exp(F/2.) * np.exp(np.log(x_short[1]))
-                xx_short.append(dxxi)
-                #xx_short.append(xx_short[-1] + dxxi)
                 if x_short[-1] + dxi < Lmin:
                     # dx increment does not reach the boundary
                     dem_short.append(dem)
@@ -280,22 +278,13 @@ class CompositeCrackBridge(HasTraits):
                 epsf0[i] = epsf0_clamped
  
         self._x_arr = np.hstack((-np.array(x_short)[::-1][:-1], np.array(x_long)))
-        self.xx = np.hstack((-np.array(xx_short)[::-1][:-1], np.array(xx_short)))
-#        self.xxx = np.hstack((-np.array(dxs)[::-1], np.array([0.0]), np.array(dxs)))
+        self.xxx = np.hstack((-np.array(dxs)[::-1], np.array([0.0]), np.array(dxs)))
         self._epsm_arr = np.hstack((np.array(em_short)[::-1][:-1], np.array(em_long)))
         self._epsf0_arr = epsf0
         residuum = self.vect_xi_cdf(epsf0, x_short=x_short, x_long=x_long) - iter_damage
-        self.A = np.array(x_short)[1:] / 200e3 / 0.00345
-        self.B = self.sorted_depsf
-        self.C = np.array(dem_short)[1:]
-        print self._x_arr
         return residuum
 
     xxx = 0.0
-    xx = 0.0
-    A = 0.0
-    B = 0.0
-    C = 0.0
 
     _x_arr = Array
     def __x_arr_default(self):
@@ -330,8 +319,8 @@ if __name__ == '__main__':
                           tau=RV('uniform', loc=1., scale=10.),
                           V_f=0.1,
                           E_f=200e3,
-                          xi=100.03,
-                          n_int=20)
+                          xi=10.01,
+                          n_int=100)
 
     ccb = CompositeCrackBridge(E_m=25e3,
                                  reinforcement_lst=[reinf],
@@ -339,9 +328,8 @@ if __name__ == '__main__':
                                  Lr=10.,
                                  w=0.03)
     ccb.damage
-    plt.plot(ccb._x_arr, ccb._epsm_arr, label='old')
-    plt.plot(ccb.xx, ccb._epsm_arr, lw=3, ls='dashed', label='new')
-    #plt.plot(ccb.xxx, ccb._epsm_arr, lw=2, color='red', ls='dashed', label='suprnew')
+    plt.plot(ccb._x_arr, ccb._epsm_arr, label='loop')
+    plt.plot(ccb.xxx, ccb._epsm_arr, lw=2, color='red', ls='dashed', label='analyt')
     #plt.plot(np.zeros_like(ccb._epsf0_arr), ccb._epsf0_arr, 'ro')
     #for i, depsf in enumerate(ccb.sorted_depsf):
     #    plt.plot(ccb._x_arr, np.maximum(ccb._epsf0_arr[i] - depsf*np.abs(ccb._x_arr),ccb._epsm_arr))

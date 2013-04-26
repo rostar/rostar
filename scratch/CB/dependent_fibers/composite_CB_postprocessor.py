@@ -167,7 +167,7 @@ if __name__ == '__main__':
                           tau=RV('uniform', loc=5., scale=2.),
                           V_f=0.15,
                           E_f=70e3,
-                          xi=RV('weibull_min', shape=15., scale=10.01),
+                          xi=RV('weibull_min', shape=10., scale=0.03),
                           n_int=25,
                           label='AR glass')
 
@@ -183,7 +183,7 @@ if __name__ == '__main__':
                           tau=RV('uniform', loc=1., scale=1.5),
                           V_f=0.15,
                           E_f=200e3,
-                          xi=RV('weibull_min', shape=25., scale=10.02),
+                          xi=RV('weibull_min', shape=25., scale=0.02),
                           n_int=25,
                           label='carbon')
 
@@ -268,9 +268,9 @@ if __name__ == '__main__':
 
     #test(0.03)
     #TODO: check energy for combined reinf
-    #energy(np.linspace(.0, .12, 200))
-    profile(.01)
-    #sigma_c_w(np.linspace(.0, .12, 200))
+    #energy(np.linspace(.0, .15, 100))
+    #profile(.01)
+    sigma_c_w(np.linspace(.0, .15, 100))
     #plt.plot(ccb_view.sigma_c_max[1], ccb_view.sigma_c_max[0], 'ro')
     #sigma_f(np.linspace(.0, .16, 50))
     plt.legend(loc='best')

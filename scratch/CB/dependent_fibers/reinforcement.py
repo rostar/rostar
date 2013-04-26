@@ -9,7 +9,7 @@ can be used by the composite crack bridge model.
 '''
 
 import numpy as np
-from stats.spirrid.rv import RV
+from spirrid.rv import RV
 from etsproxy.traits.api import HasTraits, cached_property, \
     Float, Property, Int, Str
 from types import FloatType
