@@ -19,6 +19,7 @@ from reinforcement import Reinforcement, WeibullFibers
 from scipy.optimize import fsolve, broyden2
 import time as t
 from scipy.integrate import cumtrapz
+import time
 
 class CompositeCrackBridge(HasTraits):
 
@@ -205,27 +206,71 @@ class CompositeCrackBridge(HasTraits):
         C = np.log(amin)
         a1 = np.exp(F/2. + C)
         if a1[-1] <= Lmin:
-            a = np.hstack((-a1[::-1], 0.0, a1))
+            #double sided pullout
+            a = np.hstack((-Lmin, -a1[::-1], 0.0, a1, Lmin))
             em1 = np.cumsum(np.diff(np.hstack((0.0, a1)))*dems)
-            em = np.hstack((em1[::-1], 0.0, em1))
+            em = np.hstack((em1[-1], em1[::-1], 0.0, em1, em1[-1]))
+            epsf0 = em1 + self.sorted_depsf * a1
         else:
-            # boundary condition position
-            idx1 = np.sum(a1 <= Lmin) - 1       
-            a1 = np.hstack((np.array([0.0]), a1[:idx1 + 1], Lmin))
-            # matrix strain within the shorter range
-            dem1 = np.hstack((dems[:idx1 + 1], dems[idx1 + 1]))
-            em1 = np.hstack((0.0, np.cumsum(np.diff(a1)*dem1)))  
-            # a(T) for one sided pullout
-            # interpolation of the point at Lmin 
-            delta = (Lmin - a1[idx1 - 1])/(a1[idx1] - a1[idx1 - 1])
-            shift_F = F[idx1 - 1] + (F[idx1] - F[idx1-1]) * delta
-            F = F[idx1:] - shift_F
-            C = np.log(2*Lmin**2)
-            a2 = np.sqrt(2*Lmin**2 + np.exp((F + C))) - Lmin
-            # boundary condition position
-            idx2 = np.sum(a1 <= Lmax) - 1
-            a2 = a2[idx1:idx2]
-        return a, em
+            if Lmin < a1[0] and Lmax < a1[0]:
+                a = np.hstack((-Lmin, 0.0, Lmax))
+                em = np.hstack((init_dem * Lmin, 0.0, init_dem * Lmax))
+                epsf0 = (self.sorted_depsf/2. * (Lmin**2 + Lmax**2) +
+                         self.w + em[0] * Lmin / 2. + em[-1] * Lmax / 2.) / (Lmin + Lmax)
+            elif Lmin < a1[0] and Lmax >= a1[0]:
+                amin = -Lmin + np.sqrt(2 * Lmin**2 + 2*self.w / (self.sorted_depsf[0] + init_dem))
+                C = np.log(amin**2 + 2*Lmin*amin - Lmin**2)
+                a2 = np.sqrt(2*Lmin**2 + np.exp((F + C))) - Lmin
+                if Lmax <= a2[-1]:
+                    idx = np.sum(a2 < Lmax) - 1
+                    a = np.hstack((-Lmin, 0.0, a2[:idx + 1], Lmax))
+                    em2 = np.cumsum(np.diff(np.hstack((0.0, a2)))*dems)
+                    em = np.hstack((init_dem*Lmin, 0.0, em2[:idx+1], em2[idx] + (Lmax-a2[idx])*dems[idx]))
+                    um = np.trapz(em, a)
+                    epsf01 = em2[:idx + 1] + a2[:idx + 1] * self.sorted_depsf[:idx+1]
+                    epsf02 = (self.w + um + self.sorted_depsf[idx:] / 2. * (Lmin**2 + Lmax**2)) / (Lmin +Lmax)
+                    epsf0 = np.hstack((epsf01, epsf02))
+                else:
+                    a = np.hstack((-Lmin, 0.0, a2))
+                    em2 = np.cumsum(np.diff(np.hstack((0.0, a2)))*dems)
+                    em = np.hstack((init_dem*Lmin, 0.0, em2))
+                    epsf0 = em2 + self.sorted_depsf * a2
+            else:
+                # boundary condition position
+                idx1 = np.sum(a1 <= Lmin) - 1
+                # a(T) for one sided pullout
+                # interpolation of the point at Lmin 
+                delta = (Lmin - a1[idx1])/(a1[idx1 + 1] - a1[idx1])
+                shift_F = F[idx1] + (F[idx1+1] - F[idx1]) * delta
+                F = F[idx1 + 1:] - shift_F
+                C = np.log(2*Lmin**2)
+                a2 = np.sqrt(2*Lmin**2 + np.exp((F + C))) - Lmin
+                idx2 = np.sum(a2 <= Lmax) - 1
+                # matrix strain profiles - shorter side
+                a_short = np.hstack((-Lmin, -a1[:idx1+1][::-1], 0.0))
+                dems_short = np.hstack((dems[:idx1+1], dems[idx1+1]))
+                em_short = np.hstack((0.0,np.cumsum(np.diff(-a_short[::-1])*dems_short)))[::-1]
+                # matrix strain profiles - longer side
+                a_long = np.hstack((a1[:idx1 + 1], a2[:idx2 + 1]))
+                em_long = np.cumsum(np.diff(np.hstack((0.0, a_long)))*dems[:idx1+idx2+2])
+                a = np.hstack((a_short, a_long, Lmax))
+                em = np.hstack((em_short, em_long, em_long[-1]))
+                um = np.trapz(em, a)
+                epsf01 = em_long + a_long * self.sorted_depsf[:idx1+idx2+2]
+                epsf02 = (self.w + um + self.sorted_depsf [idx1+idx2+2:] / 2. * (Lmin**2 + Lmax**2)) / (Lmin +Lmax)
+                epsf0 = np.hstack((epsf01, epsf02))
+        return a, em, epsf0
+
+    def damage_residuum2(self, iter_damage):
+        Lmin = min(self.Ll, self.Lr)
+        Lmax = max(self.Ll, self.Lr)
+
+        af, emf, epsf00 = self.profile(iter_damage, Lmin, Lmax)
+        self.xx = af
+        self.ems = emf
+        self.epsf00 = epsf00
+        residuum = self.vect_xi_cdf(epsf00, x_short=1.0, x_long=1.0) - iter_damage
+        return residuum
 
     def damage_residuum(self, iter_damage):
         um_short, em_short, x_short = [0.0], [0.0], [0.0]
@@ -237,13 +282,6 @@ class CompositeCrackBridge(HasTraits):
         Lmin = min(self.Ll, self.Lr)
         Lmax = max(self.Ll, self.Lr)
 
-        af, emf = self.profile(iter_damage, Lmin, Lmax)
-#         dxs2, ems2, idx_dbl = self.x_one(iter_damage, dxs1, Lmin)
-#         xx_short = np.hstack((np.array([0.0]), dxs1[:idx_dbl], Lmin))
-#         xx_long = np.hstack((dxs1[:idx_dbl], dxs2))
-#         xx = np.hstack((-xx_short[::-1], xx_long))
-        self.xx = af
-        self.ems = emf
         for i, defi in enumerate(self.sorted_depsf):
             if x_short[-1] < Lmin and x_long[-1] < Lmax:
                 '''double sided pullout'''
@@ -315,13 +353,13 @@ class CompositeCrackBridge(HasTraits):
  
         self._x_arr = np.hstack((-np.array(x_short)[::-1][:-1], np.array(x_long)))
         self._epsm_arr = np.hstack((np.array(em_short)[::-1][:-1], np.array(em_long)))
-        self.dem2 = self._epsm_arr[-5:]
         self._epsf0_arr = epsf0
         residuum = self.vect_xi_cdf(epsf0, x_short=x_short, x_long=x_long) - iter_damage
         return residuum
 
     xx = 0.0
     ems = 0.0
+    epsf00 = 0.0
 
     _x_arr = Array
     def __x_arr_default(self):
@@ -338,16 +376,17 @@ class CompositeCrackBridge(HasTraits):
     damage = Property(depends_on='w, Ll, Lr, reinforcement+')
     @cached_property
     def _get_damage(self):
+        ff = time.clock()
         if self.w == 0.:
             damage = np.zeros_like(self.sorted_depsf)
         else:
             ff = t.clock()
             try:
-                damage = broyden2(self.damage_residuum, 0.2 * np.ones_like(self.sorted_depsf), maxiter=20)
+                damage = broyden2(self.damage_residuum2, 0.2 * np.ones_like(self.sorted_depsf), maxiter=20)
             except:
                 print 'broyden2 does not converge fast enough: switched to fsolve for this step'
-                damage = fsolve(self.damage_residuum, 0.2 * np.ones_like(self.sorted_depsf))
-            #print 'damage =', np.sum(damage) / len(damage), 'iteration time =', t.clock() - ff, 'sec' 
+                damage = fsolve(self.damage_residuum2, 0.2 * np.ones_like(self.sorted_depsf))
+            print 'damage =', np.sum(damage) / len(damage), 'iteration time =', time.clock() - ff, 'sec' 
         return damage
 
 if __name__ == '__main__':
@@ -356,18 +395,18 @@ if __name__ == '__main__':
                           tau=RV('uniform', loc=1., scale=10.),
                           V_f=0.1,
                           E_f=200e3,
-                          xi=10.01,
-                          n_int=10)
+                          xi=0.03,
+                          n_int=50)
 
     ccb = CompositeCrackBridge(E_m=25e3,
                                  reinforcement_lst=[reinf],
-                                 Ll=10.,
-                                 Lr=10.,
+                                 Ll=1.,
+                                 Lr=5.,
                                  w=0.03)
     ccb.damage
-    plt.plot(ccb._x_arr, ccb._epsm_arr, label='loop')
-    plt.plot(ccb.xx, ccb.ems, lw=2, color='red', ls='dashed', label='analyt1')
-    #plt.plot(np.zeros_like(ccb._epsf0_arr), ccb._epsf0_arr, 'ro')
+    #plt.plot(ccb._x_arr, ccb._epsm_arr, label='loop')
+    plt.plot(ccb.xx, ccb.ems, lw=2, color='red', ls='dashed', label='analytical')
+    #plt.plot(np.zeros_like(ccb.epsf00), ccb.epsf00, 'ro')
     #for i, depsf in enumerate(ccb.sorted_depsf):
     #    plt.plot(ccb._x_arr, np.maximum(ccb._epsf0_arr[i] - depsf*np.abs(ccb._x_arr),ccb._epsm_arr))
     plt.legend(loc='best')
