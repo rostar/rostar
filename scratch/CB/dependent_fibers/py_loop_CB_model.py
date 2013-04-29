@@ -1,13 +1,18 @@
 '''
+Created on Apr 29, 2013
+
+@author: rostar
+'''
+'''
 Created on Sep 20, 2012
 
-The CompositeCrackBridge class has a method for evaluating fibers and matrix
+The CompositeCrackBridgeLoop class has a method for evaluating fibers and matrix
 strain in the vicinity of a crack bridge.
 Fiber diameter and bond coefficient can be set as random variables.
 Reinforcement types can be combined by creating a list of Reinforcement
 instances and defining it as the reinforcement_lst Trait in the
-CompositeCrackBridge class.
-The evaluation is array based.
+CompositeCrackBridgeLoop class.
+The evaluation uses a python loop over the discretization point.
 
 @author: rostar
 '''
@@ -19,11 +24,9 @@ from types import FloatType
 from reinforcement import Reinforcement, WeibullFibers
 from scipy.optimize import fsolve, broyden2
 import time as t
-from scipy.integrate import cumtrapz
 import time
 
-
-class CompositeCrackBridge(HasTraits):
+class CompositeCrackBridgeLoop(HasTraits):
 
     reinforcement_lst = List(Instance(Reinforcement))
     w = Float
@@ -129,96 +132,138 @@ class CompositeCrackBridge(HasTraits):
                 Pf += method(epsy * masks[i])
         return Pf
 
-    def dem_depsf_vect(self, depsf, damage):
+    def dem_depsf(self, depsf, damage):
         '''evaluates the deps_m given deps_f
         at that point and the damage array'''
         Kf = self.sorted_V_f * self.sorted_nu_r * \
             self.sorted_stats_weights * self.sorted_E_f
-        Kf_intact_bonded = np.hstack((0.0, np.cumsum((Kf * (1. - damage)))))[:-1]
+        Kf_intact_bonded = np.sum(Kf * (depsf <= self.sorted_depsf)
+                                         * (1. - damage))
         Kf_broken = np.sum(Kf * damage)
         Kf_add = Kf_intact_bonded + Kf_broken
         Km = (1. - self.V_f_tot) * self.E_m
         E_mtrx = Km + Kf_add
-        mu_T = np.cumsum((self.sorted_depsf * Kf * (1. - damage))[::-1])[::-1]
-        return mu_T / E_mtrx
+        mean_acting_T = np.sum(self.sorted_depsf * (self.sorted_depsf < depsf) *
+                                   Kf * (1. - damage))
+        return mean_acting_T / E_mtrx
 
-    def profile(self, iter_damage, Lmin, Lmax):
-        # matrix strain derivative with resp. to z as a function of T
-        dems = self.dem_depsf_vect(self.sorted_depsf, iter_damage)
-        # initial matrix strain derivative
-        init_dem = dems[0]
-        # debonded length of fibers with Tmax
-        amin = (self.w / (np.abs(init_dem) + np.abs(self.sorted_depsf[0])))**0.5
-        # a(T) for double sided pullout
-        f = 1./200e3/(self.sorted_depsf + np.array(dems))
-        T_arr = (self.sorted_depsf*200e3)[::-1]
-        F = np.hstack((np.array([0.0]), cumtrapz(f, T_arr)))
-        C = np.log(amin)
-        a1 = np.exp(F/2. + C)
-        if a1[-1] <= Lmin:
-            #double sided pullout
-            a = np.hstack((-Lmin, -a1[::-1], 0.0, a1, Lmin))
-            em1 = np.cumsum(np.diff(np.hstack((0.0, a1)))*dems)
-            em = np.hstack((em1[-1], em1[::-1], 0.0, em1, em1[-1]))
-            epsf0 = em1 + self.sorted_depsf * a1
-        else:
-            if Lmin < a1[0] and Lmax < a1[0]:
-                a = np.hstack((-Lmin, 0.0, Lmax))
-                em = np.hstack((init_dem * Lmin, 0.0, init_dem * Lmax))
-                epsf0 = (self.sorted_depsf/2. * (Lmin**2 + Lmax**2) +
-                         self.w + em[0] * Lmin / 2. + em[-1] * Lmax / 2.) / (Lmin + Lmax)
-            elif Lmin < a1[0] and Lmax >= a1[0]:
-                amin = -Lmin + np.sqrt(2 * Lmin**2 + 2*self.w / (self.sorted_depsf[0] + init_dem))
-                C = np.log(amin**2 + 2*Lmin*amin - Lmin**2)
-                a2 = np.sqrt(2*Lmin**2 + np.exp((F + C))) - Lmin
-                if Lmax <= a2[-1]:
-                    idx = np.sum(a2 < Lmax) - 1
-                    a = np.hstack((-Lmin, 0.0, a2[:idx + 1], Lmax))
-                    em2 = np.cumsum(np.diff(np.hstack((0.0, a2)))*dems)
-                    em = np.hstack((init_dem*Lmin, 0.0, em2[:idx+1], em2[idx] + (Lmax-a2[idx])*dems[idx]))
-                    um = np.trapz(em, a)
-                    epsf01 = em2[:idx + 1] + a2[:idx + 1] * self.sorted_depsf[:idx+1]
-                    epsf02 = (self.w + um + self.sorted_depsf[idx:] / 2. * (Lmin**2 + Lmax**2)) / (Lmin +Lmax)
-                    epsf0 = np.hstack((epsf01, epsf02))
-                else:
-                    a = np.hstack((-Lmin, 0.0, a2))
-                    em2 = np.cumsum(np.diff(np.hstack((0.0, a2)))*dems)
-                    em = np.hstack((init_dem*Lmin, 0.0, em2))
-                    epsf0 = em2 + self.sorted_depsf * a2
-            else:
-                # boundary condition position
-                idx1 = np.sum(a1 <= Lmin) - 1
-                # a(T) for one sided pullout
-                # interpolation of the point at Lmin 
-                delta = (Lmin - a1[idx1])/(a1[idx1 + 1] - a1[idx1])
-                shift_F = F[idx1] + (F[idx1+1] - F[idx1]) * delta
-                F = F[idx1 + 1:] - shift_F
-                C = np.log(2*Lmin**2)
-                a2 = np.sqrt(2*Lmin**2 + np.exp((F + C))) - Lmin
-                idx2 = np.sum(a2 <= Lmax) - 1
-                # matrix strain profiles - shorter side
-                a_short = np.hstack((-Lmin, -a1[:idx1+1][::-1], 0.0))
-                dems_short = np.hstack((dems[:idx1+1], dems[idx1+1]))
-                em_short = np.hstack((0.0,np.cumsum(np.diff(-a_short[::-1])*dems_short)))[::-1]
-                # matrix strain profiles - longer side
-                a_long = np.hstack((a1[:idx1 + 1], a2[:idx2 + 1]))
-                em_long = np.cumsum(np.diff(np.hstack((0.0, a_long)))*dems[:idx1+idx2+2])
-                a = np.hstack((a_short, a_long, Lmax))
-                em = np.hstack((em_short, em_long, em_long[-1]))
-                um = np.trapz(em, a)
-                epsf01 = em_long + a_long * self.sorted_depsf[:idx1+idx2+2]
-                epsf02 = (self.w + um + self.sorted_depsf [idx1+idx2+2:] / 2. * (Lmin**2 + Lmax**2)) / (Lmin +Lmax)
-                epsf0 = np.hstack((epsf01, epsf02))
-        self._x_arr = a
-        self._epsm_arr = em
-        self._epsf0_arr = epsf0
-        return epsf0
+    def double_sided(self, defi, x0, demi, em0, um0, damage):
+        dxi = (-defi * x0 - demi * x0 + (defi * x0 ** 2 * demi
+            + demi ** 2 * x0 ** 2 - 2 * defi * em0 * x0 + 2 *
+            defi * um0 + defi * self.w - 2 * demi * em0 * x0 +
+            2 * demi * um0 + demi * self.w) ** (.5)) / (defi + demi)
+        dem = self.dem_depsf(defi, damage)
+        emi = em0 + demi * dxi
+        umi = um0 + (em0 + emi) * dxi / 2.
+        return dxi, dem, emi, umi
+
+    def one_sided(self, defi, x0, demi, em0, um0, clamped, damage):
+        w = self.w
+        xs = clamped[0]
+        ums = clamped[1]
+        dxi = (-xs * demi - demi * x0 - defi * xs - defi * x0 + (2 *
+                demi * x0 * defi * xs + demi * x0 ** 2 * defi + 2 *
+                demi ** 2 * x0 * xs + 3 * defi * xs ** 2 * demi - 2 *
+                demi * xs * em0 - 2 * demi * em0 * x0 - 2 * defi *
+                xs * em0 - 2 * defi * em0 * x0 + demi ** 2 * x0 ** 2 +
+                2 * defi ** 2 * xs ** 2 + xs ** 2 * demi ** 2 + 2 *
+                demi * um0 + 2 * demi * ums + 2 * demi * w + 2 * defi *
+                um0 + 2 * defi * ums + 2 * defi * w) ** (0.5)) / (demi + defi)
+        dem = self.dem_depsf(defi, damage)
+        emi = em0 + demi * dxi
+        umi = um0 + (em0 + emi) * dxi / 2.
+        return dxi, dem, emi, umi
+
+    def clamped(self, defi, xs, xl, ems, eml, ums, uml):
+        c1 = eml * xl - uml
+        c2 = ems * xs - ums
+        c3 = defi * xl ** 2 / 2.
+        c4 = defi * xs ** 2 / 2.
+        c5 = (defi * (xl - xs) + (eml - ems)) * xs
+        h = (self.w - c1 - c2 - c3 - c4 - c5) / (xl + xs)
+        return defi * xl + eml + h
 
     def damage_residuum(self, iter_damage):
+        um_short, em_short, x_short = [0.0], [0.0], [0.0]
+        um_long, em_long, x_long = [0.0], [0.0], [0.0]
+        init_dem = self.dem_depsf(np.infty, iter_damage)
+        dem_short = [init_dem]
+        dem_long = [init_dem]
+        epsf0 = np.zeros_like(self.sorted_depsf)
         Lmin = min(self.Ll, self.Lr)
         Lmax = max(self.Ll, self.Lr)
-        epsf0 = self.profile(iter_damage, Lmin, Lmax)
-        residuum = self.vect_xi_cdf(epsf0, x_short=1.0, x_long=1.0) - iter_damage
+        for i, defi in enumerate(self.sorted_depsf):
+            if x_short[-1] < Lmin and x_long[-1] < Lmax:
+                '''double sided pullout'''
+                dxi, dem, emi, umi = self.double_sided(defi,
+                                    x_short[-1], dem_short[-1],
+                                    em_short[-1], um_short[-1], iter_damage)
+                if x_short[-1] + dxi < Lmin:
+                    # dx increment does not reach the boundary
+                    dem_short.append(dem)
+                    dem_long.append(dem)
+                    x_short.append(x_short[-1] + dxi)
+                    x_long.append(x_long[-1] + dxi)
+                    em_short.append(emi)
+                    em_long.append(emi)
+                    um_short.append(umi)
+                    um_long.append(umi)
+                    epsf0[i] = (em_short[-1] + x_short[-1] * defi)
+                else:
+                    # boundary reached at shorter side
+                    deltax = Lmin - x_short[-1]
+                    x_short.append(Lmin)
+                    em_short.append(em_short[-1] + dem_short[-1] * deltax)
+                    um_short.append(um_short[-1] + (em_short[-2] + em_short[-1]) * deltax / 2.)
+                    short_side = [x_short[-1], um_short[-1]]
+                    dxi, dem, emi, umi = self.one_sided(defi, x_long[-1], dem_long[-1],
+                                            em_long[-1], um_long[-1], short_side, iter_damage)
+
+                    if x_long[-1] + dxi >= Lmax:
+                        # boundary reached at longer side
+                        deltax = Lmax - x_long[-1]
+                        x_long.append(Lmax)
+                        em_long.append(em_long[-1] + dem_long[-1] * deltax)
+                        um_long.append(um_long[-1] + (em_long[-2] + em_long[-1]) * deltax / 2.)
+                        epsf0_clamped = self.clamped(defi, x_short[-1], x_long[-1], em_short[-1],
+                             em_long[-1], um_short[-1], um_long[-1])
+                        epsf0[i] = epsf0_clamped
+                    else:
+                        dem_long.append(dem)
+                        x_long.append(x_long[-1] + dxi)
+                        em_long.append(emi)
+                        um_long.append(umi)
+                        epsf0[i] = (em_long[-1] + x_long[-1] * defi)
+
+            elif x_short[-1] == Lmin and x_long[-1] < Lmax:
+                #one sided pullout
+                clamped = [x_short[-1], um_short[-1]]
+                dxi, dem, emi, umi = self.one_sided(defi, x_long[-1], dem_long[-1],
+                                    em_long[-1], um_long[-1], clamped, iter_damage)
+                if x_long[-1] + dxi < Lmax:
+                    dem_long.append(dem)
+                    x_long.append(x_long[-1] + dxi)
+                    em_long.append(emi)
+                    um_long.append(umi)
+                    epsf0[i] = (em_long[-1] + x_long[-1] * defi)
+                else:
+                    dxi = Lmax - x_long[-1]
+                    x_long.append(Lmax)
+                    em_long.append(em_long[-1] + dem_long[-1] * dxi)
+                    um_long.append(um_long[-1] + (em_long[-2] + em_long[-1]) * dxi / 2.)
+                    epsf0_clamped = self.clamped(defi, x_short[-1], x_long[-1], em_short[-1],
+                                 em_long[-1], um_short[-1], um_long[-1])
+                    epsf0[i] = epsf0_clamped
+
+            elif x_short[-1] == Lmin and x_long[-1] == Lmax:
+                #clamped fibers
+                epsf0_clamped = self.clamped(defi, x_short[-1], x_long[-1], em_short[-1],
+                             em_long[-1], um_short[-1], um_long[-1])
+                epsf0[i] = epsf0_clamped
+        self._x_arr = np.hstack((-np.array(x_short)[::-1][:-1], np.array(x_long)))
+        self._epsm_arr = np.hstack((np.array(em_short)[::-1][:-1], np.array(em_long)))
+        self._epsf0_arr = epsf0
+        residuum = self.vect_xi_cdf(epsf0, x_short=x_short, x_long=x_long) - iter_damage
         return residuum
 
     _x_arr = Array
@@ -258,13 +303,13 @@ if __name__ == '__main__':
                           xi=RV('weibull_min', shape=5., scale=0.05),
                           n_int=50)
 
-    ccb = CompositeCrackBridge(E_m=25e3,
+    ccb = CompositeCrackBridgeLoop(E_m=25e3,
                                  reinforcement_lst=[reinf],
                                  Ll=1.,
                                  Lr=3.,
                                  w=0.03)
     ccb.damage
-    plt.plot(ccb._x_arr, ccb._epsm_arr, lw=2, color='red', ls='dashed', label='analytical')
+    plt.plot(ccb._x_arr, ccb._epsm_arr, label='loop')
     plt.plot(np.zeros_like(ccb._epsf0_arr), ccb._epsf0_arr, 'ro')
     for i, depsf in enumerate(ccb.sorted_depsf):
         plt.plot(ccb._x_arr, np.maximum(ccb._epsf0_arr[i] - depsf*np.abs(ccb._x_arr),ccb._epsm_arr))

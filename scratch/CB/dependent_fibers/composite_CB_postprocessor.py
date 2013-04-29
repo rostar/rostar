@@ -8,7 +8,7 @@ from etsproxy.traits.api import Instance, Property, cached_property, Array
 from composite_CB_model import CompositeCrackBridge
 import numpy as np
 from matplotlib import pyplot as plt
-from stats.spirrid.rv import RV
+from spirrid.rv import RV
 from reinforcement import Reinforcement, WeibullFibers
 from scipy.optimize import fmin, brentq
 from scipy.integrate import cumtrapz
@@ -164,11 +164,11 @@ class CompositeCrackBridgeView(ModelView):
 if __name__ == '__main__':
 
     reinf1 = Reinforcement(r=0.00345,#RV('uniform', loc=0.001, scale=0.005),
-                          tau=RV('uniform', loc=5., scale=2.),
-                          V_f=0.15,
+                          tau=0.000001,#RV('uniform', loc=5., scale=2.),
+                          V_f=0.999,
                           E_f=70e3,
-                          xi=RV('weibull_min', shape=10., scale=0.03),
-                          n_int=25,
+                          xi=RV('weibull_min', shape=5., scale=0.03),
+                          n_int=300,
                           label='AR glass')
 
     reinf2 = Reinforcement(r=0.003,#RV('uniform', loc=0.002, scale=0.002),
@@ -188,25 +188,12 @@ if __name__ == '__main__':
                           label='carbon')
 
     model = CompositeCrackBridge(E_m=25e3,
-                                 reinforcement_lst=[reinf1, reinf3],
+                                 reinforcement_lst=[reinf1],
                                  Ll=10.,
                                  Lr=10.)
 
     ccb_view = CompositeCrackBridgeView(model=model)
     #ccb_view.apply_load(1.)
-
-    def test(w):
-        n_int = ccb_view.model.reinforcement_lst[0].n_int
-        ccb_view.model.w = w
-        diff = np.diff(ccb_view.model.A * 200e3 * 0.00345) / (3.0 / n_int)
-        form = (ccb_view.model.A/(ccb_view.model.B+ccb_view.model.C))[:-1]
-        factor =  np.abs(np.max(form)/np.max(diff))
-        #print 'factor =', 1./factor
-        print form
-        plt.plot(np.linspace(1, 3, n_int-1), diff, label='diff')
-        plt.plot(np.linspace(1, 3, n_int-1), form, label='analyt')
-        plt.xlabel('$\phi$')
-        plt.ylabel('$\mathrm{d}a/\mathrm{d}\phi$')
 
     def profile(w):
         ccb_view.model.w = w
@@ -266,11 +253,14 @@ if __name__ == '__main__':
         plt.ylim(0.0)
         plt.legend(loc='best')
 
-    #test(0.03)
     #TODO: check energy for combined reinf
     #energy(np.linspace(.0, .15, 100))
     #profile(.01)
-    sigma_c_w(np.linspace(.0, .15, 100))
+    w = np.linspace(.0, 1.15, 100)
+    sigma_c_w(w)
+    e = w/20.
+    sigma = 70e3*e*np.exp(-(e/0.03)**5.)
+    plt.plot(w,sigma)
     #plt.plot(ccb_view.sigma_c_max[1], ccb_view.sigma_c_max[0], 'ro')
     #sigma_f(np.linspace(.0, .16, 50))
     plt.legend(loc='best')
