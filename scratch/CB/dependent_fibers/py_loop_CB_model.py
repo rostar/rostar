@@ -264,6 +264,22 @@ class CompositeCrackBridgeLoop(HasTraits):
         self._epsm_arr = np.hstack((np.array(em_short)[::-1][:-1], np.array(em_long)))
         self._epsf0_arr = epsf0
         residuum = self.vect_xi_cdf(epsf0, x_short=x_short, x_long=x_long) - iter_damage
+        print x_short[51]
+
+#[ 1.20608929  1.22466993  1.24297079  1.26100404  1.27878101  1.29631225
+#  1.31360761  1.33067629  1.34752691  1.36416755  1.38060581  1.39684883
+#  1.41290335  1.42877574  1.44447199  1.45999779  1.47535853  1.4905593
+#  1.50560495  1.5205001   1.53524911  1.54985618  1.56432526  1.57866017
+#  1.59286452  1.60694177  1.62089524  1.6347281   1.64844338  1.66204401
+#  1.67553276  1.68891232  1.70218527  1.71535407  1.72842113  1.74138871
+#  1.75425904  1.76703423  1.77971633  1.79230733  1.80480913  1.81722356
+#  1.82955241  1.8417974   1.85396019  1.86604239  1.87804555  1.88997118
+#  1.90182073  1.91359563]
+#        plt.plot(self._x_arr, self._epsm_arr)
+#        plt.xlim(-2,2)
+#        plt.ylim(0,0.035)
+        #plt.plot(dem_short)
+        #plt.show()
         return residuum
 
     _x_arr = Array
@@ -296,22 +312,33 @@ class CompositeCrackBridgeLoop(HasTraits):
 
 if __name__ == '__main__':
     from matplotlib import pyplot as plt
-    reinf = Reinforcement(r=0.00345,#RV('uniform', loc=0.002, scale=0.002),
-                          tau=RV('uniform', loc=1., scale=10.),
-                          V_f=0.5,
+    reinf1 = Reinforcement(r=0.00345,#RV('uniform', loc=0.001, scale=0.005),
+                          tau=RV('uniform', loc=3., scale=2.),
+                          V_f=0.1,
+                          E_f=70e3,
+                          xi=RV('weibull_min', shape=5., scale=90.04),
+                          n_int=50,
+                          label='AR glass')
+
+    reinf2 = Reinforcement(r=0.003,#RV('uniform', loc=0.002, scale=0.002),
+                          tau=RV('uniform', loc=1.3, scale=2.05),
+                          V_f=0.1,
                           E_f=200e3,
-                          xi=RV('weibull_min', shape=5., scale=0.05),
-                          n_int=50)
+                          xi=RV('weibull_min', shape=10., scale=90.02),
+                          n_int=50,
+                          label='carbon')
 
     ccb = CompositeCrackBridgeLoop(E_m=25e3,
-                                 reinforcement_lst=[reinf],
-                                 Ll=1.,
-                                 Lr=3.,
-                                 w=0.03)
+                                 reinforcement_lst=[reinf1, reinf2],
+                                 Ll=15.,
+                                 Lr=15.,
+                                 w=0.02)
+    
     ccb.damage
     plt.plot(ccb._x_arr, ccb._epsm_arr, label='loop')
     plt.plot(np.zeros_like(ccb._epsf0_arr), ccb._epsf0_arr, 'ro')
     for i, depsf in enumerate(ccb.sorted_depsf):
         plt.plot(ccb._x_arr, np.maximum(ccb._epsf0_arr[i] - depsf*np.abs(ccb._x_arr),ccb._epsm_arr))
     plt.legend(loc='best')
+    plt.xlim(-1,1)
     plt.show()

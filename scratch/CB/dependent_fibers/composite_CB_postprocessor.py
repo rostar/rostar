@@ -6,6 +6,7 @@ Created on 16.11.2012
 from etsproxy.traits.ui.api import ModelView
 from etsproxy.traits.api import Instance, Property, cached_property, Array
 from composite_CB_model import CompositeCrackBridge
+from py_loop_CB_model import CompositeCrackBridgeLoop
 import numpy as np
 from matplotlib import pyplot as plt
 from spirrid.rv import RV
@@ -164,19 +165,19 @@ class CompositeCrackBridgeView(ModelView):
 if __name__ == '__main__':
 
     reinf1 = Reinforcement(r=0.00345,#RV('uniform', loc=0.001, scale=0.005),
-                          tau=0.000001,#RV('uniform', loc=5., scale=2.),
-                          V_f=0.999,
+                          tau=RV('uniform', loc=4., scale=2.),
+                          V_f=0.2,
                           E_f=70e3,
-                          xi=RV('weibull_min', shape=5., scale=0.03),
-                          n_int=300,
+                          xi=RV('weibull_min', shape=5., scale=0.04),
+                          n_int=100,
                           label='AR glass')
 
     reinf2 = Reinforcement(r=0.003,#RV('uniform', loc=0.002, scale=0.002),
                           tau=RV('uniform', loc=.3, scale=.05),
-                          V_f=0.5,
+                          V_f=0.1,
                           E_f=200e3,
                           xi=RV('weibull_min', shape=20., scale=0.02),
-                          n_int=15,
+                          n_int=100,
                           label='carbon')
 
     reinf3 = Reinforcement(r=0.00345,#RV('uniform', loc=0.002, scale=0.002),
@@ -188,7 +189,7 @@ if __name__ == '__main__':
                           label='carbon')
 
     model = CompositeCrackBridge(E_m=25e3,
-                                 reinforcement_lst=[reinf1],
+                                 reinforcement_lst=[reinf1, reinf2],
                                  Ll=10.,
                                  Lr=10.)
 
@@ -256,11 +257,11 @@ if __name__ == '__main__':
     #TODO: check energy for combined reinf
     #energy(np.linspace(.0, .15, 100))
     #profile(.01)
-    w = np.linspace(.0, 1.15, 100)
+    w = np.linspace(.0, .4, 200)
     sigma_c_w(w)
-    e = w/20.
-    sigma = 70e3*e*np.exp(-(e/0.03)**5.)
-    plt.plot(w,sigma)
+    # bundle at 20 mm
+    #sigma_bundle = 70e3*w/20.*np.exp(-(w/20./0.03)**5.)
+    #plt.plot(w,sigma_bundle)
     #plt.plot(ccb_view.sigma_c_max[1], ccb_view.sigma_c_max[0], 'ro')
     #sigma_f(np.linspace(.0, .16, 50))
     plt.legend(loc='best')

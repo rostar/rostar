@@ -142,6 +142,26 @@ class CompositeCrackBridge(HasTraits):
         mu_T = np.cumsum((self.sorted_depsf * Kf * (1. - damage))[::-1])[::-1]
         return mu_T / E_mtrx
 
+    def double_sided_pullout(self, dems, amin):
+        f = 1./self.sorted_E_f/(self.sorted_depsf + dems)
+        T_arr = (self.sorted_depsf*self.sorted_E_f)[::-1]
+        F = np.hstack((np.array([0.0]), cumtrapz(f[::-1], T_arr)))
+        C = np.log(amin)
+        a1 = np.exp(F/2. + C)
+
+        f1 = 1./self.sorted_E_f[:50]/(self.sorted_depsf[:50] + dems[:50])
+        f2 = 1./self.sorted_E_f[50:]/(self.sorted_depsf[50:] + dems[50:])
+        T_arr1 = (self.sorted_depsf[:50]*self.sorted_E_f[:50])[::-1]
+        T_arr2 = (self.sorted_depsf[50:]*self.sorted_E_f[50:])[::-1]
+        F1 = np.hstack((np.array([0.0]), cumtrapz(f1[::-1], T_arr1)))
+        F2 = np.hstack((np.array([0.0]), cumtrapz(f2[::-1], T_arr2)))
+        C1 = np.log(amin)
+        C2 = np.log(0.937970133373)
+        a1 = np.exp(F1/2. + C1)
+        a2 = np.exp(F2/2. + C2)
+        a1 = np.hstack((a1, a2))
+        return a1
+
     def profile(self, iter_damage, Lmin, Lmax):
         # matrix strain derivative with resp. to z as a function of T
         dems = self.dem_depsf_vect(self.sorted_depsf, iter_damage)
@@ -150,11 +170,7 @@ class CompositeCrackBridge(HasTraits):
         # debonded length of fibers with Tmax
         amin = (self.w / (np.abs(init_dem) + np.abs(self.sorted_depsf[0])))**0.5
         # a(T) for double sided pullout
-        f = 1./200e3/(self.sorted_depsf + np.array(dems))
-        T_arr = (self.sorted_depsf*200e3)[::-1]
-        F = np.hstack((np.array([0.0]), cumtrapz(f, T_arr)))
-        C = np.log(amin)
-        a1 = np.exp(F/2. + C)
+        a1 = self.double_sided_pullout(dems, amin)
         if a1[-1] <= Lmin:
             #double sided pullout
             a = np.hstack((-Lmin, -a1[::-1], 0.0, a1, Lmin))
@@ -212,6 +228,10 @@ class CompositeCrackBridge(HasTraits):
         self._x_arr = a
         self._epsm_arr = em
         self._epsf0_arr = epsf0
+#        plt.plot(self._x_arr, self._epsm_arr)
+#        plt.xlim(-2,2)
+#        plt.ylim(0,0.035)
+#        plt.show()
         return epsf0
 
     def damage_residuum(self, iter_damage):
@@ -251,22 +271,46 @@ class CompositeCrackBridge(HasTraits):
 
 if __name__ == '__main__':
     from matplotlib import pyplot as plt
-    reinf = Reinforcement(r=0.00345,#RV('uniform', loc=0.002, scale=0.002),
-                          tau=RV('uniform', loc=1., scale=10.),
-                          V_f=0.5,
+#    reinf = Reinforcement(r=0.00345,#RV('uniform', loc=0.002, scale=0.002),
+#                          tau=RV('uniform', loc=1., scale=10.),
+#                          V_f=0.5,
+#                          E_f=200e3,
+#                          xi=RV('weibull_min', shape=5., scale=0.05),
+#                          n_int=50)
+#
+#    ccb = CompositeCrackBridge(E_m=25e3,
+#                                 reinforcement_lst=[reinf],
+#                                 Ll=1.,
+#                                 Lr=3.,
+#                                 w=0.03)
+    
+    reinf1 = Reinforcement(r=0.00345,#RV('uniform', loc=0.001, scale=0.005),
+                          tau=RV('uniform', loc=3., scale=2.),
+                          V_f=0.1,
+                          E_f=70e3,
+                          xi=RV('weibull_min', shape=5., scale=90.04),
+                          n_int=50,
+                          label='AR glass')
+
+    reinf2 = Reinforcement(r=0.003,#RV('uniform', loc=0.002, scale=0.002),
+                          tau=RV('uniform', loc=1.3, scale=2.05),
+                          V_f=0.1,
                           E_f=200e3,
-                          xi=RV('weibull_min', shape=5., scale=0.05),
-                          n_int=50)
+                          xi=RV('weibull_min', shape=10., scale=90.02),
+                          n_int=50,
+                          label='carbon')
 
     ccb = CompositeCrackBridge(E_m=25e3,
-                                 reinforcement_lst=[reinf],
-                                 Ll=1.,
-                                 Lr=3.,
-                                 w=0.03)
+                                 reinforcement_lst=[reinf1, reinf2],
+                                 Ll=2.,
+                                 Lr=2.,
+                                 w=0.02)
+
     ccb.damage
     plt.plot(ccb._x_arr, ccb._epsm_arr, lw=2, color='red', ls='dashed', label='analytical')
     plt.plot(np.zeros_like(ccb._epsf0_arr), ccb._epsf0_arr, 'ro')
     for i, depsf in enumerate(ccb.sorted_depsf):
         plt.plot(ccb._x_arr, np.maximum(ccb._epsf0_arr[i] - depsf*np.abs(ccb._x_arr),ccb._epsm_arr))
     plt.legend(loc='best')
+    plt.xlim(-1,1)
     plt.show()
