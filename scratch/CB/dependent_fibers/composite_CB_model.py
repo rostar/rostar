@@ -21,6 +21,7 @@ from scipy.optimize import fsolve, broyden2
 import time as t
 from scipy.integrate import cumtrapz
 import time
+from mathkit.mfn.mfn_line.mfn_line import MFnLineArray
 
 
 class CompositeCrackBridge(HasTraits):
@@ -67,9 +68,15 @@ class CompositeCrackBridge(HasTraits):
                                           np.repeat(reinf.stat_weights, n_int)))
             nu_r_arr = np.hstack((nu_r_arr, reinf.nu_r))
         argsort = np.argsort(depsf_arr)[::-1]
+        idxs = np.array([])
+        for i, reinf in enumerate(self.reinforcement_lst):
+            idxs = np.hstack((idxs, i * np.ones_like(reinf.depsf_arr)))
+        masks = []
+        for i, reinf in enumerate(self.reinforcement_lst):
+            masks.append((idxs == i)[argsort])
         return depsf_arr[argsort], V_f_arr[argsort], E_f_arr[argsort], \
                 xi_arr[argsort],  stat_weights_arr[argsort], \
-                nu_r_arr[argsort]
+                nu_r_arr[argsort], masks
 
     sorted_depsf = Property(depends_on='reinforcement_lst+')
     @cached_property
@@ -100,6 +107,11 @@ class CompositeCrackBridge(HasTraits):
     @cached_property
     def _get_sorted_nu_r(self):
         return self.sorted_theta[5]
+
+    sorted_masks = Property(depends_on='reinforcement_lst+')
+    @cached_property
+    def _get_sorted_masks(self):
+        return self.sorted_theta[6]
 
     sorted_xi_cdf = Property(depends_on='reinforcement_lst+')
     @cached_property
@@ -143,24 +155,73 @@ class CompositeCrackBridge(HasTraits):
         return mu_T / E_mtrx
 
     def double_sided_pullout(self, dems, amin):
-        f = 1./self.sorted_E_f/(self.sorted_depsf + dems)
-        T_arr = (self.sorted_depsf*self.sorted_E_f)[::-1]
-        F = np.hstack((np.array([0.0]), cumtrapz(f[::-1], T_arr)))
-        C = np.log(amin)
-        a1 = np.exp(F/2. + C)
+#         f = 1./(self.sorted_depsf + dems)
+#         F = np.hstack((np.array([0.0]), cumtrapz(f[::-1], self.sorted_depsf[::-1])))
+#         C = np.log(amin)
+#         a1 = np.exp(F/2. + C)
 
-        f1 = 1./self.sorted_E_f[:50]/(self.sorted_depsf[:50] + dems[:50])
-        f2 = 1./self.sorted_E_f[50:]/(self.sorted_depsf[50:] + dems[50:])
-        T_arr1 = (self.sorted_depsf[:50]*self.sorted_E_f[:50])[::-1]
-        T_arr2 = (self.sorted_depsf[50:]*self.sorted_E_f[50:])[::-1]
-        F1 = np.hstack((np.array([0.0]), cumtrapz(f1[::-1], T_arr1)))
-        F2 = np.hstack((np.array([0.0]), cumtrapz(f2[::-1], T_arr2)))
+        f1 = 1./(self.sorted_depsf[:50] + dems[:50])
+        f2 = 1./(self.sorted_depsf[50:] + dems[50:])
+        F1 = np.hstack((np.array([0.0]), cumtrapz(f1[::-1], self.sorted_depsf[:50][::-1])))
+        F2 = np.hstack((np.array([0.0]), cumtrapz(f2[::-1], self.sorted_depsf[50:][::-1])))
         C1 = np.log(amin)
         C2 = np.log(0.937970133373)
+        #plt.plot(self.sorted_depsf[50:][::-1], F1/2 + C1, ls = 'dashed', lw = 2)
+        #plt.plot(self.sorted_depsf[:50][::-1], F2/2 + C2, ls = 'dashed', lw = 2)
+        plt.plot(-self.sorted_depsf, np.exp(np.hstack((F1/2. + C1, F2/2. + C2))), ls = 'dashed', lw = 2)
         a1 = np.exp(F1/2. + C1)
         a2 = np.exp(F2/2. + C2)
         a1 = np.hstack((a1, a2))
         return a1
+    
+    def F(self, dems, amin):
+        # sort the reinforcement types according to their depsf_max
+        depsf_max = np.array([np.max(reinf.depsf_arr) for reinf in self.reinforcement_lst])
+        argsort = np.argsort(depsf_max)[::-1]
+        reinf_arr = np.array(self.reinforcement_lst)[argsort]
+        mask_arr = np.array(self.sorted_masks)
+        Fis = []
+        depsfi_lst = []
+        ais_lst = []
+        for i, reinf in enumerate(reinf_arr):
+            #sort depsf within a reinforcement
+            depsfi = np.sort(self.sorted_depsf[mask_arr[i]])[::-1]
+            depsfi_lst.append(depsfi)
+            demsi = np.sort(dems[mask_arr[i]])[::-1]
+            fi = 1./(depsfi+demsi)
+            Fis.append(np.hstack((np.array([0.0]), cumtrapz(fi[::-1], depsfi[::-1]))))
+            if i == 0:
+                a0i = amin
+            else:
+                idx = np.sum(depsfi[0] < depsfi_lst[i-1]) - 1
+                a1 = ais_lst[i-1][idx]
+                dem = dems[np.argwhere(self.sorted_depsf == depsfi[0])].flatten()
+                ddepsf = depsfi_lst[i-1][idx] - depsfi[0]
+                da = np.sqrt(a1**2 * (1 + 2*(ddepsf)/(depsfi[0]+dem))) - a1
+                a0i = a1 + da
+                print a1, da
+            ais_lst.append(np.exp(Fis[i]/2. + np.log(a0i)))
+            plt.plot(-depsfi, ais_lst[i], color = 'black', lw = 2)
+            
+        
+        F = np.zeros_like(self.sorted_depsf)
+        f = np.zeros_like(self.sorted_depsf)
+        for mask in self.sorted_masks:
+            depsfi = self.sorted_depsf[mask]
+            demsi = dems[mask]
+            fi = 1./(depsfi + demsi)
+            fi_line = MFnLineArray(xdata=-depsfi, ydata=fi[::-1], extrapolate='zero')
+            f += fi_line.get_values(-self.sorted_depsf)
+#             Fi = np.hstack((np.array([0.0]), cumtrapz(fi[::-1], depsfi[::-1])))
+#             Fi_line = MFnLineArray(xdata=depsfi[::-1], ydata=Fi[::-1], extrapolate='constant')
+#             F += Fi_line.get_values(self.sorted_depsf[::-1])
+        f[50] = 20.
+        #plt.plot(-self.sorted_depsf, f/300, lw =2)
+        F = np.hstack((np.array([0.0]), cumtrapz(f, -self.sorted_depsf)))
+        #plt.plot(-self.sorted_depsf, F/2. -0.491297228486, color = 'black')
+        plt.plot(-self.sorted_depsf, np.exp(F/2. -0.491297228486))
+        plt.show()
+        return F
 
     def profile(self, iter_damage, Lmin, Lmax):
         # matrix strain derivative with resp. to z as a function of T
@@ -171,6 +232,7 @@ class CompositeCrackBridge(HasTraits):
         amin = (self.w / (np.abs(init_dem) + np.abs(self.sorted_depsf[0])))**0.5
         # a(T) for double sided pullout
         a1 = self.double_sided_pullout(dems, amin)
+        F = self.F(dems, amin)
         if a1[-1] <= Lmin:
             #double sided pullout
             a = np.hstack((-Lmin, -a1[::-1], 0.0, a1, Lmin))

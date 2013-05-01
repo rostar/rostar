@@ -330,8 +330,8 @@ if __name__ == '__main__':
 
     ccb = CompositeCrackBridgeLoop(E_m=25e3,
                                  reinforcement_lst=[reinf1, reinf2],
-                                 Ll=15.,
-                                 Lr=15.,
+                                 Ll=2.,
+                                 Lr=2.,
                                  w=0.02)
     
     ccb.damage
@@ -340,5 +340,5 @@ if __name__ == '__main__':
     for i, depsf in enumerate(ccb.sorted_depsf):
         plt.plot(ccb._x_arr, np.maximum(ccb._epsf0_arr[i] - depsf*np.abs(ccb._x_arr),ccb._epsm_arr))
     plt.legend(loc='best')
-    plt.xlim(-1,1)
+    plt.xlim(-2,2)
     plt.show()
