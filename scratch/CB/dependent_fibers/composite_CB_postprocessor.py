@@ -18,7 +18,7 @@ from mathkit.mfn.mfn_line.mfn_line import MFnLineArray
 
 class CompositeCrackBridgeView(ModelView):
 
-    model = Instance(CompositeCrackBridge)
+    model = Instance(CompositeCrackBridgeLoop)
     results = Property(depends_on='model.E_m, model.w, model.Ll, model.Lr, model.reinforcement_lst+')
     @cached_property
     def _get_results(self):
@@ -188,7 +188,7 @@ if __name__ == '__main__':
                           n_int=25,
                           label='carbon')
 
-    model = CompositeCrackBridge(E_m=25e3,
+    model = CompositeCrackBridgeLoop(E_m=25e3,
                                  reinforcement_lst=[reinf1, reinf2],
                                  Ll=10.,
                                  Lr=10.)
