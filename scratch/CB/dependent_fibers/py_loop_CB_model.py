@@ -293,25 +293,25 @@ if __name__ == '__main__':
     from matplotlib import pyplot as plt
 
     reinf1 = Reinforcement(r=0.00345,#RV('uniform', loc=0.001, scale=0.005),
-                          tau=RV('uniform', loc=1., scale=2.),
-                          V_f=0.1,
+                          tau=RV('uniform', loc=4., scale=2.),
+                          V_f=0.2,
                           E_f=70e3,
-                          xi=RV('weibull_min', shape=5., scale=90.04),
-                          n_int=5,
+                          xi=RV('weibull_min', shape=5., scale=0.04),
+                          n_int=100,
                           label='AR glass')
 
     reinf2 = Reinforcement(r=0.003,#RV('uniform', loc=0.002, scale=0.002),
-                          tau=RV('uniform', loc=1.3, scale=2.05),
+                          tau=RV('uniform', loc=.3, scale=.05),
                           V_f=0.1,
                           E_f=200e3,
-                          xi=RV('weibull_min', shape=10., scale=90.02),
-                          n_int=7,
+                          xi=RV('weibull_min', shape=20., scale=0.02),
+                          n_int=100,
                           label='carbon')
 
     ccb = CompositeCrackBridgeLoop(E_m=25e3,
                                  reinforcement_lst=[reinf1, reinf2],
-                                 Ll=1.,
-                                 Lr=.3,
+                                 Ll=.6,
+                                 Lr=5.3,
                                  w=0.02)
 
     ccb.damage
@@ -320,5 +320,5 @@ if __name__ == '__main__':
     for i, depsf in enumerate(ccb.sorted_depsf):
         plt.plot(ccb._x_arr, np.maximum(ccb._epsf0_arr[i] - depsf*np.abs(ccb._x_arr),ccb._epsm_arr))
     plt.legend(loc='best')
-    plt.xlim(-2,2)
+    plt.xlim(-3,4)
     plt.show()
