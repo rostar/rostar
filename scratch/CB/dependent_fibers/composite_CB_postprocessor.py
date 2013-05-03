@@ -18,7 +18,7 @@ from mathkit.mfn.mfn_line.mfn_line import MFnLineArray
 
 class CompositeCrackBridgeView(ModelView):
 
-    model = Instance(CompositeCrackBridgeLoop)
+    model = Instance(CompositeCrackBridge)
     results = Property(depends_on='model.E_m, model.w, model.Ll, model.Lr, model.reinforcement_lst+')
     @cached_property
     def _get_results(self):
@@ -169,7 +169,7 @@ if __name__ == '__main__':
                           V_f=0.2,
                           E_f=70e3,
                           xi=RV('weibull_min', shape=5., scale=0.04),
-                          n_int=100,
+                          n_int=50,
                           label='AR glass')
 
     reinf2 = Reinforcement(r=0.003,#RV('uniform', loc=0.002, scale=0.002),
@@ -177,7 +177,7 @@ if __name__ == '__main__':
                           V_f=0.1,
                           E_f=200e3,
                           xi=RV('weibull_min', shape=20., scale=0.02),
-                          n_int=100,
+                          n_int=50,
                           label='carbon')
 
     reinf3 = Reinforcement(r=0.00345,#RV('uniform', loc=0.002, scale=0.002),
@@ -188,9 +188,9 @@ if __name__ == '__main__':
                           n_int=25,
                           label='carbon')
 
-    model = CompositeCrackBridgeLoop(E_m=25e3,
+    model = CompositeCrackBridge(E_m=25e3,
                                  reinforcement_lst=[reinf1, reinf2],
-                                 Ll=10.,
+                                 Ll=5.,
                                  Lr=10.)
 
     ccb_view = CompositeCrackBridgeView(model=model)
@@ -257,7 +257,7 @@ if __name__ == '__main__':
     #TODO: check energy for combined reinf
     #energy(np.linspace(.0, .15, 100))
     #profile(.01)
-    w = np.linspace(.0, .4, 200)
+    w = np.linspace(.0, .35, 100)
     sigma_c_w(w)
     # bundle at 20 mm
     #sigma_bundle = 70e3*w/20.*np.exp(-(w/20./0.03)**5.)
