@@ -259,6 +259,9 @@ class CompositeCrackBridge(HasTraits):
         self._x_arr = a
         self._epsm_arr = em
         self._epsf0_arr = epsf0
+        if self.Ll > self.Lr:
+            self._x_arr = -self._x_arr[::-1]
+            self._epsm_arr = self._epsm_arr[::-1]
         a_short = -a[a<0.0][1:][::-1]
         if len(a_short) < len(self.sorted_depsf):
             a_short = np.hstack((a_short, Lmin * np.ones(len(self.sorted_depsf) - len(a_short))))
@@ -323,8 +326,8 @@ if __name__ == '__main__':
 
     ccb = CompositeCrackBridge(E_m=25e3,
                                  reinforcement_lst=[reinf1, reinf2],
-                                 Ll=5.,
-                                 Lr=8.,
+                                 Ll=8.,
+                                 Lr=3.,
                                  w=0.028)
 
     ccb.damage
