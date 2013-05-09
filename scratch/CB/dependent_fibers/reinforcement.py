@@ -20,15 +20,9 @@ from math import pi
 class WeibullFibers(HasTraits):
     '''class evaluating damage for weibull fibers with linearly decreasing stress'''
     shape = Float(5.0)
-    scale = Float(0.02)
-    L0 = Float(10.)
+    sV0 = Float(3e-3)
     
-    distribution = Property(depends_on='shape, scale, L0')
-    @cached_property
-    def _get_distribution(self):
-        return weibull_min(self.shape, scale=self.scale)
-    
-    def weibull_fibers_Pf(self, epsy_arr, depsf, x_short, x_long):
+    def weibull_fibers_Pf(self, epsy_arr, depsf, x_short, x_long, r_arr):
         x_short = np.hstack((x_short[1:], np.repeat(x_short[-1], len(epsy_arr)-len(x_short[1:]))))
         x_long = np.hstack((x_long[1:], np.repeat(x_long[-1], len(epsy_arr)-len(x_long[1:]))))
         Pf_short = (((depsf * x_short - 1.) * ((epsy_arr * (1. - depsf * x_short)))

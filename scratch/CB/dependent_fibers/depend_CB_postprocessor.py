@@ -5,7 +5,7 @@ Created on 16.11.2012
 '''
 from etsproxy.traits.ui.api import ModelView
 from etsproxy.traits.api import Instance, Property, cached_property, Array
-from composite_CB_model import CompositeCrackBridge
+from depend_CB_model import CompositeCrackBridge
 from py_loop_CB_model import CompositeCrackBridgeLoop
 import numpy as np
 from matplotlib import pyplot as plt
@@ -181,17 +181,17 @@ if __name__ == '__main__':
                           label='carbon')
 
     reinf3 = Reinforcement(r=0.00345,#RV('uniform', loc=0.002, scale=0.002),
-                          tau=RV('uniform', loc=1., scale=1.5),
+                          tau=.2,
                           V_f=0.15,
                           E_f=200e3,
-                          xi=RV('weibull_min', shape=25., scale=0.02),
-                          n_int=25,
+                          xi=RV('weibull_min', shape=5., scale=0.02),
+                          n_int=50,
                           label='carbon')
 
     model = CompositeCrackBridge(E_m=25e3,
-                                 reinforcement_lst=[reinf1, reinf2],
-                                 Ll=5.,
-                                 Lr=10.)
+                                 reinforcement_lst=[reinf3],
+                                 Ll=100.,
+                                 Lr=100.)
 
     ccb_view = CompositeCrackBridgeView(model=model)
     #ccb_view.apply_load(1.)
@@ -205,20 +205,20 @@ if __name__ == '__main__':
 
     def sigma_c_w(w_arr):
         sigma_c = []
-        w_err = []
+        #w_err = []
         u = []
         for w in w_arr:
             ccb_view.model.w = w
             sigma_c.append(ccb_view.sigma_c)
             #w_err.append((ccb_view.w_evaluated - ccb_view.model.w) / (ccb_view.model.w))
-            #u.append(ccb_view.u_evaluated)
+            u.append(ccb_view.u_evaluated)
         #plt.figure()
         #plt.plot(w_arr, w_err, label='error in w')
         #plt.legend(loc='best')
         #plt.figure()
-        plt.plot(w_arr, sigma_c, lw=2, color='black', label='komb. Bewehrung')
-        #plt.plot(u, sigma_c, lw=2, label='elastic')
-        plt.xlabel('w [mm]')
+        plt.plot(w_arr, sigma_c, lw=2, color='black', label='w-sigma')
+        plt.plot(u, sigma_c, lw=2, label='u-sigma')
+        plt.xlabel('w,u [mm]')
         plt.ylabel('$\sigma_c$ [MPa]')
         plt.legend(loc='best')
 
@@ -257,7 +257,7 @@ if __name__ == '__main__':
     #TODO: check energy for combined reinf
     #energy(np.linspace(.0, .15, 100))
     #profile(.01)
-    w = np.linspace(.0, .35, 100)
+    w = np.linspace(.0, 2.4, 100)
     sigma_c_w(w)
     # bundle at 20 mm
     #sigma_bundle = 70e3*w/20.*np.exp(-(w/20./0.03)**5.)
