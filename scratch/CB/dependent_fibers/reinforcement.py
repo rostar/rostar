@@ -14,25 +14,22 @@ from etsproxy.traits.api import HasTraits, cached_property, \
     Float, Property, Int, Str
 from types import FloatType
 from util.traits.either_type import EitherType
-from scipy.stats import weibull_min
 from math import pi
 
 class WeibullFibers(HasTraits):
-    '''class evaluating damage for weibull fibers with linearly decreasing stress'''
+    '''class evaluating damage for Weibull fibers with linearly decreasing stress'''
     shape = Float(5.0)
-    sV0 = Float(3e-3)
-    
+    scale = Float(3e-3)
+    V0 = 1.
+
     def weibull_fibers_Pf(self, epsy_arr, depsf, x_short, x_long, r_arr):
+        m = self.shape
         x_short = np.hstack((x_short[1:], np.repeat(x_short[-1], len(epsy_arr)-len(x_short[1:]))))
         x_long = np.hstack((x_long[1:], np.repeat(x_long[-1], len(epsy_arr)-len(x_long[1:]))))
-        Pf_short = (((depsf * x_short - 1.) * ((epsy_arr * (1. - depsf * x_short)))
-                     / self.scale) ** self.shape + ( epsy_arr / self.scale ) ** self.shape) / (self.shape + 1) / depsf
-        Pf_long = (((depsf * x_long - 1.) * ((epsy_arr * (1. - depsf * x_long)))
-                     / self.scale) ** self.shape + ( epsy_arr / self.scale ) ** self.shape) / (self.shape + 1) / depsf
-        Pf_short = 1. - np.exp(-1. / self.L0 * Pf_short)
-        Pf_long = 1. - np.exp(-1. / self.L0 * Pf_long)
-        return Pf_long + Pf_short - Pf_long * Pf_short  
-
+        s = depsf * (m + 1) * self.sV0 ** m * self.V0 / pi / r_arr **2
+        a0 = epsy_arr / depsf
+        Pf = 1. - np.exp( - epsy_arr ** (m+1)/s * (2. - (1-x_short/a0)**(m+1) - (1-x_long/a0)**(m+1)) )
+        return Pf
 
 class Reinforcement(HasTraits):
 
@@ -64,6 +61,7 @@ class Reinforcement(HasTraits):
             nu_r = r2 / np.mean(r2)
         else:
             r = self.r
+            r2 = r ** 2
             nu_r = nu_r_tau * 1.0
         if isinstance(tau, np.ndarray) and isinstance(r, np.ndarray):
             r = r.reshape(1, self.n_int)
@@ -71,9 +69,11 @@ class Reinforcement(HasTraits):
             nu_r_r = (r2 / np.mean(r2)).reshape(1, self.n_int)
             nu_r_tau = np.ones(self.n_int).reshape(self.n_int, 1)
             nu_r = nu_r_r * nu_r_tau
-            return (2. * tau / r / self.E_f).flatten(), stat_weights, nu_r.flatten()
+            r_arr = (nu_r * np.mean(r2))**0.5
+            return (2. * tau / r / self.E_f).flatten(), stat_weights, nu_r.flatten(), r_arr.flatten()
         else:
-            return 2. * tau / r / self.E_f, stat_weights, nu_r
+            r_arr = (nu_r * np.mean(r2))**0.5
+            return 2. * tau / r / self.E_f, stat_weights, nu_r, r_arr
 
     depsf_arr = Property(depends_on='r, V_f, E_f, xi, tau, n_int')
     @cached_property
@@ -88,6 +88,11 @@ class Reinforcement(HasTraits):
     nu_r = Property(depends_on='r, V_f, E_f, xi, tau, n_int')
     @cached_property
     def _get_nu_r(self):
-        return self.results[2]  
+        return self.results[2]
+    
+    r_arr = Property(depends_on='r, V_f, E_f, xi, tau, n_int')
+    @cached_property
+    def _get_r_arr(self):
+        return self.results[3]  
     
 

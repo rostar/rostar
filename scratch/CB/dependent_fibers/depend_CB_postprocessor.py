@@ -184,7 +184,15 @@ if __name__ == '__main__':
                           tau=.2,
                           V_f=0.15,
                           E_f=200e3,
-                          xi=RV('weibull_min', shape=5., scale=0.02),
+                          xi=WeibullFibers(shape=5., scale=0.03, L0 = 10.),
+                          n_int=50,
+                          label='carbon')
+    
+    reinf3 = Reinforcement(r=0.00345,#RV('uniform', loc=0.002, scale=0.002),
+                          tau=.2,
+                          V_f=0.15,
+                          E_f=200e3,
+                          xi=WeibullFibers(shape=5., sV0=0.00618983207723),
                           n_int=50,
                           label='carbon')
 

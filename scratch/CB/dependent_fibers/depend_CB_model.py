@@ -57,6 +57,7 @@ class CompositeCrackBridge(HasTraits):
         xi_arr = np.array([])
         stat_weights_arr = np.array([])
         nu_r_arr = np.array([])
+        r_arr = np.array([])
         for reinf in self.reinforcement_lst:
             n_int = len(np.hstack((np.array([]), reinf.depsf_arr)))
             depsf_arr = np.hstack((depsf_arr, reinf.depsf_arr))
@@ -66,6 +67,7 @@ class CompositeCrackBridge(HasTraits):
             stat_weights_arr = np.hstack((stat_weights_arr,
                                           np.repeat(reinf.stat_weights, n_int)))
             nu_r_arr = np.hstack((nu_r_arr, reinf.nu_r))
+            r_arr = np.hstack((r_arr, reinf.r_arr))
         argsort = np.argsort(depsf_arr)[::-1]
         idxs = np.array([])
         for i, reinf in enumerate(self.reinforcement_lst):
@@ -75,7 +77,7 @@ class CompositeCrackBridge(HasTraits):
             masks.append((idxs == i)[argsort])
         return depsf_arr[argsort], V_f_arr[argsort], E_f_arr[argsort], \
                 xi_arr[argsort],  stat_weights_arr[argsort], \
-                nu_r_arr[argsort], masks
+                nu_r_arr[argsort], masks, r_arr[argsort]
 
     sorted_depsf = Property(depends_on='reinforcement_lst+')
     @cached_property
@@ -112,6 +114,11 @@ class CompositeCrackBridge(HasTraits):
     def _get_sorted_masks(self):
         return self.sorted_theta[6]
 
+    sorted_r = Property(depends_on='reinforcement_lst+')
+    @cached_property
+    def _get_sorted_r(self):
+        return self.sorted_theta[7]
+
     sorted_xi_cdf = Property(depends_on='reinforcement_lst+')
     @cached_property
     def _get_sorted_xi_cdf(self):
@@ -135,7 +142,7 @@ class CompositeCrackBridge(HasTraits):
         for i, method in enumerate(methods):
             if method.__name__ == 'weibull_fibers_Pf':
                 Pf += method(epsy * masks[i], self.sorted_depsf,
-                             x_short=x_short, x_long=x_long)
+                             x_short, x_long, self.sorted_r)
             else:
                 Pf += method(epsy * masks[i])
         return Pf

@@ -8,7 +8,7 @@ compares the model with analytical results for
 
 from depend_CB_model import CompositeCrackBridge
 from depend_CB_postprocessor import CompositeCrackBridgeView
-from reinforcement import Reinforcement
+from reinforcement import Reinforcement, WeibullFibers
 from spirrid.rv import RV
 from matplotlib import pyplot as plt
 import numpy as np
@@ -42,11 +42,12 @@ if __name__ == '__main__':
     def bundle_comparison(w_arr, L, shape, scale, E):
         '''bundle (Weibull fibers) response for comparison with the CB model'''
         from scipy.stats import weibull_min
+        sV0 = scale * (3.14159 * 0.00345 **2 * L)**(1/shape)
         eps = w_arr / L * (1. - weibull_min(shape, scale=scale).cdf(w_arr / L))
         plt.plot(w_arr / L, eps * E, lw=4, color='red', ls='dashed', label='FB model')
 
-        bundle = Reinforcement(r=0.13, tau=0.00001, V_f=0.9999, E_f=E,
-                          xi=RV('weibull_min', shape=shape, scale=scale),
+        bundle = Reinforcement(r=0.00345, tau=0.00001, V_f=0.9999, E_f=E,
+                          xi=WeibullFibers(shape=shape, sV0=sV0),
                           n_int=50)
         ccb = CompositeCrackBridge(E_m=25e3,
                                    reinforcement_lst=[bundle],
@@ -109,6 +110,6 @@ if __name__ == '__main__':
         plt.plot(w_arr, stress, color='blue', lw=2, label='CB model')
         plt.legend(loc='best')
 
-    bundle_comparison(np.linspace(0, 0.65, 30), 20., 5., 0.02, 70e3)
+    bundle_comparison(np.linspace(0, 0.65, 100), 10., 5., 0.02, 70e3)
     #analytical_comparison()
     plt.show()
