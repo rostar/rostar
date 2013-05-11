@@ -11,12 +11,12 @@ import numpy as np
 from matplotlib import pyplot as plt
 from spirrid.rv import RV
 from reinforcement import Reinforcement, WeibullFibers
-from scipy.optimize import fmin, brentq
+from scipy.optimize import brentq, minimize
 from scipy.integrate import cumtrapz
 from mathkit.mfn.mfn_line.mfn_line import MFnLineArray
 
 
-class CompositeCrackBridgeView(ModelView):
+class CompositeCrackBridgePostprocessor(ModelView):
 
     model = Instance(CompositeCrackBridge)
     results = Property(depends_on='model.E_m, model.w, model.Ll, model.Lr, model.reinforcement_lst+')
@@ -40,7 +40,7 @@ class CompositeCrackBridgeView(ModelView):
     @cached_property
     def _get_x_arr(self):
         return self.results[0]
-
+ 
     epsm_arr = Property(depends_on='model.E_m, model.w, model.Ll, model.Lr, model.reinforcement_lst+')
     @cached_property
     def _get_epsm_arr(self):
@@ -61,6 +61,18 @@ class CompositeCrackBridgeView(ModelView):
     def _get_w_evaluated(self):
         return np.trapz(self.mu_epsf_arr - self.epsm_arr, self.x_arr)
 
+    def sigma_c_arr(self, w_arr, u=False):
+        sigma_c_lst = []
+        u_lst = []
+        for w in w_arr:
+            ccb_view.model.w = w
+            sigma_c_lst.append(ccb_view.sigma_c)
+            if u==True:
+                u_lst.append(self.u_evaluated)
+        if u==True:
+            return np.array(sigma_c_lst), np.array(u_lst)
+        return np.array(sigma_c_lst)
+
     u_evaluated = Property(depends_on='model.E_m, model.w, model.Ll, model.Lr, model.reinforcement_lst+')
     @cached_property
     def _get_u_evaluated(self):
@@ -73,10 +85,19 @@ class CompositeCrackBridgeView(ModelView):
     @cached_property
     def _get_sigma_c_max(self):
         def minfunc(w):
-            self.model.w = float(w)
+            self.model.w = np.abs(float(w))
+            plt.plot(w, self.sigma_c, 'ro')
             return - self.sigma_c
-        wmax = fmin(minfunc, 0.0001, maxiter=30)
-        return self.sigma_c, wmax
+        result = minimize(minfunc, 0.001)
+        return self.sigma_c, result.x
+
+    def epsm_w_x(self, w_arr, x):
+        epsm = np.zeros((len(w_arr), len(x)))
+        for i, w in enumerate(w_arr):
+            self.model.w = w
+            epsm_line = MFnLineArray(xdata=self.x_arr, ydata=self.epsm_arr)
+            epsm[i,:] = epsm_line.get_values(x)
+        return epsm
 
     def apply_load(self, sigma):
         def residuum(w):
@@ -179,14 +200,6 @@ if __name__ == '__main__':
                           xi=RV('weibull_min', shape=20., scale=0.02),
                           n_int=50,
                           label='carbon')
-
-    reinf3 = Reinforcement(r=0.00345,#RV('uniform', loc=0.002, scale=0.002),
-                          tau=.2,
-                          V_f=0.15,
-                          E_f=200e3,
-                          xi=WeibullFibers(shape=5., scale=0.03, L0 = 10.),
-                          n_int=50,
-                          label='carbon')
     
     reinf3 = Reinforcement(r=0.00345,#RV('uniform', loc=0.002, scale=0.002),
                           tau=.2,
@@ -201,7 +214,7 @@ if __name__ == '__main__':
                                  Ll=100.,
                                  Lr=100.)
 
-    ccb_view = CompositeCrackBridgeView(model=model)
+    ccb_view = CompositeCrackBridgePostprocessor(model=model)
     #ccb_view.apply_load(1.)
 
     def profile(w):
@@ -212,20 +225,10 @@ if __name__ == '__main__':
         plt.ylabel('strain')
 
     def sigma_c_w(w_arr):
-        sigma_c = []
-        #w_err = []
-        u = []
-        for w in w_arr:
-            ccb_view.model.w = w
-            sigma_c.append(ccb_view.sigma_c)
-            #w_err.append((ccb_view.w_evaluated - ccb_view.model.w) / (ccb_view.model.w))
-            u.append(ccb_view.u_evaluated)
-        #plt.figure()
-        #plt.plot(w_arr, w_err, label='error in w')
-        #plt.legend(loc='best')
-        #plt.figure()
-        plt.plot(w_arr, sigma_c, lw=2, color='black', label='w-sigma')
-        plt.plot(u, sigma_c, lw=2, label='u-sigma')
+        sigma_c_arr, u_arr = ccb_view.sigma_c_arr(w_arr, u=True)
+        plt.plot(w_arr, sigma_c_arr, lw=2, color='black', label='w-sigma')
+        #plt.plot(u_arr, sigma_c_arr, lw=2, label='u-sigma')
+        plt.plot(ccb_view.sigma_c_max[1], ccb_view.sigma_c_max[0], 'bo')
         plt.xlabel('w,u [mm]')
         plt.ylabel('$\sigma_c$ [MPa]')
         plt.legend(loc='best')
@@ -264,9 +267,9 @@ if __name__ == '__main__':
 
     #TODO: check energy for combined reinf
     #energy(np.linspace(.0, .15, 100))
-    #profile(.01)
-    w = np.linspace(.0, 2.4, 100)
-    sigma_c_w(w)
+    profile(.3585)
+    #w = np.linspace(.0, 2.4, 100)
+    #sigma_c_w(w)
     # bundle at 20 mm
     #sigma_bundle = 70e3*w/20.*np.exp(-(w/20./0.03)**5.)
     #plt.plot(w,sigma_bundle)

@@ -251,11 +251,11 @@ class CompositeCrackBridge(HasTraits):
                 epsf0 = np.hstack((epsf01, epsf02))
             else:
                 a_long = np.hstack((0.0, a1[:idx1], a2, Lmax))
-                a = np.hstack((a_short, a_long))
+                a = np.hstack((a_short, a_long[1:]))
                 dems_long = np.hstack((dems, dems[-1]))
-                em_long = np.hstack((0.0, np.cumsum(np.diff(a_long)*dems_long)))
+                em_long = np.hstack((np.cumsum(np.diff(a_long)*dems_long)))
                 em = np.hstack((em_short, em_long))
-                epsf0 = em_long[1:-1] + self.sorted_depsf * a_long[1:-1]
+                epsf0 = em_long[:-1] + self.sorted_depsf * a_long[1:-1]
         elif a1[-1] <= Lmin:
             #double sided pullout
             a = np.hstack((-Lmin, -a1[::-1], 0.0, a1, Lmax))
@@ -265,9 +265,6 @@ class CompositeCrackBridge(HasTraits):
         self._x_arr = a
         self._epsm_arr = em
         self._epsf0_arr = epsf0
-#         if self.Ll > self.Lr:
-#             self._x_arr = -self._x_arr[::-1]
-#             self._epsm_arr = self._epsm_arr[::-1]
         a_short = -a[a<0.0][1:][::-1]
         if len(a_short) < len(self.sorted_depsf):
             a_short = np.hstack((a_short, Lmin * np.ones(len(self.sorted_depsf) - len(a_short))))
@@ -308,14 +305,14 @@ class CompositeCrackBridge(HasTraits):
             except:
                 print 'broyden2 does not converge fast enough: switched to fsolve for this step'
                 damage = fsolve(self.damage_residuum, 0.2 * np.ones_like(self.sorted_depsf))
-            print 'damage =', np.sum(damage) / len(damage), 'iteration time =', time.clock() - ff, 'sec'
+            #print 'damage =', np.sum(damage) / len(damage), 'iteration time =', time.clock() - ff, 'sec'
         return damage
 
 if __name__ == '__main__':
     from matplotlib import pyplot as plt
 
     reinf1 = Reinforcement(r=0.00345,#RV('uniform', loc=0.001, scale=0.005),
-                          tau=RV('uniform', loc=4., scale=2.),
+                          tau=RV('uniform', loc=1., scale=20.),
                           V_f=0.2,
                           E_f=70e3,
                           xi=RV('weibull_min', shape=5., scale=0.04),
@@ -332,9 +329,23 @@ if __name__ == '__main__':
 
     ccb = CompositeCrackBridge(E_m=25e3,
                                  reinforcement_lst=[reinf1],
-                                 Ll=8.,
-                                 Lr=3.,
+                                 Ll=.7,
+                                 Lr=1.,
                                  w=0.028)
+
+    reinf = Reinforcement(r=0.00345,#RV('uniform', loc=0.002, scale=0.002),
+                          tau=RV('uniform', loc=0.02, scale=20.),
+                          V_f=0.15,
+                          E_f=200e3,
+                          xi=WeibullFibers(shape=5., sV0=0.01618983207723),
+                          n_int=50,
+                          label='carbon')
+
+    ccb = CompositeCrackBridge(E_m=25e3,
+                                 reinforcement_lst=[reinf],
+                                 Ll=1.,
+                                 Lr=1.,
+                                 w = 0.00127117783144)
 
     ccb.damage
     plt.plot(ccb._x_arr, ccb._epsm_arr, lw=2, color='red', ls='dashed', label='analytical')
