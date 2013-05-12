@@ -14,7 +14,8 @@ from spirrid.rv import RV
 from dependent_fibers.reinforcement import Reinforcement, WeibullFibers
 from dependent_fibers.depend_CB_model import CompositeCrackBridge
 from dependent_fibers.depend_CB_postprocessor import CompositeCrackBridgePostprocessor
-from scipy.optimize import minimize
+from scipy.optimize import minimize_scalar
+import time
 
 def H(x):
     return x >= 0.0
@@ -95,7 +96,7 @@ class NDIdxInterp(HasTraits):
         return icoords
 
 
-class InterpolatedResults(HasTraits):
+class Interpolator(HasTraits):
 
     CB_model = Instance(CompositeCrackBridgePostprocessor)
     load_sigma_c_max = Float
@@ -121,7 +122,7 @@ class InterpolatedResults(HasTraits):
                 return 0.0
             else:
                 return - sigma_c_truncated(float(w))
-        result = minimize(minfunc, 0.001)
+        result = minimize_scalar(minfunc)
         return self.CB_model.sigma_c, result.x
     
     BC_range = Property(depends_on = 'n_BC, CB_model')
@@ -144,19 +145,15 @@ class InterpolatedResults(HasTraits):
         interp_coords = [self.load_sigma_c_arr, self.x_arr]
         return preinterp(*interp_coords, mode='constant')
 
-    interp_grid = Property()
-    @cached_property
-    def _get_interp_grid(self):
-        print 'evaluating mean response and adapting ranges...'
-        interpolator = self.result_values
-        print 'complete'
-        return interpolator
-
     result_values = Property(Array)
     @cached_property
     def _get_result_values(self):
         L_arr = self.BC_range
-        result = np.zeros((self.load_n_sigma_c, self.n_x,
+        epsm_w_x = np.zeros((self.load_n_sigma_c, self.n_x,
+                           self.n_BC, self.n_BC))
+        mu_epsf_w_x = np.zeros((self.load_n_sigma_c, self.n_x,
+                           self.n_BC, self.n_BC))
+        mu_sigma_c_w = np.zeros((self.load_n_sigma_c, self.n_x,
                            self.n_BC, self.n_BC))
         loops_tot = len(L_arr) ** 2
         for i, ll in enumerate(L_arr):
@@ -166,41 +163,48 @@ class InterpolatedResults(HasTraits):
                     sigma_c_max, wmax = self.max_sigma_w(ll, lr)
                     w_arr = np.linspace(0.0, wmax, self.n_w)
                     # evaluate the result (2D (w,x) SPIRRID with adapted ranges x and w
-                    epsm_w_x = self.CB_model.epsm_w_x(w_arr, self.x_arr)
+                    CB_epsm_w_x = self.CB_model.epsm_w_x(w_arr, self.x_arr)
                     # preinterpolate particular result for the given x and sigma ranges
-                    epsm_w_x_interp = \
-                    self.preinterpolate(epsm_w_x, self.load_sigma_c_arr, self.x_arr).T
+                    epsm_w_x_preinterp = \
+                    self.preinterpolate(CB_epsm_w_x, self.load_sigma_c_arr, self.x_arr).T
                     mask = np.where(self.load_sigma_c_arr
                                     <= sigma_c_max, 1, np.NaN)[:, np.newaxis]
-                    epsm_w_x_interp = epsm_w_x_interp * mask
-                    eps_vars = orthogonalize([np.arange(len(w_arr))/10., self.x_arr])
+                    epsm_w_x_preinterp = epsm_w_x_preinterp * mask
+                    #eps_vars = orthogonalize([np.arange(len(w_arr))/10., self.x_arr])
 #                     m.surf(eps_vars[0], eps_vars[1], epsm_w_x*1000)
 #                     m.surf(eps_vars[0], eps_vars[1], epsm_w_x[:,::-1]*1100)
 #                     m.surf(eps_vars[0], eps_vars[1], epsm_w_x_interp*1000)
 #                     m.show()
                     # store the particular result for BC ll and lr into the result array
-                    result[:, :, i, j] = epsm_w_x_interp
-                    result[:, :, j, i] = epsm_w_x_interp[:,::-1]
+                    epsm_w_x[:, :, i, j] = epsm_w_x_preinterp
+                    epsm_w_x[:, :, j, i] = epsm_w_x_preinterp[:,::-1]
+                    mu_epsf_w_x[:, :, i, j] = epsm_w_x_preinterp
+                    mu_epsf_w_x[:, :, j, i] = epsm_w_x_preinterp[:,::-1]
+                    mu_sigma_c_w[:, :, i, j] = epsm_w_x_preinterp
+                    mu_sigma_c_w[:, :, j, i] = epsm_w_x_preinterp[:,::-1]
                     current_loop = i * len(L_arr) + j + 1
                     print 'progress: %2.1f %%' % \
                     (current_loop / float(loops_tot) * 100.)
         axes_values = [self.load_sigma_c_arr, self.x_arr, self.BC_range, self.BC_range]
-        return NDIdxInterp(data=result, axes_values=axes_values)
+        interp_epsm = NDIdxInterp(data=epsm_w_x, axes_values=axes_values)
+        interp_epsf = NDIdxInterp(data=mu_epsf_w_x, axes_values=axes_values) 
+        interp_sigmac = NDIdxInterp(data=mu_sigma_c_w, axes_values=axes_values) 
+        return interp_epsm, interp_epsf, interp_sigmac
 
-    initial_axes_values = Property(List(Array))
-
+    interpolator_epsm = Property(depends_on = 'CB_model, load_sigma_c_max, load_n_sigma_c, n_w, n_x, n_BC')
     @cached_property
-    def _get_initial_eps_vars(self):
-        return [self.adaption.load_sigma_f,
-                self.adaption.x_init,
-                self.adaption.BC_range,
-                self.adaption.BC_range]
-
-    def __call__(self, sigma_c_arr, x_arr, Ll, Lr):
-        '''
-        evaluation of matrix strain and reinforcement strain within a crack bridge
-        '''
-        return self.interp_grid(sigma_c_arr, x_arr, Ll, Lr)
+    def _get_interpolator_epsm(self):
+        return self.result_values[0]
+    
+    interpolator_mu_epsf = Property(depends_on = 'CB_model, load_sigma_c_max, load_n_sigma_c, n_w, n_x, n_BC')
+    @cached_property
+    def _get_interpolator_mu_epsf(self):
+        return self.result_values[1]
+    
+    interpolator_mu_sigma_c = Property(depends_on = 'CB_model, load_sigma_c_max, load_n_sigma_c, n_w, n_x, n_BC')
+    @cached_property
+    def _get_interpolator_mu_sigma_c(self):
+        return self.result_values[2]
 
 if __name__ == '__main__':
     from stats.spirrid import make_ogrid as orthogonalize
@@ -210,7 +214,7 @@ if __name__ == '__main__':
                           tau=RV('uniform', loc=0.02, scale=20.),
                           V_f=0.15,
                           E_f=200e3,
-                          xi=WeibullFibers(shape=5., sV0=0.01618983207723),
+                          xi=WeibullFibers(shape=5., sV0=0.00618983207723),
                           n_int=50,
                           label='carbon')
 
@@ -221,15 +225,13 @@ if __name__ == '__main__':
 
     ccb_post = CompositeCrackBridgePostprocessor(model=model)
     
-    ir = InterpolatedResults(CB_model = ccb_post,
+    ir = Interpolator(CB_model = ccb_post,
                              load_sigma_c_max = 600.,
                              load_n_sigma_c = 50,
-                             n_w = 20,
-                             n_x = 21,
+                             n_w = 100,
+                             n_x = 101,
                              n_BC = 3
                              )
-
-    ir(np.linspace(0.0, 600., 100), np.linspace(-20, 20, 100), 10., 15.)
 
     def plot():
         sigma = ir.load_sigma_c_arr
@@ -237,7 +239,7 @@ if __name__ == '__main__':
 
         eps_vars = orthogonalize([np.arange(len(sigma)), np.arange(len(x))])
         # mu_q_nisp = nisp(P, x, Ll, Lr)[0]
-        mu_q_isp = ir(sigma, x, 4., 4.)
+        mu_q_isp = ir.interpolator_epsm(sigma, x, 4., 4.)
         #mu_q_isp2 = ir(sigma, x, Ll, Lr)
 
 #        plt.plot(np.arange(len(sigma)), sigma/0.0103)
