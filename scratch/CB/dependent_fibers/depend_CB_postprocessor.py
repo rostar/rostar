@@ -22,7 +22,7 @@ class CompositeCrackBridgePostprocessor(ModelView):
     results = Property(depends_on='model.E_m, model.w, model.Ll, model.Lr, model.reinforcement_lst+')
     @cached_property
     def _get_results(self):
-        if self.model.w == 0.0:
+        if self.model.w <= 0.0:
             self.model.w = 1e-15
         self.model.damage
         sigma_c = np.sum(self.model._epsf0_arr * self.model.sorted_stats_weights * self.model.sorted_V_f *
@@ -85,19 +85,25 @@ class CompositeCrackBridgePostprocessor(ModelView):
     @cached_property
     def _get_sigma_c_max(self):
         def minfunc(w):
-            self.model.w = np.abs(float(w))
-            plt.plot(w, self.sigma_c, 'ro')
+            self.model.w = float(w)
+            sig_c = self.sigma_c
+            plt.plot(self.model.w, sig_c, 'ro')
             return - self.sigma_c
         result = minimize(minfunc, 0.001)
         return self.sigma_c, result.x
 
-    def epsm_w_x(self, w_arr, x):
+    def w_x_results(self, w_arr, x):
         epsm = np.zeros((len(w_arr), len(x)))
+        mu_epsf = np.zeros((len(w_arr), len(x)))
+        sigma_c = []
         for i, w in enumerate(w_arr):
             self.model.w = w
             epsm_line = MFnLineArray(xdata=self.x_arr, ydata=self.epsm_arr)
+            mu_epsf_line = MFnLineArray(xdata=self.x_arr, ydata=self.mu_epsf_arr)
             epsm[i,:] = epsm_line.get_values(x)
-        return epsm
+            mu_epsf[i,:] = mu_epsf_line.get_values(x)
+            sigma_c.append(self.sigma_c)
+        return epsm, mu_epsf, np.array(sigma_c)
 
     def apply_load(self, sigma):
         def residuum(w):
@@ -201,18 +207,18 @@ if __name__ == '__main__':
                           n_int=50,
                           label='carbon')
     
-    reinf3 = Reinforcement(r=0.00345,#RV('uniform', loc=0.002, scale=0.002),
-                          tau=.2,
-                          V_f=0.15,
+    reinf = Reinforcement(r=0.01,
+                          tau=RV('uniform', loc=0.01, scale=.5),
+                          V_f=0.05,
                           E_f=200e3,
                           xi=WeibullFibers(shape=5., sV0=0.00618983207723),
                           n_int=50,
                           label='carbon')
 
     model = CompositeCrackBridge(E_m=25e3,
-                                 reinforcement_lst=[reinf3],
-                                 Ll=100.,
-                                 Lr=100.)
+                                 reinforcement_lst=[reinf],
+                                 Ll=4.,
+                                 Lr=87.)
 
     ccb_view = CompositeCrackBridgePostprocessor(model=model)
     #ccb_view.apply_load(1.)
@@ -228,7 +234,7 @@ if __name__ == '__main__':
         sigma_c_arr, u_arr = ccb_view.sigma_c_arr(w_arr, u=True)
         plt.plot(w_arr, sigma_c_arr, lw=2, color='black', label='w-sigma')
         #plt.plot(u_arr, sigma_c_arr, lw=2, label='u-sigma')
-        plt.plot(ccb_view.sigma_c_max[1], ccb_view.sigma_c_max[0], 'bo')
+        #plt.plot(ccb_view.sigma_c_max[1], ccb_view.sigma_c_max[0], 'bo')
         plt.xlabel('w,u [mm]')
         plt.ylabel('$\sigma_c$ [MPa]')
         plt.legend(loc='best')
@@ -267,8 +273,8 @@ if __name__ == '__main__':
 
     #TODO: check energy for combined reinf
     #energy(np.linspace(.0, .15, 100))
-    profile(.3585)
-    #w = np.linspace(.0, 2.4, 100)
+    profile(0.004)
+    w = np.linspace(.0, .2, 100)
     #sigma_c_w(w)
     # bundle at 20 mm
     #sigma_bundle = 70e3*w/20.*np.exp(-(w/20./0.03)**5.)

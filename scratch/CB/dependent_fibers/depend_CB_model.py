@@ -252,8 +252,9 @@ class CompositeCrackBridge(HasTraits):
             else:
                 a_long = np.hstack((0.0, a1[:idx1], a2, Lmax))
                 a = np.hstack((a_short, a_long[1:]))
-                dems_long = np.hstack((dems, dems[-1]))
-                em_long = np.hstack((np.cumsum(np.diff(a_long)*dems_long)))
+                dems_long = dems
+                em_long = np.hstack((np.cumsum(np.diff(a_long[:-1])*dems_long)))
+                em_long = np.hstack((em_long, em_long[-1]))
                 em = np.hstack((em_short, em_long))
                 epsf0 = em_long[:-1] + self.sorted_depsf * a_long[1:-1]
         elif a1[-1] <= Lmin:
@@ -295,15 +296,15 @@ class CompositeCrackBridge(HasTraits):
     damage = Property(depends_on='w, Ll, Lr, reinforcement+')
     @cached_property
     def _get_damage(self):
-        ff = time.clock()
+        #ff = time.clock()
         if self.w == 0.:
             damage = np.zeros_like(self.sorted_depsf)
         else:
-            ff = t.clock()
+            #ff = t.clock()
             try:
                 damage = broyden2(self.damage_residuum, 0.2 * np.ones_like(self.sorted_depsf), maxiter=20)
             except:
-                print 'broyden2 does not converge fast enough: switched to fsolve for this step'
+                #print 'broyden2 does not converge fast enough: switched to fsolve for this step'
                 damage = fsolve(self.damage_residuum, 0.2 * np.ones_like(self.sorted_depsf))
             #print 'damage =', np.sum(damage) / len(damage), 'iteration time =', time.clock() - ff, 'sec'
         return damage
@@ -333,19 +334,19 @@ if __name__ == '__main__':
                                  Lr=1.,
                                  w=0.028)
 
-    reinf = Reinforcement(r=0.00345,#RV('uniform', loc=0.002, scale=0.002),
-                          tau=RV('uniform', loc=0.02, scale=20.),
-                          V_f=0.15,
+    reinf = Reinforcement(r=0.01,
+                          tau=RV('uniform', loc=0.01, scale=.5),
+                          V_f=0.05,
                           E_f=200e3,
-                          xi=WeibullFibers(shape=5., sV0=0.01618983207723),
+                          xi=WeibullFibers(shape=5., sV0=0.00618983207723),
                           n_int=50,
                           label='carbon')
 
     ccb = CompositeCrackBridge(E_m=25e3,
                                  reinforcement_lst=[reinf],
-                                 Ll=1.,
-                                 Lr=1.,
-                                 w = 0.00127117783144)
+                                 Ll=4.,
+                                 Lr=87.,
+                                 w=0.004)
 
     ccb.damage
     plt.plot(ccb._x_arr, ccb._epsm_arr, lw=2, color='red', ls='dashed', label='analytical')
@@ -353,5 +354,5 @@ if __name__ == '__main__':
     for i, depsf in enumerate(ccb.sorted_depsf):
         plt.plot(ccb._x_arr, np.maximum(ccb._epsf0_arr[i] - depsf*np.abs(ccb._x_arr),ccb._epsm_arr))
     plt.legend(loc='best')
-    plt.xlim(-5,5)
+    plt.xlim(-5,109)
     plt.show()

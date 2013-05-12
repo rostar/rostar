@@ -1,6 +1,9 @@
 '''
 Created on 11 May 2013
 
+the Interpolator class evaluates crack bridges along x and for a range of load and BCs
+the Interpolator2 class evaluates crack bridges along x and for a range of load and for given fixed BCs
+
 @author: Q
 '''
 
@@ -14,7 +17,7 @@ from spirrid.rv import RV
 from dependent_fibers.reinforcement import Reinforcement, WeibullFibers
 from dependent_fibers.depend_CB_model import CompositeCrackBridge
 from dependent_fibers.depend_CB_postprocessor import CompositeCrackBridgePostprocessor
-from scipy.optimize import minimize_scalar
+from scipy.optimize import minimize, fminbound
 import time
 
 def H(x):
@@ -113,17 +116,17 @@ class Interpolator(HasTraits):
     def max_sigma_w(self, Ll, Lr):
         self.CB_model.model.Ll = Ll
         self.CB_model.model.Lr = Lr
-        def sigma_c_truncated(w):
-            self.CB_model.model.w = w
+        def min_full_sigma_c(w):
+            self.CB_model.model.w = float(w)
             sigma_c = self.CB_model.sigma_c
-            return sigma_c * H(self.load_sigma_c_max - sigma_c)
-        def minfunc(w):
-            if w < 0.0:
-                return 0.0
-            else:
-                return - sigma_c_truncated(float(w))
-        result = minimize_scalar(minfunc)
-        return self.CB_model.sigma_c, result.x
+            return -sigma_c
+        wmax_full = minimize(min_full_sigma_c, 0.001, options = dict(gtol = 0.01)).x
+        def min_sigma_c_truncated(w):
+            self.CB_model.model.w = float(w)
+            sigma_c = self.CB_model.sigma_c
+            return - sigma_c * H(self.load_sigma_c_max - sigma_c)
+        result = fminbound(min_sigma_c_truncated, 0.0, wmax_full)
+        return self.CB_model.sigma_c, result
     
     BC_range = Property(depends_on = 'n_BC, CB_model')
     @cached_property
@@ -163,25 +166,29 @@ class Interpolator(HasTraits):
                     sigma_c_max, wmax = self.max_sigma_w(ll, lr)
                     w_arr = np.linspace(0.0, wmax, self.n_w)
                     # evaluate the result (2D (w,x) SPIRRID with adapted ranges x and w
-                    CB_epsm_w_x = self.CB_model.epsm_w_x(w_arr, self.x_arr)
+                    CB_epsm_w_x, CB_mu_epsf_w_x, sigma_c = self.CB_model.w_x_results(w_arr, self.x_arr)
                     # preinterpolate particular result for the given x and sigma ranges
                     epsm_w_x_preinterp = \
-                    self.preinterpolate(CB_epsm_w_x, self.load_sigma_c_arr, self.x_arr).T
+                    self.preinterpolate(CB_epsm_w_x, sigma_c, self.x_arr).T
+                    mu_epsf_w_x_preinterp = \
+                    self.preinterpolate(CB_mu_epsf_w_x, sigma_c, self.x_arr).T
                     mask = np.where(self.load_sigma_c_arr
                                     <= sigma_c_max, 1, np.NaN)[:, np.newaxis]
                     epsm_w_x_preinterp = epsm_w_x_preinterp * mask
-                    #eps_vars = orthogonalize([np.arange(len(w_arr))/10., self.x_arr])
-#                     m.surf(eps_vars[0], eps_vars[1], epsm_w_x*1000)
-#                     m.surf(eps_vars[0], eps_vars[1], epsm_w_x[:,::-1]*1100)
+                    mu_epsf_w_x_preinterp = mu_epsf_w_x_preinterp * mask
+                    mu_sigma_c_w_preinterp = np.ones_like(epsm_w_x_preinterp) * self.load_sigma_c_arr[:, np.newaxis] * mask
+#                     eps_vars = orthogonalize([np.arange(len(w_arr))/5., self.x_arr])
+#                     m.surf(eps_vars[0], eps_vars[1], epsm_w_x_preinterp*500)
+#                     m.surf(eps_vars[0], eps_vars[1], mu_epsf_w_x_preinterp*500)
 #                     m.surf(eps_vars[0], eps_vars[1], epsm_w_x_interp*1000)
 #                     m.show()
                     # store the particular result for BC ll and lr into the result array
                     epsm_w_x[:, :, i, j] = epsm_w_x_preinterp
                     epsm_w_x[:, :, j, i] = epsm_w_x_preinterp[:,::-1]
-                    mu_epsf_w_x[:, :, i, j] = epsm_w_x_preinterp
-                    mu_epsf_w_x[:, :, j, i] = epsm_w_x_preinterp[:,::-1]
-                    mu_sigma_c_w[:, :, i, j] = epsm_w_x_preinterp
-                    mu_sigma_c_w[:, :, j, i] = epsm_w_x_preinterp[:,::-1]
+                    mu_epsf_w_x[:, :, i, j] = mu_epsf_w_x_preinterp
+                    mu_epsf_w_x[:, :, j, i] = mu_epsf_w_x_preinterp[:,::-1]
+                    mu_sigma_c_w[:, :, i, j] = mu_sigma_c_w_preinterp
+                    mu_sigma_c_w[:, :, j, i] = mu_sigma_c_w_preinterp[:,::-1]
                     current_loop = i * len(L_arr) + j + 1
                     print 'progress: %2.1f %%' % \
                     (current_loop / float(loops_tot) * 100.)
@@ -202,6 +209,94 @@ class Interpolator(HasTraits):
         return self.result_values[1]
     
     interpolator_mu_sigma_c = Property(depends_on = 'CB_model, load_sigma_c_max, load_n_sigma_c, n_w, n_x, n_BC')
+    @cached_property
+    def _get_interpolator_mu_sigma_c(self):
+        return self.result_values[2]
+
+
+class Interpolator2(HasTraits):
+
+    CB_model = Instance(CompositeCrackBridgePostprocessor)
+    load_sigma_c_max = Float
+    load_n_sigma_c = Int
+    n_w = Int
+    Ll = Float
+    Lr = Float
+    
+    load_sigma_c_arr = Property(depends_on = 'load_sigma_c_max, load_n_sigma_c')
+    @cached_property
+    def _get_load_sigma_c_arr(self):
+        return np.linspace(0.0, self.load_sigma_c_max, self.load_n_sigma_c) 
+    
+    def max_sigma_w(self, Ll, Lr):
+        self.CB_model.model.Ll = Ll
+        self.CB_model.model.Lr = Lr
+        def min_full_sigma_c(w):
+            self.CB_model.model.w = float(w)
+            sigma_c = self.CB_model.sigma_c
+            return -sigma_c
+        wmax_full = minimize(min_full_sigma_c, 0.001, options = dict(gtol = 0.01)).x
+        def min_sigma_c_truncated(w):
+            self.CB_model.model.w = float(w)
+            sigma_c = self.CB_model.sigma_c
+            return - sigma_c * H(self.load_sigma_c_max - sigma_c)
+        result = fminbound(min_sigma_c_truncated, 0.0, wmax_full)
+        return self.CB_model.sigma_c, result
+    
+    x_arr = Array
+
+    def preinterpolate(self, sigma_c_w_x, sigma_c_cutoff, x_range):
+        # values to create array grid
+        axes_values = [sigma_c_cutoff, x_range]
+        preinterp = NDIdxInterp(data=sigma_c_w_x, axes_values=axes_values)
+        # values to interpolate for
+        interp_coords = [self.load_sigma_c_arr, self.x_arr]
+        return preinterp(*interp_coords, mode='constant')
+
+    result_values = Property(Array)
+    def _get_result_values(self):
+        # adapt w range
+        sigma_c_max, wmax = self.max_sigma_w(self.Ll, self.Lr)
+        w_arr = np.linspace(0.0, wmax, self.n_w)
+        # evaluate the result (2D (w,x) SPIRRID with adapted ranges x and w
+        CB_epsm_w_x, CB_mu_epsf_w_x, sigma_c = self.CB_model.w_x_results(w_arr, self.x_arr)
+        # preinterpolate particular result for the given x and sigma ranges
+        epsm_w_x_preinterp = \
+        self.preinterpolate(CB_epsm_w_x, sigma_c, self.x_arr).T
+        mu_epsf_w_x_preinterp = \
+        self.preinterpolate(CB_mu_epsf_w_x, sigma_c, self.x_arr).T
+        mask = np.where(self.load_sigma_c_arr
+                        <= sigma_c_max, 1, np.NaN)[:, np.newaxis]
+        epsm_w_x_preinterp = epsm_w_x_preinterp * mask
+        mu_epsf_w_x_preinterp = mu_epsf_w_x_preinterp * mask
+        mu_sigma_c_w_preinterp = np.ones_like(epsm_w_x_preinterp) * self.load_sigma_c_arr[:, np.newaxis] * mask
+#                     eps_vars = orthogonalize([np.arange(len(w_arr))/5., self.x_arr])
+#                     m.surf(eps_vars[0], eps_vars[1], epsm_w_x_preinterp*500)
+#                     m.surf(eps_vars[0], eps_vars[1], mu_epsf_w_x_preinterp*500)
+#                     m.surf(eps_vars[0], eps_vars[1], epsm_w_x_interp*1000)
+#                     m.show()
+        # store the particular result for BC ll and lr into the result array
+        epsm_w_x = epsm_w_x_preinterp
+        mu_epsf_w_x = mu_epsf_w_x_preinterp
+        mu_sigma_c_w = mu_sigma_c_w_preinterp
+
+        axes_values = [self.load_sigma_c_arr, self.x_arr]
+        interp_epsm = NDIdxInterp(data=epsm_w_x, axes_values=axes_values)
+        interp_epsf = NDIdxInterp(data=mu_epsf_w_x, axes_values=axes_values) 
+        interp_sigmac = NDIdxInterp(data=mu_sigma_c_w, axes_values=axes_values)
+        return interp_epsm, interp_epsf, interp_sigmac
+
+    interpolator_epsm = Property()
+    @cached_property
+    def _get_interpolator_epsm(self):
+        return self.result_values[0]
+    
+    interpolator_mu_epsf = Property()
+    @cached_property
+    def _get_interpolator_mu_epsf(self):
+        return self.result_values[1]
+    
+    interpolator_mu_sigma_c = Property()
     @cached_property
     def _get_interpolator_mu_sigma_c(self):
         return self.result_values[2]
@@ -228,26 +323,38 @@ if __name__ == '__main__':
     ir = Interpolator(CB_model = ccb_post,
                              load_sigma_c_max = 600.,
                              load_n_sigma_c = 50,
-                             n_w = 100,
-                             n_x = 101,
+                             n_w = 50,
+                             n_x = 51,
                              n_BC = 3
                              )
 
     def plot():
+        
+        w_arr = np.linspace(0.0, 0.1, 20)
+        ll = 2.0
+        lr = 5.0
+        x = np.linspace(-ll, lr, 51)
+        #resm, resf = ccb_post.w_x_results(w_arr, x)
+        #eps_vars = orthogonalize([w_arr * 100., x])
+        #m.surf(eps_vars[0], eps_vars[1], resm * 500.)
+        #m.surf(eps_vars[0], eps_vars[1], resf * 500.)
+        #m.show()
         sigma = ir.load_sigma_c_arr
-        x = np.linspace(-2, 2, 101)
 
-        eps_vars = orthogonalize([np.arange(len(sigma)), np.arange(len(x))])
+        eps_vars = orthogonalize([np.linspace(0.0, 0.0254229525299, len(sigma)) * 100., x])
         # mu_q_nisp = nisp(P, x, Ll, Lr)[0]
-        mu_q_isp = ir.interpolator_epsm(sigma, x, 4., 4.)
+        mu_epsm = ir.interpolator_epsm(sigma, x, 100., 100.)
+        mu_epsf = ir.interpolator_mu_epsf(sigma, x, 100., 100.)
+        sig_c = ir.interpolator_mu_sigma_c(sigma, x, 100., 100.)
         #mu_q_isp2 = ir(sigma, x, Ll, Lr)
 
 #        plt.plot(np.arange(len(sigma)), sigma/0.0103)
 #        plt.plot(np.arange(len(sigma)), np.max(mu_q_isp,axis = 0))
 #        plt.show()
         # n_mu_q_arr = mu_q_nisp / np.max(np.fabs(mu_q_nisp))
-        m.surf(eps_vars[0], eps_vars[1], mu_q_isp * 1000.)
-        #m.surf(eps_vars[0], eps_vars[1], mu_q_isp2 * 1000.)
+        m.surf(eps_vars[0], eps_vars[1], mu_epsm * 500.)
+        m.surf(eps_vars[0], eps_vars[1], mu_epsf * 500.)
+        m.surf(eps_vars[0], eps_vars[1], sig_c /(25e3*0.85 + 200e3*0.15)*500)
         m.show()
 
     plot()
