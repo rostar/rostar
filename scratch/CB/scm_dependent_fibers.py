@@ -31,6 +31,7 @@ from dependent_fibers.depend_CB_model import CompositeCrackBridge
 from dependent_fibers.depend_CB_postprocessor import CompositeCrackBridgePostprocessor
 from spirrid.rv import RV
 from matplotlib import pyplot as plt
+from math import pi
 
 class CB(HasTraits):
     '''crack bridge class - includes informations about position,
@@ -82,7 +83,7 @@ class SCM(HasTraits):
         return Interpolator(CB_model = CB_model,
                              load_sigma_c_max = self.load_sigma_c_max,
                              load_n_sigma_c = self.load_n_sigma_c,
-                             n_w = 60, n_x = 81, n_BC = 6
+                             n_w = 80, n_x = 61, n_BC = 6
                              )
     
     sigma_c_crack = List
@@ -208,7 +209,7 @@ class SCM(HasTraits):
     def evaluate(self):
         # seek for the minimum strength redundancy to find the position
         # of the next crack
-        last_pos = 0.0
+        last_pos = pi
         sigc_min = 0.0
         sigc_max = self.load_sigma_c_max
         while np.any(self.sigma_m(sigc_max) > self.matrix_strength):
@@ -230,15 +231,17 @@ class SCM(HasTraits):
                   cbi.position == float(crack_position)][0]
             sigc = cb.get_sigma_c_x(self.load_sigma_c).flatten()
             new_sigc_max = np.max(sigc[np.isnan(sigc) == False])
+#             plt.plot(self.x_arr, self.epsf_x(sigc_min))
+#             plt.plot(self.x_arr, self.sigma_m(sigc_min)/self.E_m)
+#             plt.plot(self.x_arr, self.matrix_strength / self.E_m)
+#             plt.show()
             if new_sigc_max < sigc_max:
                 sigc_max = new_sigc_max
             if float(crack_position) == last_pos:
+                print last_pos
                 raise ValueError('''got stuck in loop,
                 try to adapt x, w, BC ranges''')
             last_pos = float(crack_position)
-#             plt.plot(self.x_arr, self.epsf_x(sigc_min))
-#             plt.plot(self.x_arr, self.sigma_m(sigc_min)/self.E_m)
-#             plt.show()
         #plt.plot(self.x_arr, self.matrix_strength)
         
         #print sigc_min, sigc_min / (self.reinforcement.E_f * self.reinforcement.V_f + self.E_m * (1. - self.reinforcement.V_f))

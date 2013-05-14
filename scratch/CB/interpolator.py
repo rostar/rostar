@@ -17,7 +17,7 @@ from spirrid.rv import RV
 from dependent_fibers.reinforcement import Reinforcement, WeibullFibers
 from dependent_fibers.depend_CB_model import CompositeCrackBridge
 from dependent_fibers.depend_CB_postprocessor import CompositeCrackBridgePostprocessor
-from scipy.optimize import minimize, fminbound
+from scipy.optimize import minimize, fminbound, brentq
 import time
 
 def H(x):
@@ -119,14 +119,17 @@ class Interpolator(HasTraits):
         def min_full_sigma_c(w):
             self.CB_model.model.w = float(w)
             sigma_c = self.CB_model.sigma_c
-            return -sigma_c
-        wmax_full = minimize(min_full_sigma_c, 0.001, options = dict(gtol = 0.01)).x
-        def min_sigma_c_truncated(w):
-            self.CB_model.model.w = float(w)
-            sigma_c = self.CB_model.sigma_c
-            return - sigma_c * H(self.load_sigma_c_max - sigma_c)
-        result = fminbound(min_sigma_c_truncated, 0.0, wmax_full)
-        return self.CB_model.sigma_c, result
+            return - sigma_c
+        wmax_full = minimize(min_full_sigma_c, 0.0, options = dict(maxiter = 5)).x
+        if self.CB_model.sigma_c < self.load_sigma_c_max:
+            return self.CB_model.sigma_c, wmax_full
+        else:
+            def residuum(w):
+                self.CB_model.model.w = float(w)
+                sigma_c = self.CB_model.sigma_c
+                return self.load_sigma_c_max - sigma_c
+            result = brentq(residuum, 0.0, wmax_full)
+            return self.CB_model.sigma_c, result
     
     BC_range = Property(depends_on = 'n_BC, CB_model')
     @cached_property
@@ -214,44 +217,11 @@ class Interpolator(HasTraits):
         return self.result_values[2]
 
 
-class Interpolator2(HasTraits):
+class Interpolator2(Interpolator):
 
-    CB_model = Instance(CompositeCrackBridgePostprocessor)
-    load_sigma_c_max = Float
-    load_n_sigma_c = Int
-    n_w = Int
     Ll = Float
-    Lr = Float
-    
-    load_sigma_c_arr = Property(depends_on = 'load_sigma_c_max, load_n_sigma_c')
-    @cached_property
-    def _get_load_sigma_c_arr(self):
-        return np.linspace(0.0, self.load_sigma_c_max, self.load_n_sigma_c) 
-    
-    def max_sigma_w(self, Ll, Lr):
-        self.CB_model.model.Ll = Ll
-        self.CB_model.model.Lr = Lr
-        def min_full_sigma_c(w):
-            self.CB_model.model.w = float(w)
-            sigma_c = self.CB_model.sigma_c
-            return -sigma_c
-        wmax_full = minimize(min_full_sigma_c, 0.001, options = dict(gtol = 0.01)).x
-        def min_sigma_c_truncated(w):
-            self.CB_model.model.w = float(w)
-            sigma_c = self.CB_model.sigma_c
-            return - sigma_c * H(self.load_sigma_c_max - sigma_c)
-        result = fminbound(min_sigma_c_truncated, 0.0, wmax_full)
-        return self.CB_model.sigma_c, result
-    
+    Lr = Float    
     x_arr = Array
-
-    def preinterpolate(self, sigma_c_w_x, sigma_c_cutoff, x_range):
-        # values to create array grid
-        axes_values = [sigma_c_cutoff, x_range]
-        preinterp = NDIdxInterp(data=sigma_c_w_x, axes_values=axes_values)
-        # values to interpolate for
-        interp_coords = [self.load_sigma_c_arr, self.x_arr]
-        return preinterp(*interp_coords, mode='constant')
 
     result_values = Property(Array)
     def _get_result_values(self):

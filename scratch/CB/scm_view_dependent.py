@@ -28,7 +28,7 @@ class SCMView(ModelView):
         idx = np.abs(self.model.load_sigma_c - sigma_c).argmin()
         # evaluate the relative strain e_rel between fibers
         # and matrix for the given load
-        e_rel = self.eps_f[idx, :] - self.eps_m[idx, :]
+        e_rel = self.mu_epsf_x[idx, :] - self.eps_m_x[idx, :]
         # pick the cracks that emerged at the given load
         cb_load = self.model.cb_list(sigma_c)
         if cb_load[0] is not None:
@@ -90,7 +90,7 @@ class SCMView(ModelView):
 
     eps_m_x = Property(Array, depends_on='model.')
     @cached_property
-    def _get_eps_m(self):
+    def _get_eps_m_x(self):
         return self.sigma_m_x / self.model.E_m
 
     mu_epsf_x = Property(depends_on='model.')
@@ -119,11 +119,12 @@ class SCMView(ModelView):
             return eps, self.model.load_sigma_c
 
 if __name__ == '__main__':
-    length = 2000.
-    nx = 2000
+    import time
+    length = 4000.
+    nx = 4000
     random_field = RandomField(seed=True,
                                lacor=10.,
-                                xgrid=np.linspace(0., length, 600),
+                                xgrid=np.linspace(0., length, 200),
                                 nsim=1,
                                 loc=.0,
                                 shape=15.,
@@ -156,6 +157,7 @@ if __name__ == '__main__':
               load_n_sigma_c=200
               )
 
+    t = time.clock()
     scm.evaluate()
 
     scm_view = SCMView(model=scm)
@@ -168,7 +170,7 @@ if __name__ == '__main__':
         plt.legend(loc='best')
         plt.xlabel('composite strain [-]')
         plt.ylabel('composite stress [MPa]')
-        plt.show()
+        print 'time =', time.clock() - t
         plt.figure()
         plt.hist(scm_view.crack_widths(16.), bins=20, label='load = 20 MPa')
         plt.hist(scm_view.crack_widths(13.), bins=20, label='load = 15 MPa')

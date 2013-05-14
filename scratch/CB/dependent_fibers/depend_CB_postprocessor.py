@@ -89,7 +89,7 @@ class CompositeCrackBridgePostprocessor(ModelView):
             sig_c = self.sigma_c
             plt.plot(self.model.w, sig_c, 'ro')
             return - self.sigma_c
-        result = minimize(minfunc, 0.001)
+        result = minimize(minfunc, 0.001, options = dict(maxiter = 5))
         return self.sigma_c, result.x
 
     def w_x_results(self, w_arr, x):
@@ -207,9 +207,9 @@ if __name__ == '__main__':
                           n_int=50,
                           label='carbon')
     
-    reinf = Reinforcement(r=0.01,
-                          tau=RV('uniform', loc=0.01, scale=.5),
-                          V_f=0.05,
+    reinf = Reinforcement(r=0.00345,
+                          tau=RV('weibull_min', shape=1.5, scale=.2),
+                          V_f=0.0103,
                           E_f=200e3,
                           xi=WeibullFibers(shape=5., sV0=0.00618983207723),
                           n_int=50,
@@ -217,8 +217,8 @@ if __name__ == '__main__':
 
     model = CompositeCrackBridge(E_m=25e3,
                                  reinforcement_lst=[reinf],
-                                 Ll=4.,
-                                 Lr=87.)
+                                 Ll=15.8141487532,
+                                 Lr=75.0707437662) 
 
     ccb_view = CompositeCrackBridgePostprocessor(model=model)
     #ccb_view.apply_load(1.)
@@ -234,7 +234,7 @@ if __name__ == '__main__':
         sigma_c_arr, u_arr = ccb_view.sigma_c_arr(w_arr, u=True)
         plt.plot(w_arr, sigma_c_arr, lw=2, color='black', label='w-sigma')
         #plt.plot(u_arr, sigma_c_arr, lw=2, label='u-sigma')
-        #plt.plot(ccb_view.sigma_c_max[1], ccb_view.sigma_c_max[0], 'bo')
+        plt.plot(ccb_view.sigma_c_max[1], ccb_view.sigma_c_max[0], 'bo')
         plt.xlabel('w,u [mm]')
         plt.ylabel('$\sigma_c$ [MPa]')
         plt.legend(loc='best')
@@ -273,9 +273,9 @@ if __name__ == '__main__':
 
     #TODO: check energy for combined reinf
     #energy(np.linspace(.0, .15, 100))
-    profile(0.004)
-    w = np.linspace(.0, .2, 100)
-    #sigma_c_w(w)
+    #profile(0.004)
+    w = np.linspace(.0, 1., 100)
+    sigma_c_w(w)
     # bundle at 20 mm
     #sigma_bundle = 70e3*w/20.*np.exp(-(w/20./0.03)**5.)
     #plt.plot(w,sigma_bundle)
