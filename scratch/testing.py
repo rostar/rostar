@@ -5,23 +5,151 @@ Created on 14.6.2012
 @author: Q
 '''
 
-from stats.spirrid.sampling import FunctionRandomization
-from stats.spirrid.rv import RV
+from spirrid.sampling import FunctionRandomization
+from spirrid.rv import RV
 from stats.misc.random_field.random_field_1D import RandomField
 import numpy as np
 from matplotlib import pyplot as plt
-from quaducom.meso.ctt.scm_numerical.scm_model import SCM
-from quaducom.micro.resp_func.cb_emtrx_clamped_fiber_stress import \
-CBEMClampedFiberStressSP
-from quaducom.meso.ctt.scm_numerical.scm_view import SCMView
+from quaducom.meso.scm.numerical.interdependent_fibers.scm_interdependent_fibers_model import SCM
+from quaducom.meso.scm.numerical.interdependent_fibers.scm_interdependent_fibers_view import SCMView
+from quaducom.meso.homogenized_crack_bridge.elastic_matrix.reinforcement import Reinforcement, WeibullFibers
+from quaducom.meso.homogenized_crack_bridge.elastic_matrix.hom_CB_elastic_mtrx import CompositeCrackBridge
+from quaducom.meso.homogenized_crack_bridge.elastic_matrix.hom_CB_elastic_mtrx_view import CompositeCrackBridgeView
 from os.path import join
 from matresdev.db import SimDB
 from matresdev.db.exdb import ExRun
 from mathkit.mfn.mfn_line.mfn_line import MFnLineArray
 from scipy.optimize import fsolve, fmin
 
-if __name__ == '__main__':
 
+class Calibration():
+
+    r = 0.00345
+    xi = RV('weibull_min', shape=5.0, scale=10.)#WeibullFibers(shape=5., sV0=0.00618983207723)
+    E_m = 25e3
+    E_f = 180e3
+    length = 800.
+    nx = 1000
+    smallest_resid = 300.
+    t_scale = .1
+    mtrx_scale = 4.5
+    mtrx_shape = 13.0
+
+    def get_eps_extrap(self, params):
+        tau = RV('weibull_min', shape=2., scale=self.t_scale)
+        random_field = RandomField(seed=True,
+                                   lacor=5.,
+                                    xgrid=np.linspace(0., self.length, 500),
+                                    nsim=1,
+                                    loc=.0,
+                                    shape=params[1],
+                                    scale=self.mtrx_scale,
+                                    distribution='Weibull'
+                                   )
+
+        reinf = Reinforcement(r=self.r,
+                              tau=tau,
+                              V_f=0.0166,
+                              E_f=params[0],
+                              xi=self.xi,
+                              n_int=50,
+                              label='carbon')
+
+        scm = SCM(length=self.length,
+                  nx=self.nx,
+                  random_field=random_field,
+                  E_m=self.E_m,
+                  reinforcement=reinf,
+                  load_sigma_c_min=.1,
+                  load_sigma_c_max=25.,
+                  load_n_sigma_c=80
+                  )
+
+        scm_view = SCMView(model=scm)
+        scm_view.model.evaluate()
+        return scm_view.eps_sigma
+
+    def get_eps(self, params):
+        tau = RV('weibull_min', shape=2., scale=self.t_scale)
+        random_field = RandomField(seed=True,
+                                   lacor=5.,
+                                    xgrid=np.linspace(0., self.length, 500),
+                                    nsim=1,
+                                    loc=.0,
+                                    shape=params[1],
+                                    scale=self.mtrx_scale,
+                                    distribution='Weibull'
+                                   )
+
+        reinf = Reinforcement(r=self.r,
+                              tau=tau,
+                              V_f=0.0111,
+                              E_f=params[0],
+                              xi=self.xi,
+                              n_int=50,
+                              label='carbon')
+
+        scm = SCM(length=self.length,
+                  nx=self.nx,
+                  random_field=random_field,
+                  E_m=self.E_m,
+                  reinforcement=reinf,
+                  load_sigma_c_min=.1,
+                  load_sigma_c_max=15.,
+                  load_n_sigma_c=80
+                  )
+
+        scm_view = SCMView(model=scm)
+        scm_view.model.evaluate()
+        return scm_view.eps_sigma
+
+    def experiment(self, e):
+        eps = V13.ex_type.eps_asc[108:]
+        sig = V13.ex_type.sig_c_asc[108:]
+        line = MFnLineArray(xdata=eps, ydata=sig)
+        vect_line = np.vectorize(line.get_value)
+        return vect_line(e)
+
+    def residuum(self, params):
+        try:
+            eps_opt, sigma = self.get_eps(params)
+            squares = (self.experiment(eps_opt) - sigma) ** 2
+            weight = np.ones(len(squares))
+            weight[50:70] = 5.
+            resid = np.sum((self.experiment(eps_opt) - sigma) ** 2 * weight)
+            print 'params:', params
+            print 'RESIDUUM =', resid
+            if resid < self.smallest_resid:
+                self.smallest_resid = resid
+                plt.figure()
+                plt.plot(V13.ex_type.eps_asc, V13.ex_type.sig_c_asc, color='black')
+                plt.plot(V23.ex_type.eps_asc, V23.ex_type.sig_c_asc, color='black')
+                plt.plot(V33.ex_type.eps_asc, V33.ex_type.sig_c_asc, color='black')
+                plt.plot(eps_opt, sigma, color='red',
+                         label='%.2f, %.2f' %(params[0], params[1]))
+                plt.plot(V2small.ex_type.eps_asc, V2small.ex_type.sig_c_asc, color='black')
+                plt.plot(V3small.ex_type.eps_asc, V3small.ex_type.sig_c_asc, color='black')
+                try:
+                    eps_extrap, sigma_extrap = self.get_eps_extrap(params)
+                    plt.plot(eps_extrap, sigma_extrap, color='red')
+                except:
+                    print 'extrapolation failed'
+                    pass
+                plt.xlim(0., 0.008)
+                plt.legend(loc='best')
+                plt.show()
+            return resid
+        except:
+            print 'FAILED'
+            return self.smallest_resid * 1.5
+
+    def get_parameters(self):
+        opt_params = fmin(self.residuum, np.array([190e3, 13.0]))
+        print opt_params
+
+
+if __name__ == '__main__':
+    calib = Calibration()
     simdb = SimDB()
 
     # specify the path to the data file.
@@ -87,157 +215,6 @@ if __name__ == '__main__':
     V2small = ExRun(data_file=SH3V2_4cm)
     V3small = ExRun(data_file=SH3V3_4cm)
 
-    class Opt():
-
-        r = 0.00345
-        l = 1.0
-        theta = 0.0
-        xi = .013
-        phi = 1.
-        E_m = 25e3
-        E_f = 200e3
-        length = 1500.
-        nx = 1500
-        smallest_resid = 300.
-        t_shape = 1.
-        mtrx_scale = 5.8
-        mtrx_shape = 21.0
-
-        def get_eps_extrap(self, t_scale, ef):
-            tau = RV('weibull_min', shape=self.t_shape, scale=t_scale)
-            random_field = RandomField(seed=True,
-                                       lacor=5.,
-                                        xgrid=np.linspace(0., self.length, 500),
-                                        nsim=1,
-                                        loc=.0,
-                                        shape=self.mtrx_shape,
-                                        scale=self.mtrx_scale * 1.1,
-                                        distribution='Weibull'
-                                       )
-            rf = CBEMClampedFiberStressSP()
-            rand = FunctionRandomization(q=rf,
-                                         tvars=dict(tau=tau,
-                                                    l=self.l,
-                                                    E_f=ef,
-                                                    theta=self.theta,
-                                                    xi=self.xi,
-                                                    phi=self.phi,
-                                                    E_m=self.E_m,
-                                                    r=self.r,
-                                                    V_f=0.0166
-                                                         ),
-                                            n_int=500
-                                            )
-
-            scm = SCM(length=self.length,
-                      nx=self.nx,
-                      random_field=random_field,
-                      cb_randomization=rand,
-                      cb_type='mean',
-                      load_sigma_c_min=.1,
-                      load_sigma_c_max=20.,
-                      load_n_sigma_c=100,
-                      n_w=50,
-                      n_x=61,
-                      n_BC=2
-                      )
-
-            scm_view = SCMView(model=scm)
-            scm_view.model.evaluate()
-            return scm_view.eps_sigma
-
-        def get_eps(self, t_scale, ef):
-            tau = RV('weibull_min', shape=self.t_shape, scale=t_scale)
-            random_field = RandomField(seed=True,
-                                       lacor=5.,
-                                        xgrid=np.linspace(0., self.length, 500),
-                                        nsim=1,
-                                        loc=.0,
-                                        shape=self.mtrx_shape,
-                                        scale=self.mtrx_scale,
-                                        non_negative_check=True,
-                                        distribution='Weibull'
-                                       )
-            rf = CBEMClampedFiberStressSP()
-            rand = FunctionRandomization(q=rf,
-                                         tvars=dict(tau=tau,
-                                                    l=self.l,
-                                                    E_f=ef,
-                                                    theta=self.theta,
-                                                    xi=self.xi,
-                                                    phi=self.phi,
-                                                    E_m=self.E_m,
-                                                    r=self.r,
-                                                    V_f=0.0111
-                                                         ),
-                                            n_int=500
-                                            )
-
-            scm = SCM(length=self.length,
-                      nx=self.nx,
-                      random_field=random_field,
-                      cb_randomization=rand,
-                      cb_type='mean',
-                      load_sigma_c_min=.1,
-                      load_sigma_c_max=12.,
-                      load_n_sigma_c=100,
-                      n_w=50,
-                      n_x=61,
-                      n_BC=2
-                      )
-
-            scm_view = SCMView(model=scm)
-            scm_view.model.evaluate()
-            return scm_view.eps_sigma
-
-        def experiment(self, e):
-            eps = V13.ex_type.eps_asc[108:]
-            sig = V13.ex_type.sig_c_asc[108:]
-            line = MFnLineArray(xdata=eps, ydata=sig)
-            vect_line = np.vectorize(line.get_value)
-            return vect_line(e)
-
-        def residuum(self, params):
-            t_scale = params[0]
-            ef = params[1]
-            try:
-                eps_opt, sigma = self.get_eps(t_scale, ef)
-                squares = (self.experiment(eps_opt) - sigma) ** 2
-                weight = np.ones(len(squares))
-                weight[50:70] = 5.
-                resid = np.sum((self.experiment(eps_opt) - sigma) ** 2 * weight)
-            except:
-                print '!!!!FAILED!!!!'
-                resid = self.smallest_resid * 20.0
-            print 't_scale', t_scale
-            print 'Ef', ef
-            print 'RESIDUUM', resid
-            if resid < self.smallest_resid:
-                self.smallest_resid = resid
-                plt.figure()
-                plt.plot(V13.ex_type.eps_asc, V13.ex_type.sig_c_asc, color='black')
-                plt.plot(V23.ex_type.eps_asc, V23.ex_type.sig_c_asc, color='black')
-                plt.plot(V33.ex_type.eps_asc, V33.ex_type.sig_c_asc, color='black')
-                plt.plot(eps_opt, sigma, color='red',
-                         label='%.2f, %.2f' %(t_scale, ef))
-                plt.plot(V2small.ex_type.eps_asc, V2small.ex_type.sig_c_asc, color='black')
-                plt.plot(V3small.ex_type.eps_asc, V3small.ex_type.sig_c_asc, color='black')
-                try:
-                    eps_extrap, sigma_extrap = self.get_eps_extrap(t_scale,
-                                                                   ef)
-                    plt.plot(eps_extrap, sigma_extrap, color='red')
-                except:
-                    pass
-                plt.xlim(0., 0.008)
-                plt.ion()
-                plt.legend(loc='best')
-            plt.show()
-            return resid
-
-        def get_parameters(self):
-            opt_params = fmin(self.residuum, np.array([0.087, 201e3]))
-            print opt_params
-
     def plot():
 
         # access the response values.
@@ -245,117 +222,79 @@ if __name__ == '__main__':
             eps = V.ex_type.eps_asc * 100.
             sig_c = V.ex_type.sig_c_asc
             plt.plot(eps, sig_c, color='black')
-#        for V in [V2small, V3small]:
-#            eps = V.ex_type.eps_asc * 100.
-#            sig_c = V.ex_type.sig_c_asc
-#            plt.plot(eps, sig_c, color='black')
+        for V in [V2small, V3small]:
+            eps = V.ex_type.eps_asc * 100.
+            sig_c = V.ex_type.sig_c_asc
+            plt.plot(eps, sig_c, color='black')
         plt.xlim(0.0, 0.8)
         plt.ylim(0.0,27.)
 
     # filaments
         r = 0.00345
-        tau = RV('weibull_min', shape=1.0, scale=.086)
-        Ef = 195e3
-        Em = 25e3
-        l = 1.0#RV('uniform', scale=6., loc=.5)
-        theta = 0.0
-        xi = 20.013#RV('weibull_min', scale=0.02, shape=5)
-        phi = 1.
-
-        length = 1500.
-        nx = 1500
-        random_field1 = RandomField(seed=True,
-                                   lacor=10.,
-                                    xgrid=np.linspace(0., length, 600),
+        xi = RV('weibull_min', shape=5., scale=10.03)
+        E_m = 25e3
+        E_f = 180e3
+        t_shape = 1.2
+        mtrx_scale = 4.0
+        mtrx_shape = 13.0
+        length = 6000.
+        nx = 6000
+        tau = RV('weibull_min', shape=t_shape, scale=0.1)
+        random_field = RandomField(seed=True,
+                                   lacor=5.,
+                                    xgrid=np.linspace(0., length, 500),
                                     nsim=1,
                                     loc=.0,
-                                    shape=21.,
-                                    scale=5.8 * 1.05,
-                                    non_negative_check=True,
+                                    shape=mtrx_shape,
+                                    scale=mtrx_scale,
                                     distribution='Weibull'
                                    )
 
-        rf = CBEMClampedFiberStressSP()
-        rand1 = FunctionRandomization(q=rf,
-                                     tvars=dict(tau=tau,
-                                                l=l,
-                                                E_f=Ef,
-                                                theta=theta,
-                                                xi=xi,
-                                                phi=phi,
-                                                E_m=Em,
-                                                r=r,
-                                                V_f=0.0166
-                                                     ),
-                                        n_int=20
-                                        )
+        reinf = Reinforcement(r=r,
+                              tau=tau,
+                              V_f=0.0111,
+                              E_f=E_f,
+                              xi=xi,
+                              n_int=50,
+                              label='carbon')
 
-        scm1 = SCM(length=length,
+        scm = SCM(length=length,
                   nx=nx,
-                  random_field=random_field1,
-                  cb_randomization=rand1,
-                  cb_type='mean',
+                  random_field=random_field,
+                  E_m=E_m,
+                  reinforcement=reinf,
                   load_sigma_c_min=.1,
-                  load_sigma_c_max=25.,
-                  load_n_sigma_c=200,
-                  n_w=60,
-                  n_x=81,
-                  n_BC=2
+                  load_sigma_c_max=16.,
+                  load_n_sigma_c=80
                   )
 
-        scm_view1 = SCMView(model=scm1)
-        scm_view1.model.evaluate()
+        scm_view = SCMView(model=scm)
+        scm_view.model.evaluate()
 
-        random_field2 = RandomField(seed=True,
-                                   lacor=10.,
-                                    xgrid=np.linspace(0., length, 600),
-                                    nsim=1,
-                                    loc=.0,
-                                    shape=21.,
-                                    scale=5.8,
-                                    non_negative_check=True,
-                                    distribution='Weibull'
-                                   )
-
-        rand2 = FunctionRandomization(q=rf,
-                                     tvars=dict(tau=tau,
-                                                l=l,
-                                                E_f=Ef,
-                                                theta=theta,
-                                                xi=xi,
-                                                phi=phi,
-                                                E_m=Em,
-                                                r=r,
-                                                V_f=0.0111
-                                                     ),
-                                        n_int=20
-                                        )
-
-        scm2 = SCM(length=length,
-                  nx=nx,
-                  random_field=random_field2,
-                  cb_randomization=rand2,
-                  cb_type='mean',
-                  load_sigma_c_min=.1,
-                  load_sigma_c_max=15.,
-                  load_n_sigma_c=200,
-                  n_w=60,
-                  n_x=81,
-                  n_BC=2
-                  )
-
-        scm_view2 = SCMView(model=scm2)
-        scm_view2.model.evaluate()
-
-        eps1, sigma1 = scm_view1.eps_sigma
-        plt.plot(eps1 * 100., sigma1, lw=2, ls='dashed', color='red')
+        eps1, sigma1 = scm_view.eps_sigma
+        plt.plot(np.array(eps1) * 100., sigma1, lw=2, ls='dashed', color='red')
                  #label='no of cracks = ' + str(len(scm_view1.crack_widths(12.))))
         plt.legend(loc='best')
 #        plt.xlabel('composite strain [-]')
 #        plt.ylabel('composite stress [MPa]')
-        eps2, sigma2 = scm_view2.eps_sigma
-        plt.plot(eps2 * 100., sigma2, lw=2, color='red')
-                 #label='no of cracks = ' + str(len(scm_view2.crack_widths(12.))))
+
+        random_field.scale *= 1.05
+        reinf.V_f = 0.0166
+
+        scm = SCM(length=length,
+                  nx=nx,
+                  random_field=random_field,
+                  E_m=E_m,
+                  reinforcement=reinf,
+                  load_sigma_c_min=.1,
+                  load_sigma_c_max=25.,
+                  load_n_sigma_c=80
+                  )
+
+        scm_view = SCMView(model=scm)
+        scm_view.model.evaluate()
+        eps2, sigma2 = scm_view.eps_sigma
+        plt.plot(np.array(eps2) * 100., sigma2, lw=2, color='red')
         plt.legend(loc='best')
         plt.xlabel('composite strain [%]')
         plt.ylabel('composite stress [MPa]')
@@ -366,6 +305,6 @@ if __name__ == '__main__':
         #plt.legend(loc='best')
         plt.show()
 
-    plot()
-    #opt = Opt()
-    #opt.get_parameters()
+    #plot()
+
+    calib.get_parameters()
