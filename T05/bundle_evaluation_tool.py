@@ -65,11 +65,13 @@ if __name__ == '__main__':
     
     # predicting the SE curve for a bundle from filament data
     filament_tests = True
+    # carbon tested at Textechno/ITA
     fil_lengths_carbon = np.array([25.,50.])
-    fil_strengths_carbon = np.array( [3557., 3243.] )
+    fil_strengths_carbon = np.array([3557., 3243.])
     Ecarbon = 130e3
-    fil_lengths_glass = np.array([20.,100.])
-    fil_strengths_glass = np.array( [2157., 1790.] )
+    # AR-glass tested at Textechno/ITA
+    fil_lengths_glass = np.array([20., 100.])
+    fil_strengths_glass = np.array([2157., 1790.])
     Eglass = 70e3
     #yarn tests on AR-glass
     fh = np.array(fh) / 0.445
@@ -78,19 +80,31 @@ if __name__ == '__main__':
     strengths_glass_adapter = fa
     strengths_glass_resin = fh
     
-    
+    # filament test carbon Dresden (50 and 100 mm) and ITA (25 and 49.99 mm)
+    fil_lengths_carbon = np.array([25., 49.99, 50., 100.])
+    fil_strengths_carbon = np.array([3557., 3243., 3295., 2969.])
+    Ecarbon = 130e3
+
+    # filament tests Basalt Dresden - tested in Textechno
+    fil_lengths_basalt = np.array([50., 100.])
+    fil_strengths_basalt = np.array([2928., 2466.])
+
+    # filament tests AR-Glas Dresden - tested in Textechno
+    fil_lengths_glas = np.array([50., 100.])
+    fil_strengths_glas = np.array([2125., 1792.])
+
     # predicting the SE curve for a filament from bundle data
     bundle_tests = False
     if filament_tests:
-        pe = BundleEvaluationTool( lengths = fil_lengths_glass, 
-                                   strengths = fil_strengths_glass,
-                                   E = Eglass
+        pe = BundleEvaluationTool( lengths = np.array([25., 50., 100.]), 
+                                   strengths = np.array([3557., 3295., 2969.]),
+                                   Ef = Ecarbon
                                    )
         br = pe.bundle_reduction()
     elif bundle_tests:
         pe = BundleEvaluationTool( lengths = lengths_glass[3:], 
                                    strengths = strengths_glass_adapter[3:],
-                                   E = Eglass
+                                   Ef = Eglass
                                    )
         br = 1./pe.bundle_reduction()
 
@@ -150,15 +164,22 @@ if __name__ == '__main__':
         
         logax = plt.subplot( 1, 1, 1 )
         if filament_tests:
-            logax.loglog( x, y, color = 'black', label = 'Filament - Skalierung', subsy = [2, 3, 4, 5, 6, 7, 8, 9] )
-            logax.loglog( x, y*br, color = 'black', lw = 2, ls = 'dashed', label = 'Buendel - Theoretisch' )
-            logax.loglog( pe.lengths, pe.strengths, 'k^', label = 'Filamenttests' )
+            logax.loglog( x, y, color = 'black', label = 'extrapolated filament strength', subsy = [2, 3, 4, 5, 6, 7, 8, 9] )
+            logax.loglog( x, y*br, color = 'black', lw = 2, ls = 'dashed', label = 'theoretical bundle strength' )
+#            logax.loglog( pe.lengths, pe.strengths, 'k^', label = 'Filamenttests AR-Glas - Dresden' )
+            logax.loglog( pe.lengths[:2], pe.strengths[:2], 'k^', label = 'filament tests' )
+#            logax.loglog( pe.lengths[2:], pe.strengths[2:], 'r^', label = 'Filamenttests - Dresden' )
             #glass
-            logax.loglog( lengths_glass, strengths_glass_adapter, 'ro', label = 'Statimat 4U Adapter' )
-            logax.loglog( lengths_glass, strengths_glass_resin, 's', color = 'grey', label = 'resin porters' )
+#            logax.loglog( lengths_glass, strengths_glass_adapter, 'ko', label = 'Statimat 4U adapter' )
+#            logax.loglog( lengths_glass, strengths_glass_resin, 's', color = 'grey', label = 'resin porters' )
             #carbon
-#            plt.loglog( A_lengths, A_strength[:,0], 'ko', label = 'bundle tests' )
-#            plt.loglog( A_lengths, B_strength[:,0], 's', color = 'grey', label = 'UB' )
+            plt.loglog( A_lengths, A_strength[:,0], 'ko', label = 'yarn - Statimat 4U adapter' )
+            plt.loglog( A_lengths, B_strength[:,0], 's', color = 'grey', label = 'yarn - Statimat 4U bollards' )
+#            plt.loglog( [200., 400.], [1518., 1364.], 'ro', label = 'Dresden/Textechno S4U-Adpater' )
+            #plt.loglog( [50., 100., 200., 400.], [1728., 1633., 1570., 1490.], 'ro', label = 'Dresden/Textechno S4U-Adpater basalt' )
+            #plt.loglog( [200., 400.], [1649., 1528.], 'ko', label = 'Dresden/Dresden Capstan Grips basalt' )
+            #plt.loglog( [50., 100., 200., 400.], [1284, 1158, 1284, 1227], 'ro', label = 'Dresden/Textechno S4U-Adpater ARglas' )
+            #plt.loglog( [200., 400.], [1238, 1284], 'ko', label = 'Dresden/Dresden Capstan Grips ARglas' )            
             plt.xticks(fontsize = 16)
             plt.yticks(fontsize = 16)
             plt.grid(True,which="both",ls="-", color = 'grey')
@@ -181,7 +202,7 @@ if __name__ == '__main__':
         xax = logax.xaxis
         xmajor = xax.get_ticklocs()
         xax.set_ticklabels((10,100,1000), fontsize = 16)
-        plt.ylim(500,3000)
+        plt.ylim(500,5000)
         plt.xlim(10,1000)
         #plt.ylabel( 'strength' )
         #plt.xlim( x[0] - ( x[-1] - x[0] ) * 0.01, x[-1] + ( x[-1] - x[0] ) * 0.05 )

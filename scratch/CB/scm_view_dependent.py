@@ -16,7 +16,6 @@ from scm_dependent_fibers import SCM
 from dependent_fibers.reinforcement import Reinforcement, WeibullFibers
 from dependent_fibers.depend_CB_model import CompositeCrackBridge
 from dependent_fibers.depend_CB_postprocessor import CompositeCrackBridgePostprocessor
-from spirrid.rv import RV
 
 
 class SCMView(ModelView):
@@ -34,16 +33,16 @@ class SCMView(ModelView):
         if cb_load[0] is not None:
             # find the symmetry points between cracks as
             # the 0 element of their x range
-            indexes = []
+            idxs = []
             for cb in cb_load:
-                indexes.append(np.where(cb.position +
+                idxs.append(np.where(cb.position +
                                 cb.x[0] == self.model.x_arr)[0])
             # add the index of the last point
-            indexes.append(self.model.nx - 1)
+            idxs.append(self.model.nx - 1)
             # list of crack widths to be filled in a loop with integrated e_rel
-            crack_widths = [np.trapz(e_rel[idx:indexes[i + 1]],
-                            self.model.x_arr[idx:indexes[i + 1]])
-                            for i, idx in enumerate(indexes[:-1])]
+            crack_widths = [np.trapz(e_rel[idx:idxs[i + 1]],
+                            self.model.x_arr[idx:idxs[i + 1]])
+                            for i, idx in enumerate(idxs[:-1])]
             return np.array(crack_widths)
         else:
             return 0.0
@@ -120,8 +119,8 @@ class SCMView(ModelView):
 
 if __name__ == '__main__':
     import time
-    length = 4000.
-    nx = 4000
+    length = 1000.
+    nx = 1000
     random_field = RandomField(seed=True,
                                lacor=10.,
                                 xgrid=np.linspace(0., length, 200),
@@ -157,12 +156,15 @@ if __name__ == '__main__':
               load_n_sigma_c=200
               )
 
-    t = time.clock()
     scm.evaluate()
-
     scm_view = SCMView(model=scm)
     scm_view.model.evaluate()
-
+#    print scm_view.eval_w
+#    print scm_view.w_mean
+#    print scm_view.w_median
+#    print scm_view.w_stdev
+#    print scm_view.w_max
+    
     def plot():
         eps, sigma = scm_view.eps_sigma
         plt.figure()
@@ -170,13 +172,13 @@ if __name__ == '__main__':
         plt.legend(loc='best')
         plt.xlabel('composite strain [-]')
         plt.ylabel('composite stress [MPa]')
-        print 'time =', time.clock() - t
         plt.figure()
         plt.hist(scm_view.crack_widths(16.), bins=20, label='load = 20 MPa')
         plt.hist(scm_view.crack_widths(13.), bins=20, label='load = 15 MPa')
         plt.hist(scm_view.crack_widths(10.), bins=20, label='load = 10 MPa')
         plt.legend(loc='best')
         plt.figure()
+        print scm_view.w_mean
         plt.plot(scm.load_sigma_c, scm_view.w_mean,
                  color='green', lw=2, label='mean crack width')
         plt.plot(scm.load_sigma_c, scm_view.w_median,

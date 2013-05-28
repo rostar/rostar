@@ -13,14 +13,13 @@ from etsproxy.mayavi import mlab as m
 import numpy as np
 from scipy.stats import weibull_min
 from stats.spirrid import make_ogrid as orthogonalize
-from depend_CB_model import CompositeCrackBridge
-from depend_CB_postprocessor import CompositeCrackBridgeView
+from quaducom.meso.homogenized_crack_bridge.elastic_matrix.hom_CB_elastic_mtrx import CompositeCrackBridge
+from quaducom.meso.homogenized_crack_bridge.elastic_matrix.hom_CB_elastic_mtrx_view import CompositeCrackBridgeView
 from matplotlib import pyplot as plt
-from stats.spirrid.rv import RV
-from reinforcement import Reinforcement, WeibullFibers
-from spirrid.spirrid import SPIRRID
+from spirrid.rv import RV
+from quaducom.meso.homogenized_crack_bridge.elastic_matrix.reinforcement import Reinforcement, WeibullFibers
 
-reinf1 = Reinforcement(r=0.01,#RV('uniform', loc=0.001, scale=0.005),
+reinf = Reinforcement(r=0.01,#RV('uniform', loc=0.001, scale=0.005),
                       tau=RV('uniform', loc=.1, scale=1.),
                       V_f=0.3,
                       E_f=200e3,
@@ -29,7 +28,7 @@ reinf1 = Reinforcement(r=0.01,#RV('uniform', loc=0.001, scale=0.005),
                       label='reinforcement')
 
 model = CompositeCrackBridge(E_m=25e3,
-                             reinforcement_lst=[reinf1],
+                             reinforcement_lst=[reinf],
                              Ll=50.,
                              Lr=50.)
 

@@ -56,16 +56,16 @@ if __name__ == '__main__':
             plt.loglog(l, fa, 'ko')
         else:
             plt.plot(l, fa, 'ko')
-        plt.errorbar(l, fa, color = 'red', yerr = np.array(fa) / 100. * cva,
-                     lw = 2, label = 'Adapter')
+        plt.errorbar(l, fa, color = 'black', yerr = np.array(fa) / 100. * cva,
+                     lw = 2, label = 'Statimat 4U adapter')
     
     if harz == True:
         if loglog == True:
             plt.loglog(l, fh, 'ko')
         else:
             plt.plot(l, fh, 'ko')
-        plt.errorbar(l, fh, color = 'orange', yerr = np.array(fh) / 100. * cvh,
-                     lw = 2, ls = 'solid', label = 'Harzeinbettung')
+        plt.errorbar(l, fh, color = 'black', yerr = np.array(fh) / 100. * cvh,
+                     lw = 2, ls = 'dashed', label = 'resin porters')
     
     if vergleich == True:
         if loglog == True:
@@ -91,8 +91,8 @@ if __name__ == '__main__':
             plt.loglog(sp_lengths, sp_strength, 'ko')
         else:
             plt.plot(sp_lengths, sp_strength, 'ko')
-        plt.errorbar(sp_lengths, sp_strength, color = 'blue', yerr = sp_std,
-                     lw = 2, label = 'Umschlingungspruefung')
+        plt.errorbar(sp_lengths, sp_strength, color = 'black', yerr = sp_std,
+                     lw = 1, label = 'capstan grips')
     
     plt.grid()
     plt.xlim(0, 800)

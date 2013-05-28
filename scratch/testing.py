@@ -28,22 +28,22 @@ class Calibration():
     xi = RV('weibull_min', shape=5.0, scale=10.)#WeibullFibers(shape=5., sV0=0.00618983207723)
     E_m = 25e3
     E_f = 180e3
-    length = 800.
-    nx = 1000
+    length = 2000.
+    nx = 2000
     smallest_resid = 300.
     t_scale = .1
-    mtrx_scale = 4.5
+    mtrx_scale = 3.8
     mtrx_shape = 13.0
 
     def get_eps_extrap(self, params):
-        tau = RV('weibull_min', shape=2., scale=self.t_scale)
+        tau = RV('weibull_min', shape=params[3], scale=params[4])
         random_field = RandomField(seed=True,
                                    lacor=5.,
                                     xgrid=np.linspace(0., self.length, 500),
                                     nsim=1,
                                     loc=.0,
                                     shape=params[1],
-                                    scale=self.mtrx_scale,
+                                    scale=params[2],
                                     distribution='Weibull'
                                    )
 
@@ -70,14 +70,14 @@ class Calibration():
         return scm_view.eps_sigma
 
     def get_eps(self, params):
-        tau = RV('weibull_min', shape=2., scale=self.t_scale)
+        tau = RV('weibull_min', shape=params[3], scale=params[4])
         random_field = RandomField(seed=True,
                                    lacor=5.,
                                     xgrid=np.linspace(0., self.length, 500),
                                     nsim=1,
                                     loc=.0,
                                     shape=params[1],
-                                    scale=self.mtrx_scale,
+                                    scale=params[2],
                                     distribution='Weibull'
                                    )
 
@@ -95,7 +95,7 @@ class Calibration():
                   E_m=self.E_m,
                   reinforcement=reinf,
                   load_sigma_c_min=.1,
-                  load_sigma_c_max=15.,
+                  load_sigma_c_max=16.,
                   load_n_sigma_c=80
                   )
 
@@ -144,7 +144,7 @@ class Calibration():
             return self.smallest_resid * 1.5
 
     def get_parameters(self):
-        opt_params = fmin(self.residuum, np.array([190e3, 13.0]))
+        opt_params = fmin(self.residuum, np.array([195e3, 11.0, 4.0, 2.0, 0.1]))
         print opt_params
 
 
@@ -227,7 +227,7 @@ if __name__ == '__main__':
             sig_c = V.ex_type.sig_c_asc
             plt.plot(eps, sig_c, color='black')
         plt.xlim(0.0, 0.8)
-        plt.ylim(0.0,27.)
+        plt.ylim(0.0, 27.)
 
     # filaments
         r = 0.00345
@@ -237,8 +237,8 @@ if __name__ == '__main__':
         t_shape = 1.2
         mtrx_scale = 4.0
         mtrx_shape = 13.0
-        length = 6000.
-        nx = 6000
+        length = 1000.
+        nx = 1000
         tau = RV('weibull_min', shape=t_shape, scale=0.1)
         random_field = RandomField(seed=True,
                                    lacor=5.,

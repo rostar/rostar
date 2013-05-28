@@ -51,11 +51,11 @@ Rel_strength = A_strength / B_strength - 1.0
 if __name__ == '__main__':
 
     plt.plot(lengths, A_strength[:, 0], 'ko')
-    plt.errorbar(x=lengths, y=A_strength[:,0], label='Adapter',
-           yerr = A_COV[:,0] * A_strength[:,0]/100., lw = 2, color = 'red')
+    plt.errorbar(x=lengths, y=A_strength[:,0], label='Statimat 4U adapter',
+           yerr = A_COV[:,0] * A_strength[:,0]/100., lw = 2, color = 'black')
     plt.plot(lengths, B_strength[:,0], 'ko')
-    plt.errorbar(x = lengths, y = B_strength[:,0], label = 'Statimat + UB',
-           yerr = B_COV[:,0] * B_strength[:,0]/100., lw=2, color = 'black', ls = 'solid')
+    plt.errorbar(x = lengths, y = B_strength[:,0], label = 'Statimat 4U big bollards',
+           yerr = B_COV[:,0] * B_strength[:,0]/100., lw=2, color = 'black', ls = 'dashed')
 
     #plt.plot(lengths, A_strength[:,1],
     #                lw = 2, color = 'red', label = '10 twists')
@@ -86,13 +86,13 @@ if __name__ == '__main__':
 #           yerr = B_COV[:,4] * B_strength[:,4]/100., color = 'black', ls = 'dashed')    
     
     plt.ylim(0, 2300)
-    plt.xlim(0,520)
-    plt.ylabel('Festigkeit [MPa]', fontsize = 16)
+    plt.xlim(0,800)
+    plt.ylabel('strength [MPa]', fontsize = 16)
     plt.xticks(fontsize = 16)
     plt.yticks(fontsize = 16)
     plt.legend(loc = 'lower right')
-    plt.title('Toho Tenax Carbon 400 tex', fontsize = 16)
-    plt.xlabel('Laenge [mm]', fontsize = 16)
+    plt.title('Toho Tenax carbon 400 tex', fontsize = 16)
+    plt.xlabel('length [mm]', fontsize = 16)
     
     def plot_results(strength_arr, COV_arr):
         '''contains plotting methods'''
