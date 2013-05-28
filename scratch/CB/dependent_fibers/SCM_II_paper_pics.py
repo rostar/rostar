@@ -126,23 +126,6 @@ def profiles_rigid_vs_el_mtrx():
     plt.ylim(0)
     plt.ylabel('$\epsilon$ [-]')
 
-def random_domain(w):
-    Ef = 70e3
-    Fxi = weibull_min(5., scale = 0.02)
-    r = np.linspace(0.001, 0.005, 100)
-    tau = np.linspace(0., 1., 100)
-    e_arr = orthogonalize([np.arange(len(r)), np.arange(len(tau))])
-
-    tau = tau.reshape(1, len(tau))
-    r = r.reshape(len(r), 1)
-    eps0 = np.sqrt(w * 2 * tau / r / Ef)
-    F = Fxi.cdf(eps0)
-    a = r * Ef / 2. / tau
-    m.surf(e_arr[0], e_arr[1], 50 * F / np.max(F))
-    m.surf(e_arr[0], e_arr[1], 50 * eps0 / np.max(eps0))
-    m.surf(e_arr[0], e_arr[1], np.nan_to_num(a) / 100.)
-    m.show()
-
 def sigma_f(w_arr):
     sf_arr = ccb_view.sigma_f_lst(w_arr)
     #for i, reinf in enumerate(ccb_view.model.reinforcement_lst):
@@ -249,41 +232,10 @@ def sigma_c_u(w_arr, r, tau, E_f, E_m, V_f, xi, n_int):
                       n_int=n_int)
     plt.plot(w_arr, E_f * V_f * spirrid.mu_q_arr, lw=2, color='black')
 
-def integ_domain(isolines):
-    #T = np.linspace(2., 250., isolines)
-    tau = np.linspace(0.01, 0.5)
-    #for t in T:
-    plt.plot(tau, 2 * tau / 100., lw=2., color='black')
-    plt.xlabel('')
-    plt.ylabel('r')
-
-ld_rigid_vs_el_mtrx()
+#ld_rigid_vs_el_mtrx()
 #profiles_rigid_vs_el_mtrx()
 #elastic_matrix(np.linspace(.0, .5, 100))
 #sigma_f(np.linspace(.0, .3, 100))
 #rigid_mtrx()
-#plt.subplot(1,3,1)
-#errors(np.linspace(0.000001, 2., 20))
-#plt.legend(loc='best')
-#plt.subplot(1,3,2)
-#sigma_c_w(w_arr=np.linspace(.0, .3, 100),
-#          r=0.002, tau=RV('weibull_min', shape=5., scale=.5),
-#          E_f=200e3, E_m=25e3,
-#          V_f=0.9, xi=RV('weibull_min', shape=5., scale=.02),
-#          n_int=50)
-#plt.legend(loc='best')
-#plt.subplot(1,3,3)
-#profile(wr=.087, we=0.067, r=0.002, tau=RV('weibull_min', shape=5., scale=.5),
-#        E_f=200e3, E_m=25e3,
-#        V_f=0.05, xi=RV('weibull_min', shape=5., scale=.02),
-#        n_int=50)
-#for em in np.linspace(5e3, 100e3, 4):
-#    sigma_c_u(w_arr=np.linspace(.0, .5, 100),
-#          r=0.002, tau=RV('weibull_min', shape=5., scale=.5),
-#          E_f=200e3, E_m=em,
-#          V_f=0.1, xi=RV('weibull_min', shape=5., scale=.02),
-#          n_int=50)
-#integ_domain(10)
 plt.legend(loc='best')
 plt.show()
-#random_domain(0.15)
