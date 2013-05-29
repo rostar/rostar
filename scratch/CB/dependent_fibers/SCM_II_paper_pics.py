@@ -132,22 +132,50 @@ def Vf_k(k):
     Ef = ccb_view.model.reinforcement_lst[0].E_f
     return -Em*k/(Ef*k-Em*k-Ef)
 
-def sigma_c_arr():
-    Vf = Vf_k(0.1)
+def sigma_c_arr(k):
+    Vf = Vf_k(k[0])
     reinf = Reinforcement(r=0.01, tau=0.1, V_f=Vf, E_f=200e3, xi=1000., n_int=50)
     sigma = ccb_view.sigma_c_arr(w_arr)
     plt.plot(w_arr, sigma / Vf, lw=2)
-    Vf = Vf_k(0.5)
+    Vf = Vf_k(k[1])
     reinf = Reinforcement(r=0.01, tau=0.1, V_f=Vf, E_f=200e3, xi=1000., n_int=50)
     sigma = ccb_view.sigma_c_arr(w_arr)
     plt.plot(w_arr, sigma / Vf, lw=2)
-    Vf = Vf_k(0.8)
+    Vf = Vf_k(k[2])
     reinf = Reinforcement(r=0.01, tau=0.1, V_f=Vf, E_f=200e3, xi=1000., n_int=50)
     ccb_view.model.reinforcement_lst = [reinf]
     sigma = ccb_view.sigma_c_arr(w_arr)
     plt.plot(w_arr, sigma / Vf, lw=2)
 
-sigma_c_arr()
+def profiles(k):
+    Vf = Vf_k(k[0])
+    ccb_view.model.w = 0.5
+    reinf = Reinforcement(r=0.01, tau=RV('uniform', loc=.1, scale=.002), V_f=Vf, E_f=200e3, xi=1000., n_int=50)
+    x = ccb_view.x_arr[1:-1]
+    epsm = ccb_view.epsm_arr[1:-1]
+    epsf = ccb_view.mu_epsf_arr[1:-1]
+    plt.plot(x, epsm, lw=2)
+    plt.plot(x, epsf, lw=2)
+    Vf = Vf_k(k[1])
+    reinf = Reinforcement(r=0.01, tau=0.1, V_f=Vf, E_f=200e3, xi=1000., n_int=50)
+    ccb_view.model.reinforcement_lst = [reinf]
+    ccb_view.model.w = 0.5
+    x = ccb_view.x_arr[1:-1]
+    epsm = ccb_view.epsm_arr[1:-1]
+    epsf = ccb_view.mu_epsf_arr[1:-1]
+    plt.plot(x, epsm, lw=2)
+    plt.plot(x, epsf, lw=2)
+    Vf = Vf_k(k[2])
+    reinf = Reinforcement(r=0.01, tau=0.1, V_f=Vf, E_f=200e3, xi=1000., n_int=50)
+    ccb_view.model.reinforcement_lst = [reinf]
+    x = ccb_view.x_arr[1:-1]
+    epsm = ccb_view.epsm_arr[1:-1]
+    epsf = ccb_view.mu_epsf_arr[1:-1]
+    plt.plot(x, epsm, lw=2)
+    plt.plot(x, epsf, lw=2)
+
+#sigma_c_arr([0.1,0.3,0.5])
+profiles([0.1,0.3,0.5])
 #ld_rigid_vs_el_mtrx()
 #profiles_rigid_vs_el_mtrx()
 #elastic_matrix(np.linspace(.0, .5, 100))
