@@ -70,12 +70,8 @@ def sigma_c_arr_rand(k):
         Vf = Vf_k(ki)
         reinf = Reinforcement(r=RV('uniform', loc=.005, scale=.01),
                               tau=RV('uniform', loc=.05, scale=.1),
-                              V_f=Vf, E_f=200e3, xi=WeibullFibers(shape=5., sV0=0.003),
+                              V_f=Vf, E_f=200e3, xi=WeibullFibers(shape=30., sV0=0.003),
                               n_int=50)
-        reinf = Reinforcement(r=0.01,#RV('uniform', loc=.005, scale=.01),
-                      tau=0.1,#RV('uniform', loc=.001, scale=.2),
-                      V_f=Vf, E_f=200e3, xi=WeibullFibers(shape=5., sV0=0.003),
-                      n_int=50)
         ccb_view.model.reinforcement_lst = [reinf]
         sigma = ccb_view.sigma_c_arr(w_arr)
         plt.plot(w_arr, sigma / Vf, lw=2)
@@ -90,6 +86,8 @@ def profiles_rand(k):
                       V_f=Vf, E_f=200e3, xi=WeibullFibers(shape=5., sV0=0.003),
                       n_int=50)
         ccb_view.model.reinforcement_lst = [reinf]
+        sig_max, wmax = ccb_view.sigma_c_max
+        ccb_view.model.w = wmax
         x = ccb_view.x_arr[1:-1]
         epsm = ccb_view.epsm_arr[1:-1]
         epsf = ccb_view.mu_epsf_arr[1:-1]
@@ -98,33 +96,33 @@ def profiles_rand(k):
 
 
 def k_influence_rand(k_arr):
-    sig_max_lst = []
-    wmax_lst = []
-    for ki in k_arr:
-        print ki
-        Vf = Vf_k(ki)
-        reinf = Reinforcement(r=RV('uniform', loc=.005, scale=.01),
-                              tau=RV('uniform', loc=.05, scale=.1),
-                              xi=WeibullFibers(shape=5., sV0=0.003),
-                              V_f=Vf, E_f=200e3, n_int=100)
-        ccb_view.model.reinforcement_lst = [reinf]
-        sig_max, wmax = ccb_view.sigma_c_max
-        sig_max_lst.append(sig_max / Vf)
-        wmax_lst.append(wmax)
-
     fig = plt.figure()
     ax1 = fig.add_subplot(111)
     ax2 = ax1.twinx()
-    ax1.plot(k_arr, np.array(sig_max_lst))
-    ax2.plot(k_arr, np.array(wmax_lst))
+    for i,m in enumerate([4., 8., 15.]):
+        sig_max_lst = []
+        wmax_lst = []
+        for ki in k_arr:
+            Vf = Vf_k(ki)
+            print 'Vf =', Vf
+            reinf = Reinforcement(r=RV('uniform', loc=.005, scale=.01),
+                                  tau=RV('uniform', loc=.05, scale=.1),
+                                  xi=WeibullFibers(shape=m, sV0=0.003),
+                                  V_f=Vf, E_f=200e3, n_int=100)
+            ccb_view.model.reinforcement_lst = [reinf]
+            sig_max, wmax = ccb_view.sigma_c_max
+            sig_max_lst.append(sig_max / Vf)
+            wmax_lst.append(wmax)
+        ax1.plot(k_arr, np.array(sig_max_lst)/sig_max_lst[0], lw=i+1)
+        ax2.plot(k_arr, np.array(wmax_lst),lw=i+1)
     ax1.set_ylim(0)
     ax2.set_ylim(0)
 
 #sigma_c_arr([0.1,0.3,0.5])
 #profiles([0.1, 0.3, 0.5])
 #k_influence(np.linspace(0.01, 0.9, 10))
-#sigma_c_arr_rand([0.01, 0.5, 0.8])
+#sigma_c_arr_rand([0.1, 0.3, 0.5])
 #profiles_rand([0.1, 0.3, 0.5])
-k_influence_rand(np.linspace(0.01, 0.9, 50))
+k_influence_rand(np.linspace(0.01, 0.8, 20))
 plt.legend(loc='best')
 plt.show()
