@@ -70,7 +70,7 @@ def sigma_c_arr_rand(k):
         Vf = Vf_k(ki)
         reinf = Reinforcement(r=RV('uniform', loc=.005, scale=.01),
                               tau=RV('uniform', loc=.05, scale=.1),
-                              V_f=Vf, E_f=200e3, xi=WeibullFibers(shape=30., sV0=0.003),
+                              V_f=Vf, E_f=200e3, xi=WeibullFibers(shape=4., sV0=0.003),
                               n_int=50)
         ccb_view.model.reinforcement_lst = [reinf]
         sigma = ccb_view.sigma_c_arr(w_arr)
@@ -94,27 +94,35 @@ def profiles_rand(k):
         plt.plot(x, epsm, lw=2)
         plt.plot(x, epsf, lw=2)
 
-
+from scipy.special import gamma
+from math import pi
 def k_influence_rand(k_arr):
     fig = plt.figure()
     ax1 = fig.add_subplot(111)
-    ax2 = ax1.twinx()
-    for i,m in enumerate([4., 8., 15.]):
+    fig2 = plt.figure()
+    ax2 = fig2.add_subplot(111)
+    for i, m in enumerate([4., 8., 30.]):
         sig_max_lst = []
         wmax_lst = []
         for ki in k_arr:
             Vf = Vf_k(ki)
-            print 'Vf =', Vf
+            print 'Vf = ', Vf, 'm = ', m
             reinf = Reinforcement(r=RV('uniform', loc=.005, scale=.01),
                                   tau=RV('uniform', loc=.05, scale=.1),
                                   xi=WeibullFibers(shape=m, sV0=0.003),
                                   V_f=Vf, E_f=200e3, n_int=100)
+            mur = reinf.r._distr.mean
+            mutau = reinf.tau._distr.mean
+            muxi = reinf.xi.mean(2*mutau/mur/reinf.E_f, mur)
+            g = gamma(1. + 1./(1 + m))
+            sV0 = ((muxi/g)**(m+1)*(pi*mur**3*reinf.E_f)/(mutau*(m+1)))**(1./m)
+            reinf.xi.sV0 = sV0
             ccb_view.model.reinforcement_lst = [reinf]
             sig_max, wmax = ccb_view.sigma_c_max
             sig_max_lst.append(sig_max / Vf)
             wmax_lst.append(wmax)
-        ax1.plot(k_arr, np.array(sig_max_lst)/sig_max_lst[0], lw=i+1)
-        ax2.plot(k_arr, np.array(wmax_lst),lw=i+1)
+        ax1.plot(k_arr, np.array(sig_max_lst)/sig_max_lst[0])
+        ax2.plot(k_arr, np.array(wmax_lst)/wmax_lst[0], label=str(m))
     ax1.set_ylim(0)
     ax2.set_ylim(0)
 
@@ -123,6 +131,6 @@ def k_influence_rand(k_arr):
 #k_influence(np.linspace(0.01, 0.9, 10))
 #sigma_c_arr_rand([0.1, 0.3, 0.5])
 #profiles_rand([0.1, 0.3, 0.5])
-k_influence_rand(np.linspace(0.01, 0.8, 20))
+k_influence_rand(np.linspace(0.01, 0.9, 30))
 plt.legend(loc='best')
 plt.show()
