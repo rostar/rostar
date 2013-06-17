@@ -63,11 +63,9 @@ def sigma_c_arr(k_lst, mu_r, mu_tau, COV_r_lst, COV_tau_lst):
             scale_r = cov_r * 2 * np.sqrt(3.0) * mu_r
             loc_tau = mu_tau * (1 - COV_tau_lst[i] * np.sqrt(3.0))
             scale_tau = COV_tau_lst[i] * 2 * np.sqrt(3.0) * mu_tau
-            print loc_r + scale_r/2.
-            print loc_tau + scale_tau/2.
             reinf = ContinuousFibers(r=RV('uniform', loc=loc_r, scale=scale_r),
                           tau=RV('uniform', loc=loc_tau, scale=scale_tau),
-                          V_f=Vf, E_f=200e3, xi=100.,#WeibullFibers(shape=5., sV0=0.003),
+                          V_f=Vf, E_f=200e3, xi=WeibullFibers(shape=20., sV0=0.003),
                           n_int=50)
             ccb_view.model.reinforcement_lst = [reinf]
             #sig_max, wmax = ccb_view.sigma_c_max
@@ -94,9 +92,7 @@ def profiles(k_lst, mu_r, mu_tau, COV_r_lst, COV_tau_lst):
             #ccb_view.model.w = wmax
             x = ccb_view.x_arr[1:-1]
             epsm = ccb_view.epsm_arr[1:-1]
-            epsf = ccb_view.mu_epsf_arr[1:-1]
             plt.plot(x, epsm, lw=2)
-            plt.plot(x, epsf, lw=2)
             plt.xlim(0, 300)
 
 from scipy.special import gamma
@@ -131,8 +127,8 @@ def k_influence_rand(k_arr):
     ax2.set_ylim(0)
 
 k_lst, mu_r, mu_tau, COV_r_lst, COV_tau_lst = [0.1, 0.3], 0.01, 0.1, [0.0001, 0.5], [0.0001, 0.5]
-profiles(k_lst, mu_r, mu_tau, COV_r_lst, COV_tau_lst)
-#sigma_c_arr(k_lst, mu_r, mu_tau, COV_r_lst, COV_tau_lst)
+#profiles(k_lst, mu_r, mu_tau, COV_r_lst, COV_tau_lst)
+sigma_c_arr(k_lst, mu_r, mu_tau, COV_r_lst, COV_tau_lst)
 #k_influence_rand(np.linspace(0.01, 0.9, 30))
 #k_influence(k_lst, mu_r, mu_tau, COV_r_lst, COV_tau_lst)
 plt.legend(loc='best')
