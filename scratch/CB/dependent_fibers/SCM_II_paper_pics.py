@@ -15,9 +15,9 @@ from quaducom.meso.homogenized_crack_bridge.elastic_matrix.hom_CB_elastic_mtrx i
 from quaducom.meso.homogenized_crack_bridge.elastic_matrix.hom_CB_elastic_mtrx_view import CompositeCrackBridgeView
 from matplotlib import pyplot as plt
 from spirrid.rv import RV
-from quaducom.meso.homogenized_crack_bridge.elastic_matrix.reinforcement import Reinforcement, WeibullFibers
+from quaducom.meso.homogenized_crack_bridge.elastic_matrix.reinforcement import Reinforcement, WeibullFibers, ContinuousFibers
 
-reinf = Reinforcement(r=0.01, tau=0.1, V_f=0.01, E_f=200e3, xi=1000., n_int=50)
+reinf = ContinuousFibers(r=0.01, tau=0.1, V_f=0.01, E_f=200e3, xi=1000., n_int=50)
 model = CompositeCrackBridge(E_m=25e3,
                              reinforcement_lst=[reinf],
                              Ll=np.infty,
@@ -35,23 +35,23 @@ def Vf_k(k):
 def sigma_c_arr(k):
     for ki in k:
         Vf = Vf_k(ki)
-        reinf = Reinforcement(r=0.01, tau=0.1, V_f=Vf, E_f=200e3, xi=1000., n_int=50)
+        reinf = ContinuousFibers(r=0.01, tau=0.1, V_f=Vf, E_f=200e3, xi=1000., n_int=50)
         ccb_view.model.reinforcement_lst = [reinf]
         sigma = ccb_view.sigma_c_arr(w_arr)
         plt.plot(w_arr, sigma / Vf, lw=2)
 
 
-def profiles(k):
-    for ki in k:
-        Vf = Vf_k(ki)
-        ccb_view.model.w = 0.5
-        reinf = Reinforcement(r=0.01, tau=0.1, V_f=Vf, E_f=200e3, xi=1000., n_int=50)
-        ccb_view.model.reinforcement_lst = [reinf]
-        x = ccb_view.x_arr[1:-1]
-        epsm = ccb_view.epsm_arr[1:-1]
-        epsf = ccb_view.mu_epsf_arr[1:-1]
-        plt.plot(x, epsm, lw=2)
-        plt.plot(x, epsf, lw=2)
+# def profiles(k):
+#     for ki in k:
+#         Vf = Vf_k(ki)
+#         ccb_view.model.w = 0.5
+#         reinf = ContinuousFibers(r=0.01, tau=0.1, V_f=Vf, E_f=200e3, xi=1000., n_int=50)
+#         ccb_view.model.reinforcement_lst = [reinf]
+#         x = ccb_view.x_arr[1:-1]
+#         epsm = ccb_view.epsm_arr[1:-1]
+#         epsf = ccb_view.mu_epsf_arr[1:-1]
+#         plt.plot(x, epsm, lw=2)
+#         plt.plot(x, epsf, lw=2)
 
 
 def k_influence(k_arr):
@@ -59,7 +59,7 @@ def k_influence(k_arr):
     for ki in k_arr:
         Vf = Vf_k(ki)
         ccb_view.model.w = 0.5
-        reinf = Reinforcement(r=0.01, tau=0.1, V_f=Vf, E_f=200e3, xi=1000., n_int=50)
+        reinf = ContinuousFibers(r=0.01, tau=0.1, V_f=Vf, E_f=200e3, xi=1000., n_int=50)
         ccb_view.model.reinforcement_lst = [reinf]
         epsf_max_lst.append(np.max(ccb_view.mu_epsf_arr))
     plt.plot(k_arr, np.array(epsf_max_lst) * reinf.E_f)
@@ -68,7 +68,7 @@ def k_influence(k_arr):
 def sigma_c_arr_rand(k):
     for ki in k:
         Vf = Vf_k(ki)
-        reinf = Reinforcement(r=RV('uniform', loc=.005, scale=.01),
+        reinf = ContinuousFibers(r=RV('uniform', loc=.005, scale=.01),
                               tau=RV('uniform', loc=.05, scale=.1),
                               V_f=Vf, E_f=200e3, xi=WeibullFibers(shape=4., sV0=0.003),
                               n_int=50)
@@ -77,22 +77,28 @@ def sigma_c_arr_rand(k):
         plt.plot(w_arr, sigma / Vf, lw=2)
 
 
-def profiles_rand(k):
-    for ki in k:
+def profiles(k_lst, mu_r, mu_tau, COV_r_lst, COV_tau_lst):
+    for ki in k_lst:
         Vf = Vf_k(ki)
         ccb_view.model.w = 0.5
-        reinf = Reinforcement(r=RV('uniform', loc=.005, scale=.01),
-                      tau=RV('uniform', loc=.001, scale=.2),
-                      V_f=Vf, E_f=200e3, xi=WeibullFibers(shape=5., sV0=0.003),
-                      n_int=50)
-        ccb_view.model.reinforcement_lst = [reinf]
-        sig_max, wmax = ccb_view.sigma_c_max
-        ccb_view.model.w = wmax
-        x = ccb_view.x_arr[1:-1]
-        epsm = ccb_view.epsm_arr[1:-1]
-        epsf = ccb_view.mu_epsf_arr[1:-1]
-        plt.plot(x, epsm, lw=2)
-        plt.plot(x, epsf, lw=2)
+        for i, cov_r in enumerate(COV_r_lst):
+            loc_r = mu_r * (1 - cov_r * np.sqrt(3.0))
+            scale_r = cov_r * 2 * np.sqrt(3.0) * mu_r
+            print loc_r, scale_r
+            loc_tau = mu_tau * (1 - COV_tau_lst[i] * np.sqrt(3.0))
+            scale_tau = COV_tau_lst[i] * 2 * np.sqrt(3.0) * mu_tau
+            print loc_tau, scale_tau
+            reinf = ContinuousFibers(r=RV('uniform', loc=loc_r, scale=scale_r),
+                          tau=RV('uniform', loc=loc_tau, scale=scale_tau),
+                          V_f=Vf, E_f=200e3, xi=100.,#WeibullFibers(shape=5., sV0=0.003),
+                          n_int=50)
+            ccb_view.model.reinforcement_lst = [reinf]
+            #sig_max, wmax = ccb_view.sigma_c_max
+            #ccb_view.model.w = wmax
+            x = ccb_view.x_arr[1:-1]
+            epsm = ccb_view.epsm_arr[1:-1]
+            plt.plot(x, epsm, lw=2)
+            plt.xlim(0, 100)
 
 from scipy.special import gamma
 from math import pi
@@ -107,7 +113,7 @@ def k_influence_rand(k_arr):
         for ki in k_arr:
             Vf = Vf_k(ki)
             print 'Vf = ', Vf, 'm = ', m
-            reinf = Reinforcement(r=RV('uniform', loc=.005, scale=.01),
+            reinf = ContinuousFibers(r=RV('uniform', loc=.005, scale=.01),
                                   tau=RV('uniform', loc=.05, scale=.1),
                                   xi=WeibullFibers(shape=m, sV0=0.003),
                                   V_f=Vf, E_f=200e3, n_int=100)
@@ -127,10 +133,10 @@ def k_influence_rand(k_arr):
     ax2.set_ylim(0)
 
 #sigma_c_arr([0.1,0.3,0.5])
-#profiles([0.1, 0.3, 0.5])
 #k_influence(np.linspace(0.01, 0.9, 10))
 #sigma_c_arr_rand([0.1, 0.3, 0.5])
-#profiles_rand([0.1, 0.3, 0.5])
-k_influence_rand(np.linspace(0.01, 0.9, 30))
-plt.legend(loc='best')
+k_lst, mu_r, mu_tau, COV_r_lst, COV_tau_lst = [0.1, 0.3], 0.001, 0.1, [0.0001, 0.3, 0.5], [0.0001, 0.3, 0.5]
+profiles(k_lst, mu_r, mu_tau, COV_r_lst, COV_tau_lst)
+#k_influence_rand(np.linspace(0.01, 0.9, 30))
+#plt.legend(loc='best')
 plt.show()
