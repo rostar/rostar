@@ -65,7 +65,7 @@ def sigma_c_arr(k_lst, mu_r, mu_tau, COV_r_lst, COV_tau_lst):
             scale_tau = COV_tau_lst[i] * 2 * np.sqrt(3.0) * mu_tau
             reinf = ContinuousFibers(r=RV('uniform', loc=loc_r, scale=scale_r),
                           tau=RV('uniform', loc=loc_tau, scale=scale_tau),
-                          V_f=Vf, E_f=200e3, xi=WeibullFibers(shape=20., sV0=0.003),
+                          V_f=Vf, E_f=200e3, xi=WeibullFibers(shape=7., sV0=0.003),
                           n_int=50)
             ccb_view.model.reinforcement_lst = [reinf]
             #sig_max, wmax = ccb_view.sigma_c_max
@@ -142,24 +142,24 @@ def k_COV_plots(k_arr, COV_arr):
             reinf = ContinuousFibers(r=RV('uniform', loc=loc_r, scale=scale_r),
                                   tau=RV('uniform', loc=loc_tau, scale=scale_tau),
                                   xi=WeibullFibers(shape=7.0, sV0=0.003),
-                                  V_f=Vf, E_f=200e3, n_int=50)
+                                  V_f=Vf, E_f=200e3, n_int=100)
             ccb_view.model.reinforcement_lst = [reinf]
             sig_max, wmax = ccb_view.sigma_c_max
-            sig_max_arr[i,j] = sig_max/Vf
-            wmax_arr[i,j] = wmax
+            sig_max_arr[i, j] = sig_max/Vf
+            wmax_arr[i, j] = wmax
     ctrl_vars = orthogonalize([np.arange(len(k_arr)), np.arange(len(COV_arr))])
     print sig_max_arr
     print wmax_arr
     mlab.surf(ctrl_vars[0], ctrl_vars[1], sig_max_arr / np.max(sig_max_arr))
     mlab.surf(ctrl_vars[0], ctrl_vars[1], wmax_arr / np.max(wmax_arr))
     mlab.show()
-    
-    
-#k_lst, mu_r, mu_tau, COV_r_lst, COV_tau_lst = [0.1, 0.3], 0.01, 0.1, [0.0001, 0.5], [0.0001, 0.5]
+
+
+#k_lst, mu_r, mu_tau, COV_r_lst, COV_tau_lst = [0.001, 0.9], 0.01, 0.1, [0.0001, 0.5], [0.0001, 0.5]
 #profiles(k_lst, mu_r, mu_tau, COV_r_lst, COV_tau_lst)
 #sigma_c_arr(k_lst, mu_r, mu_tau, COV_r_lst, COV_tau_lst)
 #k_influence_rand(np.linspace(0.01, 0.9, 30))
 #k_influence(k_lst, mu_r, mu_tau, COV_r_lst, COV_tau_lst)
-k_COV_plots(np.linspace(0.001, 0.9, 15), np.linspace(0.001, 0.5, 15))
+k_COV_plots(np.linspace(0.001, 0.9, 2), np.linspace(0.001, 0.5, 2))
 plt.legend(loc='best')
 plt.show()
