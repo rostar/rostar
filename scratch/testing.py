@@ -12,7 +12,8 @@ import numpy as np
 from matplotlib import pyplot as plt
 from quaducom.meso.scm.numerical.interdependent_fibers.scm_interdependent_fibers_model import SCM
 from quaducom.meso.scm.numerical.interdependent_fibers.scm_interdependent_fibers_view import SCMView
-from quaducom.meso.homogenized_crack_bridge.elastic_matrix.reinforcement import Reinforcement, WeibullFibers
+from quaducom.meso.homogenized_crack_bridge.elastic_matrix.reinforcement import Reinforcement, ContinuousFibers
+from stats.pdistrib.weibull_fibers_composite_distr import WeibullFibers
 from quaducom.meso.homogenized_crack_bridge.elastic_matrix.hom_CB_elastic_mtrx import CompositeCrackBridge
 from quaducom.meso.homogenized_crack_bridge.elastic_matrix.hom_CB_elastic_mtrx_view import CompositeCrackBridgeView
 from os.path import join
@@ -25,7 +26,7 @@ from scipy.optimize import fsolve, fmin
 class Calibration():
 
     r = 0.00345
-    xi = RV('weibull_min', shape=5.0, scale=10.)#WeibullFibers(shape=5., sV0=0.00618983207723)
+    xi = WeibullFibers(shape=4.5, sV0=3.2e-3)
     E_m = 25e3
     E_f = 180e3
     length = 2000.
@@ -47,7 +48,7 @@ class Calibration():
                                     distribution='Weibull'
                                    )
 
-        reinf = Reinforcement(r=self.r,
+        reinf = ContinuousFibers(r=self.r,
                               tau=tau,
                               V_f=0.0166,
                               E_f=params[0],
@@ -81,7 +82,7 @@ class Calibration():
                                     distribution='Weibull'
                                    )
 
-        reinf = Reinforcement(r=self.r,
+        reinf = ContinuousFibers(r=self.r,
                               tau=tau,
                               V_f=0.0111,
                               E_f=params[0],
@@ -250,12 +251,12 @@ if __name__ == '__main__':
                                     distribution='Weibull'
                                    )
 
-        reinf = Reinforcement(r=r,
+        reinf = ContinuousFibers(r=r,
                               tau=tau,
                               V_f=0.0111,
                               E_f=E_f,
                               xi=xi,
-                              n_int=50,
+                              n_int=200,
                               label='carbon')
 
         scm = SCM(length=length,
@@ -278,7 +279,7 @@ if __name__ == '__main__':
 #        plt.xlabel('composite strain [-]')
 #        plt.ylabel('composite stress [MPa]')
 
-        random_field.scale *= 1.05
+        #random_field.scale *= 1.05
         reinf.V_f = 0.0166
 
         scm = SCM(length=length,
@@ -305,6 +306,6 @@ if __name__ == '__main__':
         #plt.legend(loc='best')
         plt.show()
 
-    #plot()
+    plot()
 
     calib.get_parameters()
