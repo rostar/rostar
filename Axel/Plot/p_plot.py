@@ -21,20 +21,34 @@ FILE_DIR = os.path.dirname( __file__ )
 #Paras 2:a_up=b_low=0.023 ,b_up= .7
 
 
-def plot1():
+def plot1_sto():
     wData, sigmaData = np.loadtxt( os.path.join( FILE_DIR, 'Data1.txt' ), delimiter = ',' )
     wModel, sigmaModel = np.loadtxt( os.path.join( FILE_DIR, 'model1.txt' ), delimiter = ',' )
     plt.plot( wData, sigmaData / 0.445 * 1000, 'k', linewidth = 1 , label = 'experiment' )
     plt.plot( wModel, sigmaModel / 0.445 * 1000, 'k--' , linewidth = 1, label = 'model' )
 
-def plot2():
+def plot2_sto():
     wData, sigmaData = np.loadtxt( os.path.join( FILE_DIR, 'Data2.txt' ), delimiter = ',' )
     wModel, sigmaModel = np.loadtxt( os.path.join( FILE_DIR, 'model2.txt' ), delimiter = ',' )
     plt.plot( wData[:-63], sigmaData[:-63] / 0.445 * 1000, 'k', linewidth = 1 , label = 'experiment' )
     plt.plot( wModel[:-150], sigmaModel[:-150] / 0.445 * 1000, 'k--' , linewidth = 1, label = 'model' )
+    
+def plot1_det():
+    wData, sigmaData = np.loadtxt( os.path.join( FILE_DIR, 'Data_det1.txt' ), delimiter = ',' )
+    wModel, sigmaModel = np.loadtxt( os.path.join( FILE_DIR, 'model_det1.txt' ), delimiter = ',' )
+    plt.plot( wData[:-63], sigmaData[:-63] / 0.445 * 1000, 'k', linewidth = 1 , label = 'experiment' )
+    plt.plot( wModel, sigmaModel / 0.445 * 1000, 'k--' , linewidth = 1, label = 'model' )
 
-#plot1()
-plot2()
+def plot2_det():
+    wData, sigmaData = np.loadtxt( os.path.join( FILE_DIR, 'Data_det2.txt' ), delimiter = ',' )
+    wModel, sigmaModel = np.loadtxt( os.path.join( FILE_DIR, 'model_det2.txt' ), delimiter = ',' )
+    plt.plot( wData[:-63], sigmaData[:-63] / 0.445 * 1000, 'k', linewidth = 1 , label = 'experiment' )
+    plt.plot( wModel, sigmaModel / 0.445 * 1000, 'k--' , linewidth = 1, label = 'model' ) 
+
+plot1_sto()
+plot2_sto()
+plot1_det()
+plot2_det()
 plt.legend()
 plt.xlabel( 'w [mm]', fontsize = '14' )
 plt.ylabel( 'sigma [Mpa]', fontsize = '14' )
