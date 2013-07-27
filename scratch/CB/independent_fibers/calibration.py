@@ -5,7 +5,7 @@ Created on 03.07.2013
 '''
 import numpy as np
 from scipy.interpolate import interp1d 
-from scipy.optimize import minimize
+from scipy.optimize import minimize, basinhopping, brute
 import os
 from etsproxy.traits.api import HasTraits, Property, Callable, Array, cached_property
 
@@ -18,7 +18,9 @@ class Calibration(HasTraits):
     test_xdata = Array
     test_ydata = Array
     weight_arr = Array
-    residuum = 1e10
+    residuum = 6e10
+    x0 = 0.0
+    count = 0.0
 
     interpolate_experiment = Property(depends_on='test_xdata, test_ydata')
     @cached_property
@@ -31,36 +33,47 @@ class Calibration(HasTraits):
 #        plt.plot(args[0], self.interpolate_experiment(args[0]))
 #        plt.show()
         def residuum(x0, *args):
-            print x0
-            #if x0[0] > 0.0 and x0[0] < 1.0 and x0[1] > 0.02:
             sq_err = (self.interpolate_experiment(args[0]) - self.model(x0, args[0])) ** 2
             residuum = np.sum(self.weight_arr * sq_err)
             if residuum < self.residuum:
                 self.residuum = residuum
-#                plt.plot(args[0], self.interpolate_experiment(args[0]))
-#                plt.plot(args[0], self.model(x0, args[0]))
-#                plt.show()
+                self.x0 = x0
+#                 plt.plot(args[0], self.interpolate_experiment(args[0]))
+#                 plt.plot(args[0], self.model(x0, args[0]))
+#                 plt.show()
             return residuum
             #else:
             #    return self.residuum * 2
-        calibrated_params = minimize(residuum, x0, args=args, method='L-BFGS-B')
-        return calibrated_params
-
+        #calibrated_params = minimize(residuum, x0, args=args, method='L-BFGS-B')
+        #calibrated_params = basinhopping(residuum, x0, minimizer_kwargs={'args':args,
+        #                                                                 'method':'BFGS'})
+        for sV0 in np.linspace(2.e-3, 5e-3, 7):
+            for ratio in np.linspace(0.6, 0.95, 7):
+                for m in np.linspace(4.0, 5.5, 7):
+                    for a_up in np.linspace(0.01, 0.1, 7):
+                        for b_up in np.linspace(0.5, 10., 7):
+                            self.count += 1.0
+                            resid = residuum([ratio, sV0, m, a_up, b_up], args[0])
+                            print self.count / (7**5)*100, 'percent'
+                            print 'current params:', [ratio, sV0, m, a_up], 'best params:', self.x0
+                            print 'current residuum:', resid, 'best:', self.residuum
+        return
+    
 if __name__ == '__main__':
     from quaducom.micro.resp_func.CB_rigid_mtrx import CBResidual
     from spirrid.spirrid import SPIRRID
     from spirrid.rv import RV
     from matplotlib import pyplot as plt
 
+    cb = CBResidual()
+    spirrid = SPIRRID(q=cb, sampling_type='PGrid')
+    
     def CB_composite_stress(params, *args):
         w = args[0]
-        ratio, sV0 = params
-        b_upper = 5.0
-        a_upper = 0.02
+        ratio, sV0, m, a_upper, b_upper = params
         E_f = 180e3
         V_f = 1.0
         r = 3.45e-3
-        m = 4.5
         Pf = RV('uniform', loc=0., scale=1.0)
         a_lower = 0.0
         tau = RV('piecewise_uniform', shape=0.0, scale=1.0)
@@ -69,14 +82,12 @@ if __name__ == '__main__':
         tau._distr.distr_type.distribution.b_lower = a_upper
         tau._distr.distr_type.distribution.b_upper = b_upper
         tau._distr.distr_type.distribution.ratio = ratio
-        n_int = 40
-        cb = CBResidual()
-        spirrid = SPIRRID(q=cb,
-                          sampling_type='PGrid',
-                          eps_vars=dict(w=w),
-                          theta_vars=dict(tau=tau, E_f=E_f, V_f=V_f, r=r,
-                                          m=m, sV0=sV0, Pf=Pf),
-                          n_int=n_int)
+        n_int = 30
+
+        spirrid.eps_vars=dict(w=w)
+        spirrid.theta_vars=dict(tau=tau, E_f=E_f, V_f=V_f, r=r,
+                                          m=m, sV0=sV0, Pf=Pf)
+        spirrid.n_int=n_int
         if isinstance(r, RV):
             r_arr = np.linspace(r.ppf(0.001), r.ppf(0.999), 300)
             Er = np.trapz(r_arr ** 2 * r.pdf(r_arr), r_arr)
@@ -96,7 +107,7 @@ if __name__ == '__main__':
     weight[5:20] = 3.0
     calib.weight_arr = weight
     
-    result = calib.calibrate([.99, 2.8e-3], w)
+    result = calib.calibrate([(0.5, 0.95), (1.5e-3,5e-3), (3.5, 5.5)], w)
     print 'optimal params: ', result.x
 
 #    E_f = 180e3
