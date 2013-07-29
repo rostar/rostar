@@ -232,15 +232,15 @@ if __name__ == '__main__':
 
     # filaments
         r = 0.00345
-        xi = RV('weibull_min', shape=5., scale=10.03)
+        xi = WeibullFibers(shape=4.0, sV0=.0025)
         E_m = 25e3
         E_f = 180e3
         t_shape = 1.2
-        mtrx_scale = 4.0
+        mtrx_scale = 5.0
         mtrx_shape = 13.0
         length = 1000.
         nx = 1000
-        tau = RV('weibull_min', shape=t_shape, scale=0.1)
+        tau = RV('uniform', loc=0.01, scale=0.1)
         random_field = RandomField(seed=True,
                                    lacor=5.,
                                     xgrid=np.linspace(0., length, 500),
@@ -265,7 +265,7 @@ if __name__ == '__main__':
                   E_m=E_m,
                   reinforcement=reinf,
                   load_sigma_c_min=.1,
-                  load_sigma_c_max=16.,
+                  load_sigma_c_max=30.,
                   load_n_sigma_c=80
                   )
 
