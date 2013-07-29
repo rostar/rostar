@@ -38,8 +38,8 @@ class Calibration(HasTraits):
             if residuum < self.residuum:
                 self.residuum = residuum
                 self.x0 = x0
-                plt.plot(args[0], self.interpolate_experiment(args[0]))
-                plt.plot(args[0], self.model(x0, args[0]))
+                plt.plot(args[0], self.interpolate_experiment(args[0]), color='black', lw=2)
+                plt.plot(args[0], self.model(x0, args[0]), color='red', lw=2)
                 plt.show()
             return residuum
             #else:
@@ -47,14 +47,13 @@ class Calibration(HasTraits):
         #calibrated_params = minimize(residuum, x0, args=args, method='L-BFGS-B')
         #calibrated_params = basinhopping(residuum, x0, minimizer_kwargs={'args':args,
         #                                                                 'method':'BFGS'})
-        for sV0 in np.linspace(2.5e-3, 4.0e-3, 20):
-            for m in np.linspace(4., 5.5, 15):
-                for tau_scale in np.linspace(0.08, .1, 50):
-                    self.count += 1.0
-                    resid = residuum([sV0, m, tau_scale], args[0])
-                    print self.count / (20*15*50)*100, 'percent'
-                    print 'current params:', [sV0, m, tau_scale], 'best params:', self.x0
-                    print 'current residuum:', resid, 'best:', self.residuum   
+        for sV0 in np.linspace(2.7755e-3, 4.0e-3, 50):
+            for tau_scale in np.linspace(0.0166, .1, 50):
+                self.count += 1.0
+                resid = residuum([sV0, tau_scale], args[0])
+                print self.count / (50*50)*100, 'percent'
+                print 'current params:', [sV0, tau_scale], 'best params:', self.x0
+                print 'current residuum:', resid, 'best:', self.residuum
 #         for sV0 in np.linspace(2.4e-3, 4e-3, 6):
 #             for ratio in np.linspace(0.87, 0.999, 6):
 #                 for m in np.linspace(4.0, 5.5, 6):
@@ -89,10 +88,11 @@ if __name__ == '__main__':
     
     def model_rand(params, *args):
         w = args[0]
-        sV0, m, tau_scale = params
+        sV0, tau_scale = params
         E_f = 180e3
         V_f = 1.0
         r = 3.45e-3
+        m = 4.5
         tau = RV('uniform', loc=0.0, scale=tau_scale)
 #         a_lower = 0.0
 #         tau = RV('piecewise_uniform', shape=0.0, scale=1.0)
@@ -116,7 +116,8 @@ if __name__ == '__main__':
 
     def model_determ(params, *args):
         w = args[0]
-        sV0, m, tau = params
+        sV0, tau = params
+        m = 4.5
         E_f = 180e3
         V_f = 1.0
         r = 3.45e-3
