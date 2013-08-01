@@ -47,8 +47,8 @@ class Calibration(HasTraits):
         #calibrated_params = minimize(residuum, x0, args=args, method='L-BFGS-B')
         #calibrated_params = basinhopping(residuum, x0, minimizer_kwargs={'args':args,
         #                                                                 'method':'BFGS'})
-        for sV0 in np.linspace(2.7755e-3, 4.0e-3, 50):
-            for tau_scale in np.linspace(0.0166, .1, 50):
+        for sV0 in np.linspace(2.5e-3, 4.0e-3, 50):
+            for tau_scale in np.linspace(.03, .1, 50):
                 self.count += 1.0
                 resid = residuum([sV0, tau_scale], args[0])
                 print self.count / (50*50)*100, 'percent'
@@ -92,8 +92,8 @@ if __name__ == '__main__':
         E_f = 180e3
         V_f = 1.0
         r = 3.45e-3
-        m = 4.5
-        tau = RV('uniform', loc=0.0, scale=tau_scale)
+        m = 4.
+        tau = RV('weibull_min', shape=.4, scale=tau_scale, loc=0.009)
 #         a_lower = 0.0
 #         tau = RV('piecewise_uniform', shape=0.0, scale=1.0)
 #         tau._distr.distr_type.distribution.a_lower = a_lower
@@ -131,12 +131,14 @@ if __name__ == '__main__':
         mu_broken = E_f * V_f * I / (m+1)
         return mu_int + mu_broken
 
-    w = np.linspace(0.0, 10., 100)
+    w = np.linspace(0.0, 8., 100)
     calib = Calibration(model=model_rand)
     file = open('DATA/PO01_RYP.ASC', 'r')
     calib.test_xdata = - np.loadtxt(file, delimiter=';')[:,3]
     file = open('DATA/PO01_RYP.ASC', 'r')
     calib.test_ydata = (np.loadtxt(file, delimiter=';')[:,1] + 0.035)/0.45 * 1000
+#    plt.plot(calib.test_xdata, calib.test_ydata)
+#    plt.show()
     weight = np.ones_like(w)
     weight[0:5] = 0.0
     weight[5:20] = 3.0

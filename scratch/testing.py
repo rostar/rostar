@@ -235,7 +235,6 @@ if __name__ == '__main__':
         xi = WeibullFibers(shape=4.0, sV0=.0025)
         E_m = 25e3
         E_f = 180e3
-        t_shape = 1.2
         mtrx_scale = 5.0
         mtrx_shape = 13.0
         length = 1000.
@@ -259,14 +258,15 @@ if __name__ == '__main__':
                               n_int=200,
                               label='carbon')
 
+        CB_model = CompositeCrackBridge(E_m=E_m,
+                                        reinforcement_lst=[reinf],
+                                        )
+
         scm = SCM(length=length,
                   nx=nx,
                   random_field=random_field,
-                  E_m=E_m,
-                  reinforcement=reinf,
-                  load_sigma_c_min=.1,
-                  load_sigma_c_max=30.,
-                  load_n_sigma_c=80
+                  CB_model=CB_model,
+                  load_sigma_c_arr=np.linspace(0.0, 30, 60)
                   )
 
         scm_view = SCMView(model=scm)
@@ -285,11 +285,7 @@ if __name__ == '__main__':
         scm = SCM(length=length,
                   nx=nx,
                   random_field=random_field,
-                  E_m=E_m,
-                  reinforcement=reinf,
-                  load_sigma_c_min=.1,
-                  load_sigma_c_max=25.,
-                  load_n_sigma_c=80
+                  load_sigma_c_arr=np.linspace(0.0,30,60)
                   )
 
         scm_view = SCMView(model=scm)
