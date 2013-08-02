@@ -31,6 +31,8 @@ class Model(HasTraits):
 
     test_xdata = Array
     test_ydata = Array
+    test_xdata2 = Array
+    test_ydata2 = Array
     sV0 = Float(auto_set=False, enter_set=True, params=True)
     m = Float(auto_set=False, enter_set=True, params=True)
     w_min = Float(auto_set=False, enter_set=True, params=True)
@@ -48,6 +50,12 @@ class Model(HasTraits):
     @cached_property
     def _get_interpolate_experiment(self):
         return interp1d(self.test_xdata, self.test_ydata,
+                        bounds_error=False, fill_value=0.0)
+        
+    interpolate_experiment2 = Property(depends_on='test_xdata, test_ydata')
+    @cached_property
+    def _get_interpolate_experiment2(self):
+        return interp1d(self.test_xdata2, self.test_ydata2,
                         bounds_error=False, fill_value=0.0)
 
     model_rand = Property(Array)
@@ -98,7 +106,10 @@ class CBView(ModelView):
         axes.plot(self.model.w, self.model.model_rand, lw=2.0, color='blue', \
                   label='model')
         axes.plot(self.model.w, self.model.interpolate_experiment(self.model.w), lw=1.0, color='black', \
-                  label='experiment')
+                  label='experiment1')
+        axes.plot(self.model.w, self.model.interpolate_experiment2(self.model.w), lw=1.0, color='black', \
+                  label='experiment2')
+        axes.legend()
 
     def refresh(self):
         self.plot(self.figure)
@@ -157,6 +168,13 @@ if __name__ == '__main__':
     model.test_xdata = model.test_xdata - model.test_xdata[0]
     file2 = open('DATA/PO01_RYP.ASC', 'r')
     model.test_ydata = (np.loadtxt(file2, delimiter=';')[:,1] + 0.035)/0.45 * 1000
+    
+    file1 = open('DATA/PO03_RYP.ASC', 'r')
+    model.test_xdata2 = - np.loadtxt(file1, delimiter=';')[:,3]
+    model.test_xdata2 = model.test_xdata2 - model.test_xdata2[0]
+    file2 = open('DATA/PO03_RYP.ASC', 'r')
+    model.test_ydata2 = (np.loadtxt(file2, delimiter=';')[:,1] + 0.035)/0.45 * 1000
+    
     cb = CBView(model=model)
     cb.refresh()
     cb.configure_traits()
