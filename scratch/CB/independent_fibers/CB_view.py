@@ -31,6 +31,7 @@ class Model(HasTraits):
     w_min = Float(auto_set=False, enter_set=True, params=True)
     w_max = Float(auto_set=False, enter_set=True, params=True)
     w_pts = Int(auto_set=False, enter_set=True, params=True)
+    n_int = Int(auto_set=False, enter_set=True, params=True)
     w2_min = Float(auto_set=False, enter_set=True, params=True)
     w2_max = Float(auto_set=False, enter_set=True, params=True)
     w2_pts = Int(auto_set=False, enter_set=True, params=True)
@@ -70,7 +71,7 @@ class Model(HasTraits):
         r = 3.5e-3
         m = self.m
         tau = RV('weibull_min', shape=self.tau_shape, scale=tau_scale, loc=self.tau_loc)
-        n_int = 100
+        n_int = self.n_int
         w = self.w
         spirrid.eps_vars=dict(w=w)
         spirrid.theta_vars=dict(tau=tau, E_f=self.Ef, V_f=V_f, r=r, m=m, sV0=sV0)
@@ -162,6 +163,7 @@ class CBView(ModelView):
                                            Item('model.w_min'),
                                            Item('model.w_max'),
                                            Item('model.w_pts'),
+                                           Item('model.n_int'),
                                            Item('model.w2_min'),
                                            Item('model.w2_max'),
                                            Item('model.w2_pts'),
@@ -217,7 +219,7 @@ if __name__ == '__main__':
                   w2_min=0.0, w2_max=.5, w2_pts=200,
                   sV0=2.6e-3, m=5.0, tau_scale=0.03,
                   tau_shape=0.23, tau_loc=0.006, Ef=240e3,
-                  lm=20.)
+                  lm=20., n_int=100)
 
     file1 = open('DATA/PO01_RYP.ASC', 'r')
     model.test_xdata = - np.loadtxt(file1, delimiter=';')[:,3]
