@@ -12,13 +12,11 @@ if __name__ == '__main__':
     from scipy.integrate import cumtrapz
     from matplotlib import pyplot as plt
     sfc = SFC_Hui(l0=1., d=0.007, tau=0.1, sigma0=2200., rho=5.0)
-    
-    for rho in np.array([300.]):
+    for rho in np.array([500.]):
         sfc.rho = rho
         x = np.linspace(0.3, 1.5, 500)
-        pdf_x = sfc.p_x(50., x)
-        muL = np.trapz(x**2*pdf_x, x)
-        print muL
+        pdf_x = sfc.p_x(10., x)
+        print 2. / np.trapz(pdf_x, x)
         cdf_x = np.hstack((0., cumtrapz(pdf_x, x)))
 #         s = np.linspace(0.01, 1.0, 200)
 #         pdf_s = sfc.p_s(s, 1.0)
@@ -27,4 +25,3 @@ if __name__ == '__main__':
         plt.plot(x, pdf_x * x, label='lengths')
     plt.legend()
     plt.show()
-    
