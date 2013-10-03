@@ -35,9 +35,6 @@ class AnalyticalCracks(SFC_Hui):
         jpdf = pdf.reshape(1,len(self.x)) * pdf.reshape(len(self.x),1)
         w_arr = self.w_func(self.x.reshape(1, len(self.x)), self.x.reshape(len(self.x),1))
         return norm, pdf, jpdf, w_arr
-
-    def jpdf(self, x1, x2):
-        return self.p_x(s, x1) * self.p_x(s, x2) / self.cached_pdfs[0]**2
     
     def Pw(self, w):
         mask = self.cached_pdfs[3] < w
@@ -69,4 +66,3 @@ if __name__ == '__main__':
     plt.ylim(0,1.2)
     plt.legend()
     plt.show()
-    
