@@ -1,132 +1,111 @@
 '''
+Created on 12 Oct 2013
+
+@author: Q
+'''
+'''
 Created on Oct 7, 2013
 
 @author: rostar
 '''
 
-from os.path import join
-from matresdev.db import SimDB
-from matresdev.db.exdb import ExRun
+import numpy as np
+from quaducom.micro.resp_func.CB_clamped_rand_xi import CBClampedRandXi
+from quaducom.micro.resp_func.CB_clamped import CBClamped
+from spirrid.spirrid import SPIRRID
+from spirrid.rv import RV
 from matplotlib import pyplot as plt
+from scipy.stats import weibull_min
 
-simdb = SimDB()
 
-    # specify the path to the data file.
-SH4V1_6cm = join(simdb.exdata_dir,
-                 'tensile_tests',
-                 'dog_bone',
-                 '2012-04-12_TT-12c-6cm-0-TU_SH4',
-                 'TT-12c-6cm-0-TU-SH4-V1.DAT')
-
-SH4V2_6cm = join(simdb.exdata_dir,
-                 'tensile_tests',
-                 'dog_bone',
-                 '2012-04-12_TT-12c-6cm-0-TU_SH4',
-                 'TT-12c-6cm-0-TU-SH4-V2.DAT')
-
-SH4V3_6cm = join(simdb.exdata_dir,
-                 'tensile_tests',
-                 'dog_bone',
-                 '2012-04-12_TT-12c-6cm-0-TU_SH4',
-                 'TT-12c-6cm-0-TU-SH4-V3.DAT')
-SH3V1_6cm = join(simdb.exdata_dir,
-                 'tensile_tests',
-                 'dog_bone',
-                 '2012-03-20_TT-12c-6cm-0-TU_SH3',
-                 'TT-12c-6cm-TU-0-SH3-V1.DAT')
-
-SH3V2_6cm = join(simdb.exdata_dir,
-                 'tensile_tests',
-                 'dog_bone',
-                 '2012-03-20_TT-12c-6cm-0-TU_SH3',
-                 'TT-12c-6cm-TU-0-SH3-V2.DAT')
-
-SH3V3_6cm = join(simdb.exdata_dir,
-                 'tensile_tests',
-                 'dog_bone',
-                 '2012-03-20_TT-12c-6cm-0-TU_SH3',
-                 'TT-12c-6cm-TU-0-SH3-V3.DAT')
-
-SH3V1_4cm = join(simdb.exdata_dir,
-                 'tensile_tests',
-                 'dog_bone',
-                 '2012-03-20_TT-12c-4cm-0-TU_SH3',
-                 'TT-12c-4cm-TU-0-SH3-V1.DAT')
-SH3V2_4cm = join(simdb.exdata_dir,
-                 'tensile_tests',
-                 'dog_bone',
-                 '2012-03-20_TT-12c-4cm-0-TU_SH3',
-                 'TT-12c-4cm-TU-0-SH3-V2.DAT')
-SH3V3_4cm = join(simdb.exdata_dir,
-                 'tensile_tests',
-                 'dog_bone',
-                 '2012-03-20_TT-12c-4cm-0-TU_SH3',
-                 'TT-12c-4cm-TU-0-SH3-V3.DAT')
-
-# construct the experiment
-V14 = ExRun(data_file=SH4V1_6cm)
-V24 = ExRun(data_file=SH4V2_6cm)
-V34 = ExRun(data_file=SH4V3_6cm)
-V13 = ExRun(data_file=SH3V1_6cm)
-V23 = ExRun(data_file=SH3V2_6cm)
-V33 = ExRun(data_file=SH3V3_6cm)
-V1small = ExRun(data_file=SH3V1_4cm)
-V2small = ExRun(data_file=SH3V2_4cm)
-V3small = ExRun(data_file=SH3V3_4cm)
-
-def plot():
-
-    # access the response values.
-    for V in [V13, V23, V33]:
-        eps = V.ex_type.eps_asc * 100.
-        sig_c = V.ex_type.sig_c_asc
-        plt.plot(eps, sig_c, color='black')
-    for V in [V2small, V3small]:
-        eps = V.ex_type.eps_asc * 100.
-        sig_c = V.ex_type.sig_c_asc
-        plt.plot(eps, sig_c, color='black')
-    plt.xlim(0.0, 0.8)
-    plt.ylim(0.0, 27.)
+def fiber():
+    cb = CBClamped()
+    w = np.linspace(0.0, 1., 300)
+    sigmaCB = []
+    sigmaMC = []
+    for wi in w:
+        sigmaCB.append(cb(wi, .1, 240e3, 0.01, 0.0035, 7.0, 0.0046, 5000., 0.5))
+        sigmaMC.append(cb(wi, .1, 240e3, 0.01, 0.0035, 7.0, 0.0046, 30., 0.5))
+    plt.plot(w, np.array(sigmaMC)/0.00345**2, label='MC')
+    plt.plot(w, np.array(sigmaCB)/0.00345**2, label='CB')
+    plt.legend()
     plt.show()
 
-plot()
-
-    def cdf_MC(self, e, depsf, r, lcs):
-        '''weibull_fibers_cdf_mc'''
-        Ll, Lr, m, sV0 = self.Ll, self.Lr, self.m, self.sV0
-        s = ((depsf*(m+1.)*sV0**m*self.V0)/(pi*r**2.))**(1./(m+1.))
-        a0 = (e+1e-15)/depsf
-        expLfree = (e/s) ** (m + 1) * (1.-(1.-al/a0)**(m+1.))
-        expLfixed = a0 / Ll * (e/s) ** (m + 1) * (1.-(1.-Ll/a0)**(m+1.))
-        maskL = al < Ll
-        expL = expLfree * maskL + expLfixed * (maskL == False)
-        expRfree = (e/s) ** (m + 1) * (1.-(1.-ar/a0)**(m+1.))
-        expRfixed = a0 / Lr * (e/s) ** (m + 1) * (1.-(1.-Lr/a0)**(m+1.))
-        maskR = ar < Lr
-        expR = expRfree * maskR + expRfixed * (maskR == False)
-        return 1. - np.exp(- expL - expR)
-
-    def ef0_break_CB(self, depsf, r, sV0, m, Pf):
-        '''weibull_fibers_cdf_cb_rigid'''
-        s = ((depsf*(m+1)*sV0**m)/(2.*pi*r**2))**(1./(m+1))
-        return s * (-np.log(1.-Pf)) ** (1./(m+1))
+def lcs_effect():
     
-    def __call__(self, w, tau, E_f, V_f, r, m, sV0, Pf, lcs):
-        #strain and debonded length of intact fibers
-        T = 2. * tau / r
-        ef0_inf = np.sqrt(T * w / E_f)
-        ef0_BC = w / lcs + lcs * T / 4. / E_f
-        a0 = ef0_inf * E_f / T
-        mask = a0 < lcs / 2.0
-        # strain at fiber breakage
-        depsf = T / E_f
-        ef0_break = self.ef0_break_CB(depsf, r, sV0, m, Pf)
-        # debonded length at fiber breakage
-        a_break = ef0_break * E_f / T
-        #mean pullout length of broken fibers
-        mu_Lpo = a_break / (m + 1)
-        # strain carried by broken fibers
-        ef0_residual = T / E_f * mu_Lpo
-        ef0_CB_xi = ef0_residual * H(ef0_inf - ef0_break) + ef0_inf * H(ef0_break - ef0_inf)
-        return ef0_CB_xi * E_f * V_f * r**2
+    def sigmac(w, lm, tau, m_xi):
+        if isinstance(w, np.ndarray):
+            pass
+        else:
+            print w
+            w = np.array([w])
+        cb = CBClampedRandXi()
+        spirrid = SPIRRID(q=cb, sampling_type='PGrid',
+                          eps_vars=dict(w=w),
+                          theta_vars=dict(tau=tau,
+                                          E_f=200e3,
+                                          V_f=0.01,
+                                          r=0.00345,
+                                          m=m_xi,
+                                          sV0=0.0026,
+                                          lm=lm),
+                          n_int=100)
+        r = spirrid.theta_vars['r']
+        if isinstance(r, RV):
+            r_arr = np.linspace(r.ppf(0.001), r.ppf(0.999), 300)
+            Er = np.trapz(r_arr ** 2 * r.pdf(r_arr), r_arr)
+        else:
+            Er = r ** 2
+        sigma_c = spirrid.mu_q_arr / Er
+        return - sigma_c
+    
+    def m_effect():
+        strength_CB = []
+        strength_MC = []
+        m_arr = np.linspace(1.,20.,3)
+        for m in m_arr:
+            w_CB = np.linspace(0.0,100./m**2,500)
+            w_MC = np.linspace(0.0,1.5/m**2,500)
+            sigma_c_CB = - sigmac(w_CB, 1000., RV('weibull_min', shape=3.0, scale=0.1, loc=0.0), m)
+            sigma_c_MC = - sigmac(w_MC, 1.0, RV('weibull_min', shape=3.0, scale=0.1, loc=0.0), m)
+            strength_CB.append(np.max(sigma_c_CB))
+            strength_MC.append(np.max(sigma_c_MC))
+            plt.plot(w_CB, sigma_c_CB, label='CB')
+            plt.plot(w_CB, sigma_c_MC, label='MC')
+            plt.show()
+        CB_arr = np.ones_like(np.array([strength_CB]))
+        MC_arr = np.array([strength_MC]) / np.array([strength_CB])
+        plt.plot(m_arr, CB_arr.flatten())
+        plt.plot(m_arr, MC_arr.flatten())
+        plt.ylim(0)
+        plt.show()
 
+    def T_effect():
+        strength_CB = []
+        strength_MC = []
+        m_arr = np.linspace(.5, 5., 30)
+        for m in m_arr:
+            #strengths.append(sigmac_max(l)[0])
+            #print 'strentgth = ', strengths[-1]
+            w_CB = np.linspace(0.0,.5,100)
+            w_MC = np.linspace(0.0,.03,100)
+            sigma_c_CB = - sigmac(w_CB, 1000., RV('weibull_min', shape=m, scale=0.1, loc=0.0), 5.0)
+            sigma_c_MC = - sigmac(w_MC, 1.0, RV('weibull_min', shape=m, scale=0.1, loc=0.0), 5.0)
+            strength_CB.append(np.max(sigma_c_CB))
+            strength_MC.append(np.max(sigma_c_MC))
+    #         plt.plot(w_CB, sigma_c_CB, label='CB')
+    #         plt.plot(w_CB, sigma_c_MC, label='MC')
+    #         plt.show()
+        COV = [np.sqrt(weibull_min(m, scale=0.1).var())/weibull_min(m, scale=0.1).mean() for m in m_arr]
+        CB_arr = np.ones_like(np.array([strength_CB]))
+        MC_arr = np.array([strength_MC]) / np.array([strength_CB])
+        plt.plot(COV, CB_arr.flatten())
+        plt.plot(COV, MC_arr.flatten())
+        plt.ylim(0)
+        plt.show()
+    
+    #T_effect()
+    m_effect()
+
+fiber()
+#lcs_effect()
