@@ -16,6 +16,7 @@ from spirrid.spirrid import SPIRRID
 from spirrid.rv import RV
 from matplotlib import pyplot as plt
 from scipy.stats import weibull_min
+from stats.pdistrib.weibull_fibers_composite_distr import fibers_MC, fibers_CB_rigid, fibers_dry
 
 
 def fiber():
@@ -25,14 +26,14 @@ def fiber():
     sigmaMC = []
     for wi in w:
         sigmaCB.append(cb(wi, .1, 240e3, 0.01, 0.0035, 7.0, 0.0046, 5000., 0.5))
-        sigmaMC.append(cb(wi, .1, 240e3, 0.01, 0.0035, 7.0, 0.0046, 30., 0.5))
+        sigmaMC.append(cb(wi, .1, 240e3, 0.01, 0.0035, 7.0, 0.0046, 20., 0.5))
     plt.plot(w, np.array(sigmaMC)/0.00345**2, label='MC')
     plt.plot(w, np.array(sigmaCB)/0.00345**2, label='CB')
     plt.legend()
     plt.show()
 
 def lcs_effect():
-    
+
     def sigmac(w, lm, tau, m_xi):
         if isinstance(w, np.ndarray):
             pass
@@ -107,5 +108,42 @@ def lcs_effect():
     #T_effect()
     m_effect()
 
-fiber()
+def Gxi():
+    r, tau, Ef, m, sV0 = 0.00345, 0.1, 200e3, 3.0, 0.0026
+    e = np.linspace(0.001, 0.04, 20)
+    a = e * Ef / (2. * tau / r)
+    L = 10.0
+    rat = 2.*a/L
+    print e
+    print rat
+    
+    wfd = fibers_dry(m=m, sV0=sV0)
+    CDFdry = wfd.cdf(e, r, 2*a)
+    
+    wfcbr = fibers_CB_rigid(m=m, sV0=sV0)
+    CDFCB = wfcbr.cdf(e, 2*tau/Ef/r, r)
+    
+    wfmc = fibers_MC(m=m, sV0=sV0, Ll=L, Lr=L)
+    CDFexct = wfmc.cdf_exact(e, 2*tau/Ef/r, r)
+    CDFrypl = wfmc.cdf(e, 2*tau/Ef/r, r, a, a)
+    
+    #linear scale
+#    plt.plot(e, CDFrypl, label='Rypl')
+#    plt.plot(e, CDFexct, label='exact')
+#    plt.plot(e, CDFdry, label='Phoenix 1992')
+#    plt.plot(e, CDFCB, label='CB')
+    
+    # Weibull plot
+#    print rat
+    plt.plot(np.log(e), np.log(-np.log(1.0 - CDFdry)), label='Phoenix 1992')
+    plt.plot(np.log(e), np.log(-np.log(1.0 - CDFCB)), label='CB')
+    plt.plot(np.log(e), np.log(-np.log(1.0 - CDFrypl)), label='Rypl')
+    plt.plot(np.log(e), np.log(-np.log(1.0 - CDFexct)), label='exact')
+
+    #plt.ylim(0)
+    plt.legend(loc='best')
+    plt.show()
+
+#fiber()
 #lcs_effect()
+Gxi()
