@@ -17,7 +17,21 @@ from spirrid.rv import RV
 from matplotlib import pyplot as plt
 from scipy.stats import weibull_min
 from stats.pdistrib.weibull_fibers_composite_distr import fibers_MC, fibers_CB_rigid, fibers_dry
+from scipy.optimize import minimize_scalar
+import pickle
+from stats.spirrid import make_ogrid as orthogonalize
+from mayavi import mlab
 
+cb = CBClampedRandXi()
+spirrid = SPIRRID(q=cb, sampling_type='PGrid',
+                  theta_vars=dict(tau=0.1,
+                                  E_f=200e3,
+                                  V_f=0.01,
+                                  r=0.00345,
+                                  m=5.0,
+                                  sV0=0.0026,
+                                  lm=1000.),
+                  n_int=100)
 
 def fiber():
     cb = CBClamped()
@@ -33,24 +47,15 @@ def fiber():
     plt.show()
 
 def lcs_effect():
-
     def sigmac(w, lm, tau, m_xi):
         if isinstance(w, np.ndarray):
             pass
         else:
-            print w
             w = np.array([w])
-        cb = CBClampedRandXi()
-        spirrid = SPIRRID(q=cb, sampling_type='PGrid',
-                          eps_vars=dict(w=w),
-                          theta_vars=dict(tau=tau,
-                                          E_f=200e3,
-                                          V_f=0.01,
-                                          r=0.00345,
-                                          m=m_xi,
-                                          sV0=0.0026,
-                                          lm=lm),
-                          n_int=100)
+        spirrid.eps_vars['w'] = w
+        spirrid.theta_vars['lm'] = lm
+        spirrid.theta_vars['tau'] = tau
+        spirrid.theta_vars['m'] = m_xi
         r = spirrid.theta_vars['r']
         if isinstance(r, RV):
             r_arr = np.linspace(r.ppf(0.001), r.ppf(0.999), 300)
@@ -58,28 +63,62 @@ def lcs_effect():
         else:
             Er = r ** 2
         sigma_c = spirrid.mu_q_arr / Er
-        return - sigma_c
-    
+        return sigma_c
+
+    def maxsigma(lm, tau, m_xi):
+        def minfunc(w):
+            res = sigmac(w, lm, tau, m_xi)
+            return - res * (w < 200.) + 1e-5 * w**2
+        w_max = minimize_scalar(minfunc, bracket=(0.0001, 0.0002))
+        return w_max.x, sigmac(w_max.x, lm, tau, m_xi)
+
     def m_effect():
-        strength_CB = []
-        strength_MC = []
-        m_arr = np.linspace(1.,20.,3)
-        for m in m_arr:
-            w_CB = np.linspace(0.0,100./m**2,500)
-            w_MC = np.linspace(0.0,1.5/m**2,500)
-            sigma_c_CB = - sigmac(w_CB, 1000., RV('weibull_min', shape=3.0, scale=0.1, loc=0.0), m)
-            sigma_c_MC = - sigmac(w_MC, 1.0, RV('weibull_min', shape=3.0, scale=0.1, loc=0.0), m)
-            strength_CB.append(np.max(sigma_c_CB))
-            strength_MC.append(np.max(sigma_c_MC))
-            plt.plot(w_CB, sigma_c_CB, label='CB')
-            plt.plot(w_CB, sigma_c_MC, label='MC')
+        m_xi_arr = np.linspace(1.,20.,15)
+        m_tau_arr = np.linspace(0.3, 5.0, 10)
+        try:
+            res_file = open('res_m.pkl', 'rb' )
+            res_arr = pickle.load(res_file)
+            res_file.close()
+#            for res_part in res_arr:
+#                plt.plot(m_xi_arr, res_part)
+#            plt.show()
+            eps_vars = orthogonalize([np.arange(15), np.arange(10)])
+            resCB = np.ones_like(res_arr)
+            resMC = res_arr
+            mlab.surf(eps_vars[0], eps_vars[1], resCB * 10)
+            mlab.surf(eps_vars[0], eps_vars[1], resMC * 10)
+            mlab.show()
+        except:
+            res_arr = []
+            for m_tau in m_tau_arr:
+                strength_CB = []
+                strength_MC = []
+                for m_xi in m_xi_arr:
+                    wmCB, smCB = maxsigma(1000., RV('weibull_min', shape=m_tau, scale=0.1, loc=0.0), m_xi)
+                    wmMC, smMC = maxsigma(1., RV('weibull_min', shape=m_tau, scale=0.1, loc=0.0), m_xi)
+        #            w_CB = np.linspace(0.0,100./m**2,200)
+        #            w_MC = np.linspace(0.0,1.5/m**2,200)
+        #            plt.plot(wmCB, smCB, 'ro')
+        #            plt.plot(wmMC, smMC, 'bo')
+        #            sigma_c_CB = sigmac(w_CB, 1000., RV('weibull_min', shape=3.0, scale=0.1, loc=0.0), m)
+        #            sigma_c_MC = sigmac(w_MC, 1.0, RV('weibull_min', shape=3.0, scale=0.1, loc=0.0), m)
+        #            plt.plot(w_CB, sigma_c_CB, label='CB')
+        #            plt.plot(w_MC, sigma_c_MC, label='MC')
+        #            plt.show()
+                    strength_CB.append(smCB)
+                    strength_MC.append(smMC)
+                CB_arr = np.ones_like(np.array([strength_CB]))
+                MC_arr = np.array([strength_MC]) / np.array([strength_CB])
+                res_arr.append(MC_arr.flatten())
+                plt.plot(m_xi_arr, CB_arr.flatten(), lw=2., color='black')
+                plt.plot(m_xi_arr, MC_arr.flatten(), label=str(m_tau)+' MC')
+            res_arr = np.array(res_arr)
+            file_res = open('res_m.pkl', 'wb')
+            pickle.dump(res_arr, file_res, -1)
+            file_res.close()
+            plt.legend(loc='best')
+            plt.ylim(0)
             plt.show()
-        CB_arr = np.ones_like(np.array([strength_CB]))
-        MC_arr = np.array([strength_MC]) / np.array([strength_CB])
-        plt.plot(m_arr, CB_arr.flatten())
-        plt.plot(m_arr, MC_arr.flatten())
-        plt.ylim(0)
-        plt.show()
 
     def T_effect():
         strength_CB = []
@@ -144,6 +183,9 @@ def Gxi():
     plt.legend(loc='best')
     plt.show()
 
+import time as t
+t0 = t.clock()
 #fiber()
-#lcs_effect()
-Gxi()
+lcs_effect()
+#Gxi()
+print 'elapsed time', t.clock() - t0, 's'
