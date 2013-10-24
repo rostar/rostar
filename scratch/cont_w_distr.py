@@ -25,6 +25,9 @@ class AnalyticalCracks(SFC_Hui):
         x2min = (self.s - a2)/self.c
         w2 = (self.s + a2) / 2. * x2min
         return w1 + w2
+
+    def sigm_func(self,x1):
+        return 2 * x1
     
     cached_pdfs = Property(depends_on='s')
     @cached_property
@@ -50,7 +53,7 @@ class AnalyticalCracks(SFC_Hui):
 if __name__ == '__main__':
     ac = AnalyticalCracks(l0=1., d=0.007, tau=0.1, sigma0=2200., s=2.0,
                           rho=5.0, c=1.0, x=np.linspace(0.0, 5.0, 500))
-    for s in [1.2, 2.0, 3.0]:
+    for s in [1., 3., 5.0]:
         ac.s = s
         pdf_x = ac.p_x(s, ac.x)
         pdf_x = pdf_x / np.trapz(pdf_x, ac.x)

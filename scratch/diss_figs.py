@@ -12,6 +12,7 @@ Created on Oct 7, 2013
 import numpy as np
 from quaducom.micro.resp_func.CB_clamped_rand_xi import CBClampedRandXi
 from quaducom.micro.resp_func.CB_clamped import CBClamped
+from quaducom.micro.resp_func.cb_short_fiber import CBShortFiber
 from spirrid.spirrid import SPIRRID
 from spirrid.rv import RV
 from matplotlib import pyplot as plt
@@ -183,9 +184,27 @@ def Gxi():
     plt.legend(loc='best')
     plt.show()
 
+
+def short_fibers():
+    cb = CBShortFiber()
+    w = np.linspace(0.0,0.06,200)
+    spirrid = SPIRRID(q=cb, sampling_type='PGrid',
+                      eps_vars=dict(w=w),
+                      theta_vars=dict(tau=.3,
+                                  E_f=70e3,
+                                  r=0.013,
+                                  le=RV('uniform', scale=7., loc=0.0),
+                                  phi=RV('sin2x', scale=1.0),
+                                  f=0.03,
+                                  xi=20e10),
+                  n_int=100)
+
+    plt.plot(w, spirrid.mu_q_arr * 70e3)
+    plt.show()
 import time as t
 t0 = t.clock()
 #fiber()
-lcs_effect()
+#lcs_effect()
 #Gxi()
+short_fibers()
 print 'elapsed time', t.clock() - t0, 's'
