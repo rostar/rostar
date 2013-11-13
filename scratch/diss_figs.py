@@ -185,7 +185,7 @@ def Gxi():
     plt.show()
 
 
-def short_fibers():
+def short_fibers_f():
     cb = CBShortFiber()
     w = np.linspace(0.0,0.06,200)
     spirrid = SPIRRID(q=cb, sampling_type='PGrid',
@@ -195,16 +195,67 @@ def short_fibers():
                                   r=0.013,
                                   le=RV('uniform', scale=7., loc=0.0),
                                   phi=RV('sin2x', scale=1.0),
-                                  f=0.03,
+                                  f=.99,
                                   xi=20e10),
                   n_int=100)
 
-    plt.plot(w, spirrid.mu_q_arr * 70e3)
+    plt.plot(w, spirrid.mu_q_arr * 70e3 * 0.01, label='.99')
+    spirrid.theta_vars['f'] = 0.7
+    plt.plot(w, spirrid.mu_q_arr * 70e3 * 0.01, label='0.7')
+    spirrid.theta_vars['phi'] = 0.0
+    plt.plot(w, spirrid.mu_q_arr * 70e3 * 0.01 * 2, label='aligned')
+    plt.legend(loc='best')
     plt.show()
-import time as t
-t0 = t.clock()
+    
+def short_fibers_lf():
+    cb = CBShortFiber()
+    w = np.linspace(0.0,0.06,200)
+    spirrid = SPIRRID(q=cb, sampling_type='PGrid',
+                      eps_vars=dict(w=w),
+                      theta_vars=dict(tau=.3,
+                                  E_f=70e3,
+                                  r=0.013,
+                                  le=RV('uniform', scale=5., loc=0.0),
+                                  phi=RV('sin2x', scale=1.0),
+                                  f=.7,
+                                  xi=20e10),
+                  n_int=100)
+
+    plt.plot(w, spirrid.mu_q_arr * 70e3 * 0.01, label='5.')
+    spirrid.theta_vars['le'] = RV('uniform', scale=7., loc=0.0)
+    plt.plot(w, spirrid.mu_q_arr * 70e3 * 0.01, label='7.')
+    spirrid.theta_vars['le'] = RV('uniform', scale=9., loc=0.0)
+    plt.plot(w, spirrid.mu_q_arr * 70e3 * 0.01, label='9.')
+    plt.legend(loc='best')
+    plt.show()
+
+def short_fibers_var():
+    cb = CBShortFiber()
+    w = np.linspace(0.0,0.06,200)
+    spirrid = SPIRRID(q=cb, sampling_type='PGrid',
+                      eps_vars=dict(w=w),
+                      theta_vars=dict(tau=.3,
+                                  E_f=70e3,
+                                  r=0.013,
+                                  le=RV('uniform', scale=5., loc=0.0),
+                                  phi=RV('sin2x', scale=1.0),
+                                  f=.7,
+                                  xi=20e10),
+                  n_int=100
+                  )
+
+    spirrid.codegen.implicit_var_eval=True
+    mu = spirrid.mu_q_arr * 70e3 * 0.01
+    var = spirrid.var_q_arr * (70e3 * 0.01)**2
+    plt.plot(w, mu - np.sqrt(var), label='-std')
+    plt.plot(w, mu + np.sqrt(var), label='+std')
+    plt.plot(w, mu, label='5.')
+    plt.legend(loc='best')
+    plt.show()
+   
 #fiber()
 #lcs_effect()
 #Gxi()
-short_fibers()
-print 'elapsed time', t.clock() - t0, 's'
+#short_fibers_f()
+#short_fibers_lf()
+short_fibers_var()
