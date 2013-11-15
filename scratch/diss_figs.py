@@ -252,10 +252,36 @@ def short_fibers_var():
     plt.plot(w, mu, label='5.')
     plt.legend(loc='best')
     plt.show()
+    
+def short_fibers_strength():
+    cb = CBShortFiber()
+    spirrid = SPIRRID(q=cb, sampling_type='PGrid',
+                      eps_vars=dict(w=np.array([1.0])),
+                      theta_vars=dict(tau=.3,
+                                  E_f=70e3,
+                                  r=0.013,
+                                  le=RV('uniform', scale=5., loc=0.0),
+                                  phi=RV('sin2x', scale=1.0),
+                                  f=.7,
+                                  xi=20e10),
+                  n_int=100
+                  )
+    
+    strengths = []
+    f_arr = np.linspace(0.0, 1.5, 100)
+    for f in f_arr:
+        spirrid.theta_vars['f'] = f
+        mu = spirrid.mu_q_arr * 70e3 * 0.01
+        strengths.append(mu)
+    ref = strengths[0]
+    plt.plot(f_arr, np.array(strengths)/ref, label='strength')
+    plt.plot(f_arr, np.ones_like(f_arr) * 2.0, label='aligned')
+    plt.show()
    
 #fiber()
 #lcs_effect()
 #Gxi()
 #short_fibers_f()
 #short_fibers_lf()
-short_fibers_var()
+#short_fibers_var()
+short_fibers_strength()
