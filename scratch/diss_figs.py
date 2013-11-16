@@ -22,6 +22,7 @@ from scipy.optimize import minimize_scalar
 import pickle
 from stats.spirrid import make_ogrid as orthogonalize
 from mayavi import mlab
+from math import pi
 
 cb = CBClampedRandXi()
 spirrid = SPIRRID(q=cb, sampling_type='PGrid',
@@ -277,6 +278,76 @@ def short_fibers_strength():
     plt.plot(f_arr, np.array(strengths)/ref, label='strength')
     plt.plot(f_arr, np.ones_like(f_arr) * 2.0, label='aligned')
     plt.show()
+    
+def short_fibers_strength_var():
+    cb = CBShortFiber()
+    spirrid = SPIRRID(q=cb, sampling_type='PGrid',
+                      eps_vars=dict(w=np.array([100.0])),
+                      theta_vars=dict(tau=1.67,
+                                  E_f=200e3,
+                                  r=0.15,
+                                  le=RV('uniform', scale=8.5, loc=0.0),
+                                  phi=RV('sin2x', scale=1.0),
+                                  f=.03,
+                                  xi=20e10),
+                  n_int=100
+                  )
+    
+    spirrid.codegen.implicit_var_eval=True
+    var = spirrid.var_q_arr
+    mu = spirrid.mu_q_arr
+    cov_e = np.sqrt(var)/mu
+    
+    COV_Ac = []
+    COVref = []
+    Ac_arr = np.linspace(1600.0, 6400., 200)
+    Vf = 0.015
+    Lc = 100.
+    for Ac in Ac_arr:
+        r = spirrid.theta_vars['r']
+        lf = 17.
+        Af = pi * r ** 2
+        COV = np.sqrt(2. * Af / Vf / Ac) * np.sqrt(cov_e**2 + (1. - lf/2./Lc))
+        COV_Ac.append(COV)
+        
+        #reference
+        p = lf / 2. / Lc
+        n = Ac * Lc * Vf / Af / lf
+        COVr = 1. / (np.sqrt(n*p)) * cov_e
+        COVref.append(COVr)    
+    #plt.plot(Ac_arr, COV_Ac, label='COV')
+    
+    COV_Vf = []
+    Vf_arr = np.linspace(0.015, 0.06,200)
+    for Vf in Vf_arr:
+        r = spirrid.theta_vars['r']
+        lf = 17.
+        Af = pi * r ** 2
+        Ac = 1600.
+        COV = np.sqrt(2. * Af / Vf / Ac) * np.sqrt(cov_e**2 + (1. - lf/2./Lc))
+        COV_Vf.append(COV)
+    #plt.plot(Ac_arr, COV_Vf, label='COVVf',ls='dashed',lw=3)
+    
+    COV_lf = []
+    lf_arr = np.linspace(1., 20., 20)
+    for lf in lf_arr:
+        r = spirrid.theta_vars['r']
+        Af = pi * r ** 2
+        Ac = 1600.
+        
+        spirrid.theta_vars['le'] = RV('uniform', scale=lf/2., loc=0.0)
+        var = spirrid.var_q_arr
+        mu = spirrid.mu_q_arr
+        cov_e = np.sqrt(var)/mu
+        
+        COV = np.sqrt(2. * Af / Vf / Ac) * np.sqrt(cov_e**2 + (1. - lf/2./Lc))
+        COV_lf.append(COV)
+    plt.plot(lf_arr, COV_lf, label='COV_lf')
+   
+    #plt.plot(Ac_arr, COVref, label='COVref',color='grey', lw=2, ls='dashed')
+    #plt.ylim(0)
+    plt.legend()
+    plt.show()
    
 #fiber()
 #lcs_effect()
@@ -284,4 +355,5 @@ def short_fibers_strength():
 #short_fibers_f()
 #short_fibers_lf()
 #short_fibers_var()
-short_fibers_strength()
+#short_fibers_strength()
+short_fibers_strength_var()
