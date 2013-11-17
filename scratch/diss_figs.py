@@ -23,6 +23,7 @@ import pickle
 from stats.spirrid import make_ogrid as orthogonalize
 from mayavi import mlab
 from math import pi
+from scipy.stats import norm
 
 cb = CBClampedRandXi()
 spirrid = SPIRRID(q=cb, sampling_type='PGrid',
@@ -199,7 +200,6 @@ def short_fibers_f():
                                   f=.99,
                                   xi=20e10),
                   n_int=100)
-
     plt.plot(w, spirrid.mu_q_arr * 70e3 * 0.01, label='.99')
     spirrid.theta_vars['f'] = 0.7
     plt.plot(w, spirrid.mu_q_arr * 70e3 * 0.01, label='0.7')
@@ -273,6 +273,7 @@ def short_fibers_strength():
     for f in f_arr:
         spirrid.theta_vars['f'] = f
         mu = spirrid.mu_q_arr * 70e3 * 0.01
+        print mu
         strengths.append(mu)
     ref = strengths[0]
     plt.plot(f_arr, np.array(strengths)/ref, label='strength')
@@ -348,12 +349,49 @@ def short_fibers_strength_var():
     #plt.ylim(0)
     plt.legend()
     plt.show()
+
+def short_fibers_CHOB():
+    cb = CBShortFiber()
+    Ef = 70e3
+    Vf = 0.015
+    r=0.15
+    Lc = 100.
+    Ac = 1600.
+    lf = 14.
+    spirrid = SPIRRID(q=cb, sampling_type='PGrid',
+                      eps_vars=dict(w=np.array([100.0])),
+                      theta_vars=dict(tau=1.67,
+                                  E_f=Ef,
+                                  r=r,
+                                  le=RV('uniform', scale=lf/2., loc=0.0),
+                                  phi=RV('sin2x', scale=1.0),
+                                  f=.99,
+                                  xi=20e10),
+                  n_int=100
+                  )
+    
+    spirrid.codegen.implicit_var_eval=True
+    var_e = spirrid.var_q_arr
+    mu_e = spirrid.mu_q_arr
+    print mu_e
+    Af = pi * r ** 2
+    p = lf / 2. / Lc
+    n = Ac * Lc * Vf / Af / lf
+    mu_strength = Ef * Vf / 2. * mu_e
+    var_strength  = (Ef * Vf / 2.) ** 2 / n / p * (var_e + (1. - p)*mu_e**2)
+    n = np.arange(10)
+    distr = norm(loc=mu_strength, scale=var_strength**(0.5))
+    sig_arr = np.linspace(mu_strength/2., mu_strength*1.5, 100)
+    plt.plot(sig_arr, distr.cdf(sig_arr), label='strength distr')
+    plt.legend()
+    plt.show()
    
 #fiber()
 #lcs_effect()
 #Gxi()
-#short_fibers_f()
+short_fibers_f()
 #short_fibers_lf()
 #short_fibers_var()
 #short_fibers_strength()
-short_fibers_strength_var()
+#short_fibers_strength_var()
+#short_fibers_CHOB()
