@@ -186,20 +186,33 @@ def Gxi():
     plt.legend(loc='best')
     plt.show()
 
-
-def short_fibers_f():
-    cb = CBShortFiber()
-    w = np.linspace(0.0,0.06,200)
-    spirrid = SPIRRID(q=cb, sampling_type='PGrid',
-                      eps_vars=dict(w=w),
-                      theta_vars=dict(tau=.3,
-                                  E_f=70e3,
-                                  r=0.013,
-                                  le=RV('uniform', scale=7., loc=0.0),
+cb = CBShortFiber()
+lf = 14.0
+sf_spirrid = SPIRRID(q=cb, sampling_type='PGrid',
+                      theta_vars=dict(tau=1.8,
+                                  E_f=200e3,
+                                  r=0.088,
+                                  le=RV('uniform', scale=lf/2., loc=0.0),
                                   phi=RV('sin2x', scale=1.0),
-                                  f=.99,
+                                  f=.87,
                                   xi=20e10),
                   n_int=100)
+
+def short_det_vs_rand():
+    w = np.linspace(0.0,0.02,200)
+    sf_spirrid.eps_vars['w'] = w
+    sf_spirrid.theta_vars['le'] = lf/2.
+    sf_spirrid.theta_vars['phi'] = 0.3
+    Ef = sf_spirrid.theta_vars['E_f']
+    plt.plot(w, sf_spirrid.mu_q_arr)
+    plt.legend(loc='best')
+    plt.ylim(0)
+    plt.show()
+
+def short_fibers_f():
+    
+    w = np.linspace(0.0,0.06,200)
+
     plt.plot(w, spirrid.mu_q_arr * 70e3 * 0.01, label='.99')
     spirrid.theta_vars['f'] = 0.7
     plt.plot(w, spirrid.mu_q_arr * 70e3 * 0.01, label='0.7')
@@ -389,7 +402,8 @@ def short_fibers_CHOB():
 #fiber()
 #lcs_effect()
 #Gxi()
-short_fibers_f()
+short_det_vs_rand()
+#short_fibers_f()
 #short_fibers_lf()
 #short_fibers_var()
 #short_fibers_strength()
