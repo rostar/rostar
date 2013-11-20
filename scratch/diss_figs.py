@@ -255,46 +255,39 @@ def short_fibers_strength_var():
     r = sf_spirrid.theta_vars['r']
     Af = pi * r ** 2
     Lc = 100.
-    COV_Ac = []
-    Ac_arr = np.linspace(1600.0, 6400., 200)
+    Ac = 1600.
     lf = 14.0
-    for Ac in Ac_arr:
-        COV = np.sqrt(2. * Af / Vf / Ac) * np.sqrt(cov_e**2 + (1. - lf/2./Lc))
-        COV_Ac.append(COV) 
+
+    Ac_arr = np.linspace(1600.0, 6400., 200)
+    COV_Ac = np.sqrt(2. * Af / Vf / Ac_arr) * np.sqrt(cov_e**2 + (1. - lf/2./Lc))
     #plt.plot(Ac_arr, COV_Ac, label='COV')
 
-    COV_Vf = []
     Vf_arr = np.linspace(0.01, 0.04, 200)
-    for Vf in Vf_arr:
-        Ac = 1600.
-        COV = np.sqrt(2. * Af / Vf / Ac) * np.sqrt(cov_e**2 + (1. - lf/2./Lc))
-        COV_Vf.append(COV)
-    #plt.plot(Ac_arr, COV_Vf, label='COVVf',ls='dashed',lw=3)
-    
+    COV_Vf = np.sqrt(2. * Af / Vf_arr / Ac) * np.sqrt(cov_e**2 + (1. - lf/2./Lc))
+    #plt.plot(Vf_arr, COV_Vf, label='COVVf',ls='dashed',lw=3)
+
     COV_lf = []
-    lf_arr = np.linspace(1., 100., 20)
-    for lf in lf_arr:
-        Ac = 1600.
+    lf_arr = np.linspace(1., 30., 100)
+    for lfi in lf_arr:
         sf_spirrid.theta_vars['le'] = RV('uniform', scale=lf/2., loc=0.0)
         var = sf_spirrid.var_q_arr
         mu = sf_spirrid.mu_q_arr
         cov_e = np.sqrt(var)/mu
-        COV = np.sqrt(2. * Af / Vf / Ac) * np.sqrt(cov_e**2 + (1. - lf/2./Lc))
+        COV = np.sqrt(2. * Af / Vf / Ac) * np.sqrt(cov_e**2 + (1. - lfi/2./Lc))
         COV_lf.append(COV)
-    plt.plot(lf_arr, COV_lf, label='COV_lf')
+    #plt.plot(lf_arr, COV_lf, label='COV_lf')
 
     COV_Lc = []
-    Lc_arr = np.linspace(14., 30., 20)
-    for lf in lf_arr:
-        Ac = 1600.
+    Lc_arr = np.linspace(50., 1000., 100)
+    for Lci in Lc_arr:
         var = sf_spirrid.var_q_arr
         mu = sf_spirrid.mu_q_arr
         cov_e = np.sqrt(var)/mu
-        COV = np.sqrt(2. * Af / Vf / Ac) * np.sqrt(cov_e**2 + (1. - lf/2./Lc))
+        COV = np.sqrt(2. * Af / Vf / Ac) * np.sqrt(cov_e**2 + (1. - lf/2./Lci))
         COV_Lc.append(COV)
-    plt.plot(lf_arr, COV_Lc, label='COV_Lc',ls='dashed',lw=3)
+    plt.plot(Lc_arr, COV_Lc, label='COV_Lc')
 
-    plt.ylim(0,0.1)
+    plt.ylim(0,0.08)
     plt.legend()
     plt.show()
 
