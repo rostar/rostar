@@ -301,14 +301,14 @@ def short_fibers_strength_var():
 
 def hybrid():
     cb = CBClampedRandXi()
-    w = np.linspace(0.0, 1., 300)
+    w = np.linspace(0.0, 2.5, 1000)
     spirrid = SPIRRID(q=cb, sampling_type='PGrid',
                       eps_vars=dict(w=w),
-                  theta_vars=dict(tau=0.1,
-                                  E_f=200e3,
+                  theta_vars=dict(tau=0.5,
+                                  E_f=180e3,
                                   V_f=0.01,
                                   r=0.00345,
-                                  m=5.0,
+                                  m=7.0,
                                   sV0=0.0026,
                                   lm=1000.),
                   n_int=100)
@@ -316,9 +316,12 @@ def hybrid():
     plt.plot(w, sigma_c1,label='1')
     spirrid.theta_vars['E_f'] = 70e3
     spirrid.theta_vars['r'] = 0.013
+    spirrid.theta_vars['sV0'] = 0.015
+    spirrid.theta_vars['m'] = 20.
     sigma_c2 = spirrid.mu_q_arr / spirrid.theta_vars['r'] ** 2
     plt.plot(w, sigma_c2,label='2')
     plt.plot(w, sigma_c2 + sigma_c1)
+    plt.ylim(0,20)
     plt.legend()
     plt.show()
 
