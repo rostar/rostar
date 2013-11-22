@@ -243,6 +243,14 @@ def short_fibers_strength_f():
     plt.plot(f_arr, func, label='analyt')
     plt.ylim(0,2)
     plt.show()
+    
+def short_fibers_strength_T():
+    lf, Vf, f = 14.0, 0.01, 0.87
+    T_arr = np.linspace(0.5, 3.0, 10.) * 2. / 0.088
+    strength = Vf*T_arr*lf/4.0 * (np.exp(f * pi / 2.) + 1) / (f**2 + 4)
+    plt.plot(T_arr, strength, label='T')
+    plt.ylim(0)
+    plt.show()
 
 def short_fibers_strength_var():
     sf_spirrid.codegen.implicit_var_eval=True
@@ -334,5 +342,6 @@ def short_fibers_CHOB():
 #short_fibers_f()
 #short_fibers_lf()
 #short_fibers_strength_f()
-short_fibers_strength_var()
+#short_fibers_strength_T()
+#short_fibers_strength_var()
 #short_fibers_CHOB()
