@@ -299,6 +299,29 @@ def short_fibers_strength_var():
     plt.legend()
     plt.show()
 
+def hybrid():
+    cb = CBClampedRandXi()
+    w = np.linspace(0.0, 1., 300)
+    spirrid = SPIRRID(q=cb, sampling_type='PGrid',
+                      eps_vars=dict(w=w),
+                  theta_vars=dict(tau=0.1,
+                                  E_f=200e3,
+                                  V_f=0.01,
+                                  r=0.00345,
+                                  m=5.0,
+                                  sV0=0.0026,
+                                  lm=1000.),
+                  n_int=100)
+    sigma_c1 = spirrid.mu_q_arr / spirrid.theta_vars['r'] ** 2
+    plt.plot(w, sigma_c1,label='1')
+    spirrid.theta_vars['E_f'] = 70e3
+    spirrid.theta_vars['r'] = 0.013
+    sigma_c2 = spirrid.mu_q_arr / spirrid.theta_vars['r'] ** 2
+    plt.plot(w, sigma_c2,label='2')
+    plt.plot(w, sigma_c2 + sigma_c1)
+    plt.legend()
+    plt.show()
+
 def short_fibers_CHOB():
     cb = CBShortFiber()
     Ef = 70e3
@@ -344,4 +367,5 @@ def short_fibers_CHOB():
 #short_fibers_strength_f()
 #short_fibers_strength_T()
 #short_fibers_strength_var()
+hybrid()
 #short_fibers_CHOB()

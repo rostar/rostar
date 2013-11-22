@@ -222,86 +222,86 @@ if __name__ == '__main__':
         for V in [V13, V23, V33]:
             eps = V.ex_type.eps_asc * 100.
             sig_c = V.ex_type.sig_c_asc
-            plt.plot(eps, sig_c, color='black')
+            plt.plot(eps, sig_c, color='black', lw=2)
         for V in [V2small, V3small]:
             eps = V.ex_type.eps_asc * 100.
             sig_c = V.ex_type.sig_c_asc
-            plt.plot(eps, sig_c, color='black')
+            plt.plot(eps, sig_c, color='black', lw=2)
         plt.xlim(0.0, 0.8)
         plt.ylim(0.0, 27.)
 
-    # filaments
-        r = 0.00345
-        xi = WeibullFibers(shape=4.0, sV0=.0025)
-        E_m = 25e3
-        E_f = 180e3
-        mtrx_scale = 5.0
-        mtrx_shape = 13.0
-        length = 1000.
-        nx = 1000
-        tau = RV('uniform', loc=0.01, scale=0.1)
-        random_field = RandomField(seed=True,
-                                   lacor=5.,
-                                    xgrid=np.linspace(0., length, 500),
-                                    nsim=1,
-                                    loc=.0,
-                                    shape=mtrx_shape,
-                                    scale=mtrx_scale,
-                                    distribution='Weibull'
-                                   )
-
-        reinf = ContinuousFibers(r=r,
-                              tau=tau,
-                              V_f=0.0111,
-                              E_f=E_f,
-                              xi=xi,
-                              n_int=200,
-                              label='carbon')
-
-        CB_model = CompositeCrackBridge(E_m=E_m,
-                                        reinforcement_lst=[reinf],
-                                        )
-
-        scm = SCM(length=length,
-                  nx=nx,
-                  random_field=random_field,
-                  CB_model=CB_model,
-                  load_sigma_c_arr=np.linspace(0.0, 30, 60)
-                  )
-
-        scm_view = SCMView(model=scm)
-        scm_view.model.evaluate()
-
-        eps1, sigma1 = scm_view.eps_sigma
-        plt.plot(np.array(eps1) * 100., sigma1, lw=2, ls='dashed', color='red')
-                 #label='no of cracks = ' + str(len(scm_view1.crack_widths(12.))))
-        plt.legend(loc='best')
-#        plt.xlabel('composite strain [-]')
-#        plt.ylabel('composite stress [MPa]')
-
-        #random_field.scale *= 1.05
-        reinf.V_f = 0.0166
-
-        scm = SCM(length=length,
-                  nx=nx,
-                  random_field=random_field,
-                  load_sigma_c_arr=np.linspace(0.0,30,60)
-                  )
-
-        scm_view = SCMView(model=scm)
-        scm_view.model.evaluate()
-        eps2, sigma2 = scm_view.eps_sigma
-        plt.plot(np.array(eps2) * 100., sigma2, lw=2, color='red')
-        plt.legend(loc='best')
-        plt.xlabel('composite strain [%]')
-        plt.ylabel('composite stress [MPa]')
+#    # filaments
+#        r = 0.00345
+#        xi = WeibullFibers(shape=4.0, sV0=.0025)
+#        E_m = 25e3
+#        E_f = 180e3
+#        mtrx_scale = 5.0
+#        mtrx_shape = 13.0
+#        length = 1000.
+#        nx = 1000
+#        tau = RV('uniform', loc=0.01, scale=0.1)
+#        random_field = RandomField(seed=True,
+#                                   lacor=5.,
+#                                    xgrid=np.linspace(0., length, 500),
+#                                    nsim=1,
+#                                    loc=.0,
+#                                    shape=mtrx_shape,
+#                                    scale=mtrx_scale,
+#                                    distribution='Weibull'
+#                                   )
+#
+#        reinf = ContinuousFibers(r=r,
+#                              tau=tau,
+#                              V_f=0.0111,
+#                              E_f=E_f,
+#                              xi=xi,
+#                              n_int=200,
+#                              label='carbon')
+#
+#        CB_model = CompositeCrackBridge(E_m=E_m,
+#                                        reinforcement_lst=[reinf],
+#                                        )
+#
+#        scm = SCM(length=length,
+#                  nx=nx,
+#                  random_field=random_field,
+#                  CB_model=CB_model,
+#                  load_sigma_c_arr=np.linspace(0.0, 30, 60)
+#                  )
+#
+#        scm_view = SCMView(model=scm)
+#        scm_view.model.evaluate()
+#
+#        eps1, sigma1 = scm_view.eps_sigma
+#        plt.plot(np.array(eps1) * 100., sigma1, lw=2, ls='dashed', color='red')
+#                 #label='no of cracks = ' + str(len(scm_view1.crack_widths(12.))))
 #        plt.legend(loc='best')
-        #plt.figure()
-        #plt.hist(scm_view.crack_widths(15.), bins=20, label='load = 15 MPa')
-        #plt.hist(scm_view1.crack_widths(22.), bins=20, label='load = 22 MPa')
-        #plt.legend(loc='best')
+##        plt.xlabel('composite strain [-]')
+##        plt.ylabel('composite stress [MPa]')
+#
+#        #random_field.scale *= 1.05
+#        reinf.V_f = 0.0166
+#
+#        scm = SCM(length=length,
+#                  nx=nx,
+#                  random_field=random_field,
+#                  load_sigma_c_arr=np.linspace(0.0,30,60)
+#                  )
+#
+#        scm_view = SCMView(model=scm)
+#        scm_view.model.evaluate()
+#        eps2, sigma2 = scm_view.eps_sigma
+#        plt.plot(np.array(eps2) * 100., sigma2, lw=2, color='red')
+#        plt.legend(loc='best')
+#        plt.xlabel('composite strain [%]')
+#        plt.ylabel('composite stress [MPa]')
+##        plt.legend(loc='best')
+#        #plt.figure()
+#        #plt.hist(scm_view.crack_widths(15.), bins=20, label='load = 15 MPa')
+#        #plt.hist(scm_view1.crack_widths(22.), bins=20, label='load = 22 MPa')
+#        #plt.legend(loc='best')
         plt.show()
 
     plot()
 
-    calib.get_parameters()
+    #calib.get_parameters()

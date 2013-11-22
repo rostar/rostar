@@ -191,19 +191,19 @@ def deterministic_tau():
     ax1 = fig.add_subplot(111)
     ax2 = ax1.twinx()
 
-    for mi in [4.0, 5.0, 7.0]:
-        tau_arr = np.linspace(0.05, .2, 5)
+    for mi in [.5, 1.0, 5.0]:
+        tau_arr = np.linspace(0.05, 1., 5)
         T = 2. * tau_arr / r
         s0 = ((T * (mi+1) * sV0**mi)/(2. * E_f * pi * r ** 2))**(1./(mi+1))
         wstar = E_f / T * s0**2 * mi**(-2./(mi+1))
         zeta = mi**(-1./(mi+1.)) * np.exp(-1./mi) + 1. / (mi + 1.) * gamma(1 + 1./(mi+1)) * gammainc(1 + 1./(mi+1), 1./mi)
         strength = E_f * V_f * s0 * zeta
         ax1.loglog(tau_arr, strength, lw=2, color='black')
-        ax1.set_ylim(0,15)
+        ax1.set_ylim(5,200)
         ax2.loglog(tau_arr, wstar, lw=2, color='black', ls='dashed')
-        ax2.set_ylim(0.1,1.)
+        ax2.set_ylim(0.1,1000.)
     plt.xlim(0.05,.2)
-    plt.ylim(0)
+    #plt.ylim(0)
     ax1.set_xlabel('$\\tau \,[\mathrm{N/mm^2}]$')
     ax1.set_ylabel('$\mu^\star_{\sigma_\mathrm{c},\\xi}\,[\mathrm{MPa}]$')
     ax2.set_ylabel('$w^\star_{\\xi}\,[\mathrm{mm}]$')
@@ -293,18 +293,11 @@ def mu_ell():
     ax2.set_ylabel('$G_\\xi\,[-]$')
     plt.show()
 
-from matplotlib import rc
-import matplotlib
-rc('font',**{'family':'sans-serif','sans-serif':['Helvetica']})
-## for Palatino and other serif fonts use:
-#rc('font',**{'family':'serif','serif':['Palatino']})
-rc('text', usetex=True)
-matplotlib.rcParams.update({'font.size': 21})
 #general_diagram()
 #rand_xi()
 #deterministic_r()
-#deterministic_tau()
+deterministic_tau()
 #rand_r()
 #rand_tau()
 #g_ell()
-mu_ell()
+#mu_ell()

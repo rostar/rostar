@@ -1,7 +1,7 @@
 '''
 Created on 03.07.2013
 
-@author: acki
+@author: rostar
 '''
 import numpy as np
 from scipy.interpolate import interp1d
