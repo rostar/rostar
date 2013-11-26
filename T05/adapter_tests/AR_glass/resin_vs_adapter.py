@@ -48,6 +48,7 @@ if __name__ == '__main__':
     if force == False:
         fh = np.array(fh) / 0.445
         fa = np.array(fa) / 0.445
+        print fa
         fs = np.array(fs) / 0.445
         com_f = np.array(com_f) / 0.445
     

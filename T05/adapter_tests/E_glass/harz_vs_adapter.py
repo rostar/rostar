@@ -24,6 +24,7 @@ f_adapter_800tex = np.array([458.1, 462.98, 460.85, 399.63, 402.48, 381.1, 359.5
 COV_adapter_800tex = np.array([9.32, 7.9, 6.23, 12.67, 15.96, 17.46, 18.57])
 
 f_adapter_1200tex = np.array([715.39, 721.47, 694.6, 661.01, 650.4, 606.91, 541.33, ]) / A_1200tex
+print f_adapter_1200tex
 COV_adapter_1200tex = np.array([6.08, 5.25, 8.23, 12.22, 14.21, 13.51, 15.87])
 
 from matplotlib import pyplot as plt

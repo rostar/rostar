@@ -31,7 +31,6 @@ A500cv = np.array([6.35, 5.74, 4.0, 6.0, 3.17])
 
 A_strength = np.array([A35, A70, A130, A250, A500]) * 16./0.89
 A_COV = np.array([A35cv, A70cv, A130cv, A250cv, A500cv])
-print A_COV[:,0]
 
 # Umlenkbolzen tests 
 B35 = np.array([108.6,114.1,113.1,112.4, 110.9])
@@ -48,7 +47,6 @@ B500cv = np.array([6.13, 4.12, 2.19, 3.41, 3.08])
 B_strength = np.array([B35, B70, B130, B250, B500]) * 16./0.89
 B_COV = np.array([B35cv, B70cv, B130cv, B250cv, B500cv])
 Rel_strength = A_strength / B_strength - 1.0
-print B_COV[:,0]
 
 if __name__ == '__main__':
 
