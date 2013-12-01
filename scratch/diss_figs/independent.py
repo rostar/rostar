@@ -44,8 +44,8 @@ def fiber():
     for wi in w:
         sigmaCB.append(cb(wi, .1, 240e3, 0.01, 0.0035, 7.0, 0.0046, 5000., 0.5))
         sigmaMC.append(cb(wi, .1, 240e3, 0.01, 0.0035, 7.0, 0.0046, 20., 0.5))
-    plt.plot(w, np.array(sigmaMC)/0.00345**2, label='MC')
-    plt.plot(w, np.array(sigmaCB)/0.00345**2, label='CB')
+    plt.plot(w, np.array(sigmaMC) / 0.00345 ** 2, label='MC')
+    plt.plot(w, np.array(sigmaCB) / 0.00345 ** 2, label='CB')
     plt.legend()
     plt.show()
 
@@ -71,15 +71,15 @@ def lcs_effect():
     def maxsigma(lm, tau, m_xi):
         def minfunc(w):
             res = sigmac(w, lm, tau, m_xi)
-            return - res * (w < 200.) + 1e-5 * w**2
+            return -res * (w < 200.) + 1e-5 * w ** 2
         w_max = minimize_scalar(minfunc, bracket=(0.0001, 0.0002))
         return w_max.x, sigmac(w_max.x, lm, tau, m_xi)
 
     def m_effect():
-        m_xi_arr = np.linspace(1.,20.,15)
+        m_xi_arr = np.linspace(1., 20., 15)
         m_tau_arr = np.linspace(0.3, 5.0, 10)
         try:
-            res_file = open('res_m.pkl', 'rb' )
+            res_file = open('res_m.pkl', 'rb')
             res_arr = pickle.load(res_file)
             res_file.close()
 #            for res_part in res_arr:
@@ -114,7 +114,7 @@ def lcs_effect():
                 MC_arr = np.array([strength_MC]) / np.array([strength_CB])
                 res_arr.append(MC_arr.flatten())
                 plt.plot(m_xi_arr, CB_arr.flatten(), lw=2., color='black')
-                plt.plot(m_xi_arr, MC_arr.flatten(), label=str(m_tau)+' MC')
+                plt.plot(m_xi_arr, MC_arr.flatten(), label=str(m_tau) + ' MC')
             res_arr = np.array(res_arr)
             file_res = open('res_m.pkl', 'wb')
             pickle.dump(res_arr, file_res, -1)
@@ -128,18 +128,18 @@ def lcs_effect():
         strength_MC = []
         m_arr = np.linspace(.5, 5., 30)
         for m in m_arr:
-            #strengths.append(sigmac_max(l)[0])
-            #print 'strentgth = ', strengths[-1]
-            w_CB = np.linspace(0.0,.5,100)
-            w_MC = np.linspace(0.0,.03,100)
-            sigma_c_CB = - sigmac(w_CB, 1000., RV('weibull_min', shape=m, scale=0.1, loc=0.0), 5.0)
-            sigma_c_MC = - sigmac(w_MC, 1.0, RV('weibull_min', shape=m, scale=0.1, loc=0.0), 5.0)
+            # strengths.append(sigmac_max(l)[0])
+            # print 'strentgth = ', strengths[-1]
+            w_CB = np.linspace(0.0, .5, 100)
+            w_MC = np.linspace(0.0, .03, 100)
+            sigma_c_CB = -sigmac(w_CB, 1000., RV('weibull_min', shape=m, scale=0.1, loc=0.0), 5.0)
+            sigma_c_MC = -sigmac(w_MC, 1.0, RV('weibull_min', shape=m, scale=0.1, loc=0.0), 5.0)
             strength_CB.append(np.max(sigma_c_CB))
             strength_MC.append(np.max(sigma_c_MC))
     #         plt.plot(w_CB, sigma_c_CB, label='CB')
     #         plt.plot(w_CB, sigma_c_MC, label='MC')
     #         plt.show()
-        COV = [np.sqrt(weibull_min(m, scale=0.1).var())/weibull_min(m, scale=0.1).mean() for m in m_arr]
+        COV = [np.sqrt(weibull_min(m, scale=0.1).var()) / weibull_min(m, scale=0.1).mean() for m in m_arr]
         CB_arr = np.ones_like(np.array([strength_CB]))
         MC_arr = np.array([strength_MC]) / np.array([strength_CB])
         plt.plot(COV, CB_arr.flatten())
@@ -147,7 +147,7 @@ def lcs_effect():
         plt.ylim(0)
         plt.show()
     
-    #T_effect()
+    # T_effect()
     m_effect()
 
 def Gxi():
@@ -155,19 +155,19 @@ def Gxi():
     e = np.linspace(0.001, 0.04, 20)
     a = e * Ef / (2. * tau / r)
     L = 10.0
-    rat = 2.*a/L
+    rat = 2.*a / L
         
     wfd = fibers_dry(m=m, sV0=sV0)
-    CDFdry = wfd.cdf(e, r, 2*a)
+    CDFdry = wfd.cdf(e, r, 2 * a)
     
     wfcbr = fibers_CB_rigid(m=m, sV0=sV0)
-    CDFCB = wfcbr.cdf(e, 2*tau/Ef/r, r)
+    CDFCB = wfcbr.cdf(e, 2 * tau / Ef / r, r)
     
     wfmc = fibers_MC(m=m, sV0=sV0, Ll=L, Lr=L)
-    CDFexct = wfmc.cdf_exact(e, 2*tau/Ef/r, r)
-    CDFrypl = wfmc.cdf(e, 2*tau/Ef/r, r, a, a)
+    CDFexct = wfmc.cdf_exact(e, 2 * tau / Ef / r, r)
+    CDFrypl = wfmc.cdf(e, 2 * tau / Ef / r, r, a, a)
     
-    #linear scale
+    # linear scale
 #    plt.plot(e, CDFrypl, label='Rypl')
 #    plt.plot(e, CDFexct, label='exact')
 #    plt.plot(e, CDFdry, label='Phoenix 1992')
@@ -180,7 +180,7 @@ def Gxi():
     plt.plot(np.log(e), np.log(-np.log(1.0 - CDFrypl)), label='Rypl')
     plt.plot(np.log(e), np.log(-np.log(1.0 - CDFexct)), label='exact')
 
-    #plt.ylim(0)
+    # plt.ylim(0)
     plt.legend(loc='best')
     plt.show()
 
@@ -190,16 +190,16 @@ sf_spirrid = SPIRRID(q=cb, sampling_type='PGrid',
                       theta_vars=dict(tau=1.8,
                                   E_f=200e3,
                                   r=0.088,
-                                  le=RV('uniform', scale=lf/2., loc=0.0),
+                                  le=RV('uniform', scale=lf / 2., loc=0.0),
                                   phi=RV('sin2x', scale=1.0),
                                   f=.87,
                                   xi=20e10),
                   n_int=100)
 
 def short_det_vs_rand():
-    w = np.linspace(0.0,0.02,200)
+    w = np.linspace(0.0, 0.02, 200)
     sf_spirrid.eps_vars['w'] = w
-    sf_spirrid.theta_vars['le'] = lf/2.
+    sf_spirrid.theta_vars['le'] = lf / 2.
     sf_spirrid.theta_vars['phi'] = 0.3
     Ef = sf_spirrid.theta_vars['E_f']
     plt.plot(w, sf_spirrid.mu_q_arr)
@@ -208,7 +208,7 @@ def short_det_vs_rand():
     plt.show()
 
 def short_fibers_f():
-    w = np.linspace(0.0,0.02,200)
+    w = np.linspace(0.0, 0.02, 200)
     Ef = sf_spirrid.theta_vars['E_f']
     Vf = 0.01
     sf_spirrid.eps_vars['w'] = w
@@ -222,7 +222,7 @@ def short_fibers_f():
     plt.show()
     
 def short_fibers_lf():
-    w = np.linspace(0.0,0.02,200)
+    w = np.linspace(0.0, 0.02, 200)
     Ef = sf_spirrid.theta_vars['E_f']
     Vf = 0.01
     sf_spirrid.eps_vars['w'] = w
@@ -238,26 +238,26 @@ def short_fibers_lf():
 def short_fibers_strength_f():
     sf_spirrid.eps_vars['w'] = np.array([1000.])
     f_arr = np.linspace(0.0, 1.5, 100)
-    func = (np.exp(f_arr * pi / 2.) + 1) / (f_arr**2 + 4)
+    func = (np.exp(f_arr * pi / 2.) + 1) / (f_arr ** 2 + 4)
     plt.plot(f_arr, np.ones_like(f_arr), label='aligned')
     plt.plot(f_arr, func, label='analyt')
-    plt.ylim(0,2)
+    plt.ylim(0, 2)
     plt.show()
     
 def short_fibers_strength_T():
     lf, Vf, f = 14.0, 0.01, 0.87
     T_arr = np.linspace(0.5, 3.0, 10.) * 2. / 0.088
-    strength = Vf*T_arr*lf/4.0 * (np.exp(f * pi / 2.) + 1) / (f**2 + 4)
+    strength = Vf * T_arr * lf / 4.0 * (np.exp(f * pi / 2.) + 1) / (f ** 2 + 4)
     plt.plot(T_arr, strength, label='T')
     plt.ylim(0)
     plt.show()
 
 def short_fibers_strength_var():
-    sf_spirrid.codegen.implicit_var_eval=True
+    sf_spirrid.codegen.implicit_var_eval = True
     sf_spirrid.eps_vars['w'] = np.array([1000.])
     var = sf_spirrid.var_q_arr
     mu = sf_spirrid.mu_q_arr
-    cov_e = np.sqrt(var)/mu
+    cov_e = np.sqrt(var) / mu
 
     Vf = 0.01
     r = sf_spirrid.theta_vars['r']
@@ -267,35 +267,35 @@ def short_fibers_strength_var():
     lf = 14.0
 
     Ac_arr = np.linspace(1600.0, 6400., 200)
-    COV_Ac = np.sqrt(2. * Af / Vf / Ac_arr) * np.sqrt(cov_e**2 + (1. - lf/2./Lc))
-    #plt.plot(Ac_arr, COV_Ac, label='COV')
+    COV_Ac = np.sqrt(2. * Af / Vf / Ac_arr) * np.sqrt(cov_e ** 2 + (1. - lf / 2. / Lc))
+    # plt.plot(Ac_arr, COV_Ac, label='COV')
 
     Vf_arr = np.linspace(0.01, 0.04, 200)
-    COV_Vf = np.sqrt(2. * Af / Vf_arr / Ac) * np.sqrt(cov_e**2 + (1. - lf/2./Lc))
-    #plt.plot(Vf_arr, COV_Vf, label='COVVf',ls='dashed',lw=3)
+    COV_Vf = np.sqrt(2. * Af / Vf_arr / Ac) * np.sqrt(cov_e ** 2 + (1. - lf / 2. / Lc))
+    # plt.plot(Vf_arr, COV_Vf, label='COVVf',ls='dashed',lw=3)
 
     COV_lf = []
     lf_arr = np.linspace(1., 30., 100)
     for lfi in lf_arr:
-        sf_spirrid.theta_vars['le'] = RV('uniform', scale=lf/2., loc=0.0)
+        sf_spirrid.theta_vars['le'] = RV('uniform', scale=lf / 2., loc=0.0)
         var = sf_spirrid.var_q_arr
         mu = sf_spirrid.mu_q_arr
-        cov_e = np.sqrt(var)/mu
-        COV = np.sqrt(2. * Af / Vf / Ac) * np.sqrt(cov_e**2 + (1. - lfi/2./Lc))
+        cov_e = np.sqrt(var) / mu
+        COV = np.sqrt(2. * Af / Vf / Ac) * np.sqrt(cov_e ** 2 + (1. - lfi / 2. / Lc))
         COV_lf.append(COV)
-    #plt.plot(lf_arr, COV_lf, label='COV_lf')
+    # plt.plot(lf_arr, COV_lf, label='COV_lf')
 
     COV_Lc = []
     Lc_arr = np.linspace(50., 1000., 100)
     for Lci in Lc_arr:
         var = sf_spirrid.var_q_arr
         mu = sf_spirrid.mu_q_arr
-        cov_e = np.sqrt(var)/mu
-        COV = np.sqrt(2. * Af / Vf / Ac) * np.sqrt(cov_e**2 + (1. - lf/2./Lci))
+        cov_e = np.sqrt(var) / mu
+        COV = np.sqrt(2. * Af / Vf / Ac) * np.sqrt(cov_e ** 2 + (1. - lf / 2. / Lci))
         COV_Lc.append(COV)
     plt.plot(Lc_arr, COV_Lc, label='COV_Lc')
 
-    plt.ylim(0,0.08)
+    plt.ylim(0, 0.08)
     plt.legend()
     plt.show()
 
@@ -313,15 +313,15 @@ def hybrid():
                                   lm=1000.),
                   n_int=100)
     sigma_c1 = spirrid.mu_q_arr / spirrid.theta_vars['r'] ** 2
-    plt.plot(w, sigma_c1,label='1')
+    plt.plot(w, sigma_c1, label='1')
     spirrid.theta_vars['E_f'] = 70e3
     spirrid.theta_vars['r'] = 0.013
     spirrid.theta_vars['sV0'] = 0.015
     spirrid.theta_vars['m'] = 20.
     sigma_c2 = spirrid.mu_q_arr / spirrid.theta_vars['r'] ** 2
-    plt.plot(w, sigma_c2,label='2')
+    plt.plot(w, sigma_c2, label='2')
     plt.plot(w, sigma_c2 + sigma_c1)
-    plt.ylim(0,20)
+    plt.ylim(0, 20)
     plt.legend()
     plt.show()
 
@@ -329,7 +329,7 @@ def short_fibers_CHOB():
     cb = CBShortFiber()
     Ef = 70e3
     Vf = 0.015
-    r=0.15
+    r = 0.15
     Lc = 100.
     Ac = 1600.
     lf = 14.
@@ -338,14 +338,14 @@ def short_fibers_CHOB():
                       theta_vars=dict(tau=1.67,
                                   E_f=Ef,
                                   r=r,
-                                  le=RV('uniform', scale=lf/2., loc=0.0),
+                                  le=RV('uniform', scale=lf / 2., loc=0.0),
                                   phi=RV('sin2x', scale=1.0),
                                   f=.99,
                                   xi=20e10),
                   n_int=100
                   )
     
-    spirrid.codegen.implicit_var_eval=True
+    spirrid.codegen.implicit_var_eval = True
     var_e = spirrid.var_q_arr
     mu_e = spirrid.mu_q_arr
     print mu_e
@@ -353,22 +353,22 @@ def short_fibers_CHOB():
     p = lf / 2. / Lc
     n = Ac * Lc * Vf / Af / lf
     mu_strength = Ef * Vf / 2. * mu_e
-    var_strength  = (Ef * Vf / 2.) ** 2 / n / p * (var_e + (1. - p)*mu_e**2)
+    var_strength = (Ef * Vf / 2.) ** 2 / n / p * (var_e + (1. - p) * mu_e ** 2)
     n = np.arange(10)
-    distr = norm(loc=mu_strength, scale=var_strength**(0.5))
-    sig_arr = np.linspace(mu_strength/2., mu_strength*1.5, 100)
+    distr = norm(loc=mu_strength, scale=var_strength ** (0.5))
+    sig_arr = np.linspace(mu_strength / 2., mu_strength * 1.5, 100)
     plt.plot(sig_arr, distr.cdf(sig_arr), label='strength distr')
     plt.legend()
     plt.show()
    
-#fiber()
-#lcs_effect()
+# fiber()
+# lcs_effect()
 Gxi()
-#short_det_vs_rand()
-#short_fibers_f()
-#short_fibers_lf()
-#short_fibers_strength_f()
-#short_fibers_strength_T()
-#short_fibers_strength_var()
-#hybrid()
-#short_fibers_CHOB()
+# short_det_vs_rand()
+# short_fibers_f()
+# short_fibers_lf()
+# short_fibers_strength_f()
+# short_fibers_strength_T()
+# short_fibers_strength_var()
+# hybrid()
+# short_fibers_CHOB()
