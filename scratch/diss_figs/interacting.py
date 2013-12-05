@@ -26,7 +26,7 @@ import copy
 
 reinf = ContinuousFibers(r=0.0035,
                       tau=0.1,
-                      V_f=0.05,
+                      V_f=0.1,
                       E_f=200e3,
                       xi=fibers_MC(m=5.0, sV0=0.006),
                       label='carbon',
@@ -76,9 +76,26 @@ def FBM_limit(w_arr):
     F = lambda x: 1 - np.exp(-100. * reinf.r ** 2 * pi * (x / sV0) ** m)
     sigma = e * 200e3 * (1. - F(e))
     plt.plot(e, sigma, lw=4, color='red', label='FBM')
+    
+def CBR_limit(w_arr):
+    model.Ll = 1e10
+    model.Lr = 1e10
+    model.E_m = 5e3
+    sigma_c_arr = ccb_view.sigma_c_arr(w_arr)
+    plt.plot(w_arr, sigma_c_arr, lw=2, label='w-sigma1')
+    model.E_m = 20e3
+    sigma_c_arr = ccb_view.sigma_c_arr(w_arr)
+    plt.plot(w_arr, sigma_c_arr, lw=2, label='w-sigma2')
+    model.E_m = 100e3
+    sigma_c_arr = ccb_view.sigma_c_arr(w_arr)
+    plt.plot(w_arr, sigma_c_arr, lw=2, label='w-sigma2')
+    model.E_m = 25e10
+    sigma_c_arr = ccb_view.sigma_c_arr(w_arr)
+    plt.plot(w_arr, sigma_c_arr, lw=3, color='black', label='rigid')
 
 # BC_effect(np.linspace(0.0, .6, 200))
-FBM_limit(np.linspace(0.0, 3.0, 200))
+# FBM_limit(np.linspace(0.0, 3.0, 200))
+CBR_limit(np.linspace(0.0, 4.0, 200))
 
 plt.legend(loc='best')
 plt.show()
