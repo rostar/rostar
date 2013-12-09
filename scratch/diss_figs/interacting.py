@@ -26,9 +26,9 @@ import copy
 
 reinf = ContinuousFibers(r=0.0035,
                       tau=0.1,
-                      V_f=0.1,
+                      V_f=0.05,
                       E_f=200e3,
-                      xi=fibers_MC(m=5.0, sV0=0.006),
+                      xi=fibers_MC(m=5.0, sV0=10.006),
                       label='carbon',
                       n_int=200)
 
@@ -41,7 +41,15 @@ model = CompositeCrackBridge(E_m=25e3,
 ccb_view = CompositeCrackBridgeView(model=model)
 
 def BC_effect(w_arr):
-    model.Ll = 20.
+    model.Ll = 1e10
+    model.Lr = 1e10
+    sigma_c_arr = ccb_view.sigma_c_arr(w_arr)
+    plt.plot(w_arr, sigma_c_arr, lw=2, color='black', label='w-sigma')
+    model.Ll = 10.
+    model.Lr = 1e10
+    sigma_c_arr = ccb_view.sigma_c_arr(w_arr)
+    plt.plot(w_arr, sigma_c_arr, lw=2, color='black', label='w-sigma')
+    model.Ll = 10.
     model.Lr = 30.
     sigma_c_arr = ccb_view.sigma_c_arr(w_arr)
     plt.plot(w_arr, sigma_c_arr, lw=2, color='black', label='w-sigma')
@@ -92,10 +100,23 @@ def CBR_limit(w_arr):
     model.E_m = 25e10
     sigma_c_arr = ccb_view.sigma_c_arr(w_arr)
     plt.plot(w_arr, sigma_c_arr, lw=3, color='black', label='rigid')
+    
+def CBe_limit(w_arr):
+    model.Ll = 1e10
+    model.Lr = 1e10
+    model.E_m = 25e3
+    reinf.xi = 100.
+    sigma_c_arr = ccb_view.sigma_c_arr(w_arr)
+    plt.plot(w_arr, sigma_c_arr / reinf.E_f / reinf.V_f, lw=2, label='numerical')
+    def analytical(w_arr):
+        T = 2 * reinf.tau / reinf.r
+        return np.sqrt((T * model.E_c * w_arr) / (reinf.E_f * model.E_m * (1 - reinf.V_f)))
+    plt.plot(w_arr, analytical(w_arr), lw=4, ls='dashed', label='analytical')
 
-# BC_effect(np.linspace(0.0, .6, 200))
+BC_effect(np.linspace(0.0, .6, 200))
 # FBM_limit(np.linspace(0.0, 3.0, 200))
-CBR_limit(np.linspace(0.0, 4.0, 200))
+# CBR_limit(np.linspace(0.0, 4.0, 200))
+# CBe_limit(np.linspace(0.0, 4.0, 200))
 
 plt.legend(loc='best')
 plt.show()
