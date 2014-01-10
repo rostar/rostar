@@ -36,6 +36,7 @@ def random_field():
     plt.ylim(0)
     
 def mtrx_shape():
+    # shapes: 1000, 16.5, 8.0; scales: 3.0 3.1, 3.2
     length = 2000.
     nx = 2000
     random_field = RandomField(seed=False,
@@ -44,8 +45,55 @@ def mtrx_shape():
                                nx=1000,
                                nsim=1,
                                loc=.0,
-                               shape=16.5,
-                               scale=3.1,
+                               shape=8.,
+                               scale=3.2,
+                               distribution='Weibull'
+                               )
+    plt.plot(random_field.xgrid, random_field.random_field, lw=1, color='black')
+    plt.ylim(0)
+    plt.show()
+
+    reinf1 = ContinuousFibers(r=0.0035,
+                          tau=0.03,#RV('weibull_min', loc=0.0, shape=3., scale=0.03),
+                          V_f=0.01,
+                          E_f=180e3,
+                          xi=fibers_MC(m=5.0, sV0=10.003),
+                          label='carbon',
+                          n_int=500)
+
+    CB_model = CompositeCrackBridge(E_m=25e3,
+                                 reinforcement_lst=[reinf1],
+                                 )
+
+    scm = SCM(length=length,
+              nx=nx,
+              random_field=random_field,
+              CB_model=CB_model,
+              load_sigma_c_arr=np.linspace(0.01, 8., 100),
+              )
+
+    scm_view = SCMView(model=scm)
+    scm_view.model.evaluate()
+
+    eps, sigma = scm_view.eps_sigma
+    plt.figure()
+    plt.plot(eps, sigma, color='black', lw=2, label='model')
+    plt.legend(loc='best')
+    plt.xlabel('composite strain [-]')
+    plt.ylabel('composite stress [MPa]')
+
+def mtrx_lacor():
+    # shapes: 1000, 16.5, 8.0; scales: 3.0 3.1, 3.2
+    length = 2000.
+    nx = 2000
+    random_field = RandomField(seed=False,
+                               lacor=17.,
+                               length=length,
+                               nx=1000,
+                               nsim=1,
+                               loc=.0,
+                               shape=8.,
+                               scale=3.2,
                                distribution='Weibull'
                                )
 
@@ -82,5 +130,6 @@ def mtrx_shape():
 if __name__ == '__main__':
     #acor_fn()
     #random_field()
-    mtrx_shape()
+    #mtrx_shape()
+    mtrx_lacor()
     plt.show()
