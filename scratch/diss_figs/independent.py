@@ -327,20 +327,20 @@ def hybrid():
 
 def short_fibers_CHOB():
     cb = CBShortFiber()
-    Ef = 70e3
+    Ef = 200e3
     Vf = 0.015
-    r = 0.15
-    Lc = 100.
+    r = 0.088
+    Lc = 400.
     Ac = 1600.
     lf = 14.
     spirrid = SPIRRID(q=cb, sampling_type='PGrid',
                       eps_vars=dict(w=np.array([100.0])),
-                      theta_vars=dict(tau=1.67,
+                      theta_vars=dict(tau=1.8,
                                   E_f=Ef,
                                   r=r,
                                   le=RV('uniform', scale=lf / 2., loc=0.0),
                                   phi=RV('sin2x', scale=1.0),
-                                  f=.99,
+                                  f=.87,
                                   xi=20e10),
                   n_int=100
                   )
@@ -364,10 +364,10 @@ def short_fibers_CHOB():
     plt.plot(sig_arr, CDF2, label='strength distr 2')
     plt.plot(sig_arr, CDF10, label='strength distr 10')
     plt.figure()
-    cracks = np.linspace(1,30,200)
-    plt.plot(distr.ppf(1.-0.5**(1./cracks)), label='0.5')
-    plt.plot(distr.ppf(1.-0.99999**(1./cracks)), label='0.000001')
-    plt.ylim(0)
+    cracks = np.linspace(1,100,500)
+    plt.plot(cracks, distr.ppf(1.-0.5**(1./cracks)), label='0.5')
+    plt.plot(cracks, distr.ppf(1.-0.99999**(1./cracks)), label='0.000001')
+    plt.ylim(1.0,3.0)
     plt.legend()
     plt.show()
    
