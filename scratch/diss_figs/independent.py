@@ -267,12 +267,12 @@ def short_fibers_strength_var():
     lf = 14.0
 
     Ac_arr = np.linspace(1600.0, 6400., 200)
-    COV_Ac = np.sqrt(2. * Af / Vf / Ac_arr) * np.sqrt(cov_e ** 2 + (1. - lf / 2. / Lc))
-    # plt.plot(Ac_arr, COV_Ac, label='COV')
+    COV_Ac = np.sqrt(2. * Af / Vf / Ac_arr) * np.sqrt(cov_e ** 2 + (1. - lf / 2. / Lc)) 
+    #plt.plot(Ac_arr, COV_Ac, label='COV')
 
     Vf_arr = np.linspace(0.01, 0.04, 200)
     COV_Vf = np.sqrt(2. * Af / Vf_arr / Ac) * np.sqrt(cov_e ** 2 + (1. - lf / 2. / Lc))
-    # plt.plot(Vf_arr, COV_Vf, label='COVVf',ls='dashed',lw=3)
+    #plt.plot(Vf_arr, COV_Vf, label='COVVf',ls='dashed',lw=3)
 
     COV_lf = []
     lf_arr = np.linspace(1., 30., 100)
@@ -293,7 +293,7 @@ def short_fibers_strength_var():
         cov_e = np.sqrt(var) / mu
         COV = np.sqrt(2. * Af / Vf / Ac) * np.sqrt(cov_e ** 2 + (1. - lf / 2. / Lci))
         COV_Lc.append(COV)
-    plt.plot(Lc_arr, COV_Lc, label='COV_Lc')
+    #plt.plot(Lc_arr, COV_Lc, label='COV_Lc')
 
     plt.ylim(0, 0.08)
     plt.legend()
@@ -348,7 +348,6 @@ def short_fibers_CHOB():
     spirrid.codegen.implicit_var_eval = True
     var_e = spirrid.var_q_arr
     mu_e = spirrid.mu_q_arr
-    print mu_e
     Af = pi * r ** 2
     p = lf / 2. / Lc
     n = Ac * Lc * Vf / Af / lf
@@ -356,14 +355,25 @@ def short_fibers_CHOB():
     var_strength = (Ef * Vf / 2.) ** 2 / n / p * (var_e + (1. - p) * mu_e ** 2)
     n = np.arange(10)
     distr = norm(loc=mu_strength, scale=var_strength ** (0.5))
-    sig_arr = np.linspace(mu_strength / 2., mu_strength * 1.5, 100)
-    plt.plot(sig_arr, distr.cdf(sig_arr), label='strength distr')
+    sig_arr = np.linspace(mu_strength / 2., mu_strength * 1.5, 1000)
+    CDF1 = distr.cdf(sig_arr)
+    CDF2 = 1 - (1-CDF1)**2
+    CDF10 = 1 - (1-CDF1)**10
+    plt.figure()
+    plt.plot(sig_arr, CDF1, label='strength distr 1')
+    plt.plot(sig_arr, CDF2, label='strength distr 2')
+    plt.plot(sig_arr, CDF10, label='strength distr 10')
+    plt.figure()
+    cracks = np.linspace(1,30,200)
+    plt.plot(distr.ppf(1.-0.5**(1./cracks)), label='0.5')
+    plt.plot(distr.ppf(1.-0.99999**(1./cracks)), label='0.000001')
+    plt.ylim(0)
     plt.legend()
     plt.show()
    
 # fiber()
 # lcs_effect()
-Gxi()
+# Gxi()
 # short_det_vs_rand()
 # short_fibers_f()
 # short_fibers_lf()
@@ -371,4 +381,5 @@ Gxi()
 # short_fibers_strength_T()
 # short_fibers_strength_var()
 # hybrid()
-# short_fibers_CHOB()
+# 4.6 procent COV
+short_fibers_CHOB()
