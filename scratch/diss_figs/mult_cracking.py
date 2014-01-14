@@ -171,10 +171,10 @@ def p_tau():
     plt.ylabel('composite stress [MPa]')
 
 def strength():
-    length = 1000.
-    nx = 1000
-    maxsigma = [15., 25., 70.]
-    for i, Vf in enumerate([.01]):
+    length = 2000.
+    nx = 2000
+    maxsigma = [12., 18., 24.]
+    for i, Vf in enumerate([0.01, 0.015, 0.02]):
         random_field = RandomField(seed=False,
                                lacor=5.0,
                                length=length,
