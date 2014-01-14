@@ -170,11 +170,55 @@ def p_tau():
     plt.xlabel('composite strain [-]')
     plt.ylabel('composite stress [MPa]')
 
+def strength():
+    length = 1000.
+    nx = 1000
+    maxsigma = [15., 25., 70.]
+    for i, Vf in enumerate([.01]):
+        random_field = RandomField(seed=False,
+                               lacor=5.0,
+                               length=length,
+                               nx=800,
+                               nsim=1,
+                               loc=.0,
+                               shape=8.,
+                               scale=3.2,
+                               distribution='Weibull'
+                               )
+
+        reinf1 = ContinuousFibers(r=0.0035,
+                              tau=0.03,
+                              V_f=Vf,
+                              E_f=180e3,
+                              xi=fibers_MC(m=5.0, sV0=0.003),
+                              label='carbon',
+                              n_int=500)
+     
+        CB_model = CompositeCrackBridge(E_m=25e3,
+                                        reinforcement_lst=[reinf1],
+                                        )
+     
+        scm = SCM(length=length,
+                  nx=nx,
+                  random_field=random_field,
+                  CB_model=CB_model,
+                  load_sigma_c_arr=np.linspace(0.01, maxsigma[i], 100),
+                  )
+     
+        scm_view = SCMView(model=scm)
+        scm_view.model.evaluate()
+     
+        eps, sigma = scm_view.eps_sigma
+        plt.plot(eps, sigma, lw=1, label=str(Vf))
+    plt.legend(loc='best')
+    plt.xlabel('composite strain [-]')
+    plt.ylabel('composite stress [MPa]')
 
 if __name__ == '__main__':
     #acor_fn()
     #random_field()
     #mtrx_shape()
     #mtrx_lacor()
-    p_tau()
+    #p_tau()
+    strength()
     plt.show()
