@@ -175,7 +175,7 @@ def strength():
     nx = 2000
     cracks = []
     strengths = []
-    maxsigma = [6., 12., 15., 21., 24.]
+    maxsigma = [12., 15., 20., 22., 24.]
     Vfs = [0.05, 0.01, 0.013, 0.017, 0.02]
     for i, Vf in enumerate(Vfs):
         random_field = RandomField(seed=False,
