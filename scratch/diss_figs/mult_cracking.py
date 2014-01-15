@@ -175,8 +175,9 @@ def strength():
     nx = 2000
     cracks = []
     strengths = []
-    maxsigma = [6.]#, 12., 15., 21., 24.]
-    for i, Vf in enumerate([0.05]):#, 0.01, 0.013, 0.017, 0.02]):
+    maxsigma = [6., 12., 15., 21., 24.]
+    Vfs = [0.05, 0.01, 0.013, 0.017, 0.02]
+    for i, Vf in enumerate(Vfs):
         random_field = RandomField(seed=False,
                                lacor=5.0,
                                length=length,
@@ -213,10 +214,16 @@ def strength():
         eps, sigma = scm_view.eps_sigma
         plt.plot(eps, sigma, lw=1, label=str(Vf))
         strengths.append(np.max(sigma))
-        cracks.append(length/1000./len(scm_view.model.cracks_list[-1]))
+        cracks.append(len(scm_view.model.cracks_list[-1]))
+    
     plt.legend(loc='best')
     plt.xlabel('composite strain [-]')
     plt.ylabel('composite stress [MPa]')
+    plt.figure()
+    plt.plot(Vfs, strengths, label='strengths')
+    plt.plot(Vfs, cracks, label='cracks')
+    print strengths
+    print cracks
 
 if __name__ == '__main__':
     #acor_fn()
