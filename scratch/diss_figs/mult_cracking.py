@@ -173,8 +173,10 @@ def p_tau():
 def strength():
     length = 2000.
     nx = 2000
-    maxsigma = [12., 18., 24.]
-    for i, Vf in enumerate([0.01, 0.015, 0.02]):
+    cracks = []
+    strengths = []
+    maxsigma = [6.]#, 12., 15., 21., 24.]
+    for i, Vf in enumerate([0.05]):#, 0.01, 0.013, 0.017, 0.02]):
         random_field = RandomField(seed=False,
                                lacor=5.0,
                                length=length,
@@ -207,9 +209,11 @@ def strength():
      
         scm_view = SCMView(model=scm)
         scm_view.model.evaluate()
-     
+        
         eps, sigma = scm_view.eps_sigma
         plt.plot(eps, sigma, lw=1, label=str(Vf))
+        strengths.append(np.max(sigma))
+        cracks.append(length/1000./len(scm_view.model.cracks_list[-1]))
     plt.legend(loc='best')
     plt.xlabel('composite strain [-]')
     plt.ylabel('composite stress [MPa]')
