@@ -221,6 +221,7 @@ def strength():
     plt.ylabel('composite stress [MPa]')
     plt.figure()
     plt.plot(Vfs, strengths, label='strengths')
+    plt.figure()
     plt.plot(Vfs, cracks, label='cracks')
     print strengths
     print cracks
