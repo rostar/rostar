@@ -190,7 +190,7 @@ def strength():
                                )
 
         reinf1 = ContinuousFibers(r=0.0035,
-                              tau=0.03,
+                              tau=RV('weibull_min', loc=0.0, shape=1., scale=0.03),
                               V_f=Vf,
                               E_f=180e3,
                               xi=fibers_MC(m=5.0, sV0=0.003),
