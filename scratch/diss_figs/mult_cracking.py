@@ -186,7 +186,6 @@ def strength():
                                loc=.0,
                                shape=8.,
                                scale=3.2,
-                               distribution='Weibull'
                                )
 
         reinf1 = ContinuousFibers(r=0.0035,

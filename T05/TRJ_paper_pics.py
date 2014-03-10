@@ -45,6 +45,6 @@ def bundle_SE():
 
 filaments_ld()
 bundle_ld()
-#filaments_SE()
-#bundle_SE()
+filaments_SE()
+bundle_SE()
 plt.show()
