@@ -204,12 +204,24 @@ def simplified():
         return w_max.x, sigmac(w_max.x, lm) / spirrid.theta_vars['V_f']
 
     sigmaf = []
-    lm_arr = np.linspace(3., 50.0, 50)
-    for lm in lm_arr:
-        sigmaf.append(maxsigma(lm)[1])
-    plt.plot(lm_arr, sigmaf)
-    plt.plot(13.7, 1201, 'ro')
-    plt.plot(9.7, 1373, 'bo')
+    w_lst = []
+    lcs = 1./np.linspace(8.4, 300.0, 200)
+    for lcsi in lcs:
+        wi, sigi = maxsigma(1./lcsi)
+        sigmaf.append(sigi)
+        w_lst.append(wi)
+    plt.plot(lcs, sigmaf)
+    plt.plot(1./13.7, 1201, 'ro')
+    plt.plot(1./9.7, 1373, 'bo')
+    plt.errorbar(1./13.7, 1201, 104.4)
+    plt.errorbar(1./9.7, 1373, 36.4)
+    plt.ylim(0)
+    plt.figure()
+    plt.plot(lcs, w_lst)
+    plt.plot(1./13.7, 0.088, 'ro')
+    plt.plot(1./9.7, 0.05, 'bo')
+    plt.errorbar(1./13.7, 0.088, 0.003)
+    plt.errorbar(1./9.7, 0.05, 0.005)
     plt.ylim(0)
     plt.show()
 
@@ -217,5 +229,4 @@ simplified()
 #valid()
 #CB()
 #TT()
-plt.show() 
 
