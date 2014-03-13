@@ -160,8 +160,8 @@ if __name__ == '__main__':
 
     #weibull()
     #normal()
-    fil()
-    #size_effect()
+    #fil()
+    size_effect()
     plt.show()
 
 

@@ -137,4 +137,4 @@ if __name__ == '__main__':
     #fte.maximum_likelihood()
     
     plt.legend(loc = 'best')
-    #plt.show()
+    plt.show()

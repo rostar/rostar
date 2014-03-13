@@ -48,8 +48,8 @@ class BundleEvaluationTool( HasTraits ):
         out = self.weibull_params
         scale0 = out[0][0]
         shape = out[0][1]
-        scale = ( scale0 * ( self.ref_length / bundle_length ) ** ( 1. / shape ) /self.E)  
-        return eps * self.E * ( 1. - weibull_min.cdf( eps, shape, scale = scale ) )
+        scale = ( scale0 * ( self.ref_length / bundle_length ) ** ( 1. / shape ) /self.Ef)  
+        return eps * self.Ef * ( 1. - weibull_min.cdf( eps, shape, scale = scale ) )
 
     def bundle_reduction(self):
         out = self.weibull_params
@@ -68,7 +68,7 @@ if __name__ == '__main__':
     # carbon tested at Textechno/ITA
     fil_lengths_carbon = np.array([25.,50.])
     fil_strengths_carbon = np.array([3557., 3243.])
-    Ecarbon = 130e3
+    Ecarbon = 200e3
     # AR-glass tested at Textechno/ITA
     fil_lengths_glass = np.array([20., 100.])
     fil_strengths_glass = np.array([2157., 1790.])
@@ -83,7 +83,7 @@ if __name__ == '__main__':
     # filament test carbon Dresden (50 and 100 mm) and ITA (25 and 49.99 mm)
     fil_lengths_carbon = np.array([25., 49.99, 50., 100.])
     fil_strengths_carbon = np.array([3557., 3243., 3295., 2969.])
-    Ecarbon = 130e3
+    Ecarbon = 200e3
 
     # filament tests Basalt Dresden - tested in Textechno
     fil_lengths_basalt = np.array([50., 100.])
@@ -115,6 +115,7 @@ if __name__ == '__main__':
         covar = out[1]
         scale = params[0]
         shape = params[1]
+        print scale, shape
         shapeErr = np.sqrt( covar[0][0] )
         scaleErr = np.sqrt( covar[1][1] )
     
