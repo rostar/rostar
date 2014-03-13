@@ -7,20 +7,14 @@ Created on 16 Feb 2014
 import numpy as np
 from matplotlib import pyplot as plt
 from quaducom.meso.homogenized_crack_bridge.rigid_matrix.CB_view import CBView, Model
-from etsproxy.traits.api import \
-    Instance, Array, List, cached_property, Property
-from matplotlib import pyplot as plt
-from etsproxy.traits.ui.api import ModelView
 from spirrid.rv import RV
 from stats.misc.random_field.random_field_1D import RandomField
-import numpy as np
-import copy
 from quaducom.meso.scm.numerical.interdependent_fibers.scm_interdependent_fibers_model import SCM
 from quaducom.meso.scm.numerical.interdependent_fibers.scm_interdependent_fibers_view import SCMView
-from quaducom.meso.homogenized_crack_bridge.elastic_matrix.reinforcement import Reinforcement, ContinuousFibers
-from stats.pdistrib.weibull_fibers_composite_distr import WeibullFibers
 from quaducom.meso.homogenized_crack_bridge.elastic_matrix.hom_CB_elastic_mtrx import CompositeCrackBridge
-from quaducom.meso.homogenized_crack_bridge.elastic_matrix.hom_CB_elastic_mtrx_view import CompositeCrackBridgeView
+from quaducom.micro.resp_func.CB_clamped_rand_xi import CBClampedRandXi
+from spirrid.spirrid import SPIRRID
+from scipy.optimize import minimize_scalar
 
 def CB():
     model = Model(w_min=0.0, w_max=8.0, w_pts=100,
@@ -68,9 +62,9 @@ def CB():
 def TT():
     for i in range(5):
         data = np.loadtxt("TT-4C-0" + str(i+1) + ".txt", delimiter=';')
-        plt.plot(-data[:,2]/2./250. - data[:,3]/2./250.,data[:,1]/2., lw=1, color='blue')
-        data = np.loadtxt("TT-6C-0" + str(i+1) + ".txt", delimiter=';')
         plt.plot(-data[:,2]/2./250. - data[:,3]/2./250.,data[:,1]/2., lw=1, color='red')
+        data = np.loadtxt("TT-6C-0" + str(i+1) + ".txt", delimiter=';')
+        plt.plot(-data[:,2]/2./250. - data[:,3]/2./250.,data[:,1]/2., lw=1, label=str(i))
     plt.legend(loc='best')
 
 def valid():
@@ -83,44 +77,44 @@ def valid():
     tau_loc = 0.0055
     xi_shape = 7.
     xi_scale = 0.0042
-    random_field = RandomField(seed=False,
-                               lacor=1.,
-                               length=length,
-                               nx=700,
-                               nsim=1,
-                               loc=.0,
-                               shape=80.,
-                               scale=3.4,
-                               distr_type='Weibull'
-                               )
-
-    reinf = ContinuousFibers(r=3.5e-3,
-                              tau=RV('gamma', loc=tau_loc, scale=tau_scale, shape=tau_shape),
-                              V_f=0.01,
-                              E_f=200e3,
-                              xi=fibers_MC(m=xi_shape, sV0=xi_scale),
-                              label='carbon',
-                              n_int=500)
-
-    CB_model = CompositeCrackBridge(E_m=25e3,
-                                 reinforcement_lst=[reinf],
-                                 )
-
-    scm = SCM(length=length,
-              nx=nx,
-              random_field=random_field,
-              CB_model=CB_model,
-              load_sigma_c_arr=np.linspace(0.01, 17., 100),
-              )
-
-    scm_view = SCMView(model=scm)
-    scm_view.model.evaluate()
-    eps, sigma = scm_view.eps_sigma
-    plt.plot(eps, sigma, color='black', lw=2,
-             label='cracks1.0: ' + str(len(scm.cracks_list[-1]))
-             + ' scale ' + str(tau_scale)
-             + ' shape ' + str(tau_shape)
-             + ' loc ' + str(tau_loc))
+#     random_field = RandomField(seed=False,
+#                                lacor=1.,
+#                                length=length,
+#                                nx=700,
+#                                nsim=1,
+#                                loc=.0,
+#                                shape=80.,
+#                                scale=3.4,
+#                                distr_type='Weibull'
+#                                )
+# 
+#     reinf = ContinuousFibers(r=3.5e-3,
+#                               tau=RV('gamma', loc=tau_loc, scale=tau_scale, shape=tau_shape),
+#                               V_f=0.01,
+#                               E_f=200e3,
+#                               xi=fibers_MC(m=xi_shape, sV0=xi_scale),
+#                               label='carbon',
+#                               n_int=500)
+# 
+#     CB_model = CompositeCrackBridge(E_m=25e3,
+#                                  reinforcement_lst=[reinf],
+#                                  )
+# 
+#     scm = SCM(length=length,
+#               nx=nx,
+#               random_field=random_field,
+#               CB_model=CB_model,
+#               load_sigma_c_arr=np.linspace(0.01, 17., 100),
+#               )
+# 
+#     scm_view = SCMView(model=scm)
+#     scm_view.model.evaluate()
+#     eps, sigma = scm_view.eps_sigma
+#     plt.plot(eps, sigma, color='black', lw=2,
+#              label='cracks1.0: ' + str(len(scm.cracks_list[-1]))
+#              + ' scale ' + str(tau_scale)
+#              + ' shape ' + str(tau_shape)
+#              + ' loc ' + str(tau_loc))
     TT()
     
     random_field = RandomField(seed=False,
@@ -162,6 +156,42 @@ def valid():
     plt.legend(loc='best')
     plt.show()
 
+cb = CBClampedRandXi()
+spirrid = SPIRRID(q=cb, sampling_type='PGrid',
+                  theta_vars=dict(tau=RV('gamma', loc=0.0055, scale=0.7, shape=0.2),
+                                  E_f=200e3,
+                                  V_f=0.01,
+                                  r=0.00345,
+                                  m=7.0,
+                                  sV0=0.0042,
+                                  lm=1000.),
+                  n_int=200)
+
+def simplified():
+    def sigmac(w, lm):
+        spirrid.eps_vars['w'] = np.array([w])
+        spirrid.theta_vars['lm'] = lm
+        sigma_c = spirrid.mu_q_arr / spirrid.theta_vars['r'] ** 2
+        return sigma_c
+
+    def maxsigma(lm):
+        def minfunc(w):
+            res = sigmac(w, lm)
+            return -res * (w < 200.) + 1e-5 * w ** 2
+        w_max = minimize_scalar(minfunc, bracket=(0.0001, 0.0002))
+        return w_max.x, sigmac(w_max.x, lm) / spirrid.theta_vars['V_f']
+
+    sigmaf = []
+    lm_arr = np.linspace(3., 50.0, 50)
+    for lm in lm_arr:
+        sigmaf.append(maxsigma(lm)[1])
+    plt.plot(lm_arr, sigmaf)
+    plt.plot(13.7, 1201, 'ro')
+    plt.plot(9.7, 1373, 'bo')
+    plt.ylim(0)
+    plt.show()
+    
 #CB()
 #TT()
-valid()
+#valid()
+simplified()
