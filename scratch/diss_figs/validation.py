@@ -18,10 +18,10 @@ from scipy.optimize import minimize_scalar
 
 def CB():
     model = Model(w_min=0.0, w_max=8.0, w_pts=100,
-                  w2_min=0.0, w2_max=.5, w2_pts=3,
-                  sV0=0.00383, m=7.0, tau_scale=0.3,
+                  w2_min=0.0, w2_max=.3, w2_pts=50,
+                  sV0=0.0094, m=9.0, tau_scale=0.3,
                   tau_shape=0.2, tau_loc=0.01, Ef=180e3,
-                  lm=20., n_int=100)
+                  lm=15., n_int=100)
     
     i = 0
     cb = np.loadtxt("CB" + str(i+1) + ".txt", delimiter=';')
@@ -72,11 +72,11 @@ def valid():
     from stats.pdistrib.weibull_fibers_composite_distr import WeibullFibers, fibers_MC
     length = 500.
     nx = 3000
-    tau_scale = .7
-    tau_shape = 0.2
-    tau_loc = 0.009
-    xi_shape = 7.0
-    xi_scale = 0.0042
+    tau_scale = .3
+    tau_shape = 0.17
+    tau_loc = 0.005
+    xi_shape = 9.0
+    xi_scale = 0.005
     ld = True
     w_width = True
     w_density = True
@@ -126,7 +126,7 @@ def valid():
                                scale=1.3 * 3.4,
                                distr_type='Weibull'
                                )
-   
+    
     reinf2 = ContinuousFibers(r=3.5e-3,
                               tau=RV('gamma', loc=tau_loc, scale=tau_scale, shape=tau_shape),
                               V_f=0.015,
@@ -134,11 +134,11 @@ def valid():
                               xi=fibers_MC(m=xi_shape, sV0=xi_scale),
                               label='carbon',
                               n_int=500)
-   
+    
     CB_model2 = CompositeCrackBridge(E_m=25e3,
                                  reinforcement_lst=[reinf2],
                                  )
-   
+    
     scm2 = SCM(length=length,
               nx=nx,
               random_field=random_field2,
@@ -146,7 +146,7 @@ def valid():
               load_sigma_c_arr=np.linspace(0.01, 27., 100),
               n_BC_CB=12
               )
-   
+    
     scm_view2 = SCMView(model=scm2)
     scm_view2.model.evaluate()
     eps2, sigma2 = scm_view2.eps_sigma
@@ -170,7 +170,7 @@ def valid():
         plt.plot(scm_view1.model.load_sigma_c_arr, scm_view1.w_max)
         plt.plot(scm_view2.model.load_sigma_c_arr, scm_view2.w_mean)
         plt.plot(scm_view2.model.load_sigma_c_arr, scm_view2.w_max)
-        
+         
     if w_density == True:
         plt.figure()
         plt.plot(scm_view1.model.load_sigma_c_arr, scm_view1.w_density)
@@ -205,8 +205,9 @@ def simplified():
 
     sigmaf = []
     w_lst = []
-    lcs = 1./np.linspace(8.4, 300.0, 200)
+    lcs = 1./np.linspace(8.4, 300.0, 20)
     for lcsi in lcs:
+        print lcsi
         wi, sigi = maxsigma(1./lcsi)
         sigmaf.append(sigi)
         w_lst.append(wi)
@@ -225,8 +226,9 @@ def simplified():
     plt.ylim(0)
     plt.show()
 
-simplified()
-#valid()
+#simplified()
+valid()
 #CB()
 #TT()
+plt.show()
 

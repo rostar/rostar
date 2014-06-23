@@ -17,8 +17,8 @@ class AnalyticalFragmentLength(SFC_Hui):
     x = Array
     s = Float
 
-    x_fragments = Property(depend_on='x')
-    def _get_x_fragments(self):
+    x_cbs = Property(depend_on='x')
+    def _get_x_cbs(self):
         return np.linspace(afl.x[0], 2 * afl.x[-1], 2 * len(self.x)-1)
 
     hui_pdf = Property(depends_on='s,x')
@@ -36,18 +36,18 @@ class AnalyticalFragmentLength(SFC_Hui):
         cdf = cumtrapz(pdf, self.x)
         return np.hstack((0.0,cdf))
 
-    fragment_length_pdf = Property(depends_on='s,x')
+    cbs_length_pdf = Property(depends_on='s,x')
     @cached_property
-    def _get_fragment_length_pdf(self):
+    def _get_cbs_length_pdf(self):
         pdf = self.hui_pdf
         convolved = np.convolve(pdf,pdf)
-        norm = np.trapz(convolved, self.x_fragments)
+        norm = np.trapz(convolved, self.x_cbs)
         return convolved / norm
     
-    fragment_length_cdf = Property(depends_on='s,x')
+    cbs_length_cdf = Property(depends_on='s,x')
     @cached_property
-    def _get_fragment_length_cdf(self):
-        return np.hstack((0.0,cumtrapz(self.fragment_length_pdf, self.x_fragments)))
+    def _get_cbs_length_cdf(self):
+        return np.hstack((0.0,cumtrapz(self.cbs_length_pdf, self.x_cbs)))
     
     def montecarlo(self,N):
         ppf = MFnLineArray(xdata=self.hui_cdf, ydata=self.x)
@@ -58,13 +58,10 @@ class AnalyticalFragmentLength(SFC_Hui):
         return np.array(fragment_lengths)
 
 if __name__ == '__main__':
-    #plot_cracks_example()
-    
     afl = AnalyticalFragmentLength(l0=1., d=0.007, tau=0.1, sigma0=2200., s=4.0,
-                          rho=5.0, x=np.linspace(0.0, 5.0, 500))
-    plt.hist(afl.montecarlo(100000), cumulative=True, normed=True, bins=200)
-    plt.plot(afl.x_fragments / 2., afl.fragment_length_cdf, label='convolved')
+                          rho=5.0, x=np.linspace(0.0, 3.0, 500))
+    plt.hist(afl.montecarlo(10000), cumulative=True, normed=True, bins=100, label='simul_CB_lengths')
+    plt.plot(afl.x_cbs / 2., afl.cbs_length_cdf, label='convolved')
     plt.plot(afl.x, afl.hui_cdf, label='original')
-    #plt.plot(afl.montecarlo(np.linspace(0.0001,0.9999,100)), np.linspace(0.0001,0.9999,100), label='ppf')
     plt.legend(loc='best')
     plt.show()
