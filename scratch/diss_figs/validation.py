@@ -20,44 +20,17 @@ def CB():
     model = Model(w_min=0.0, w_max=8.0, w_pts=100,
                   w2_min=0.0, w2_max=.3, w2_pts=50,
                   sV0=0.0094, m=9.0, tau_scale=0.3,
-                  tau_shape=0.2, tau_loc=0.01, Ef=180e3,
+                  tau_shape=0.2, tau_loc=0.001, Ef=180e3,
                   lm=15., n_int=100)
     
-    i = 0
-    cb = np.loadtxt("CB" + str(i+1) + ".txt", delimiter=';')
-    model.test_xdata = -cb[:,2]/4. - cb[:,3]/4. - cb[:,4]/2.
-    model.test_ydata = cb[:,1] / (11. * 0.445) * 1000
-
-    i = 1
-    cb = np.loadtxt("CB" + str(i+1) + ".txt", delimiter=';')
-    model.test_xdata2 = -cb[:,2]/4. - cb[:,3]/4. - cb[:,4]/2.
-    model.test_ydata2 = cb[:,1] / (11. * 0.445) * 1000
-
-    i = 2
-    cb = np.loadtxt("CB" + str(i+1) + ".txt", delimiter=';')
-    model.test_xdata3 = -cb[:,2]/4. - cb[:,3]/4. - cb[:,4]/2.
-    model.test_ydata3 = cb[:,1] / (11. * 0.445) * 1000
-    
-    i = 3
-    cb = np.loadtxt("CB" + str(i+1) + ".txt", delimiter=';')
-    model.test_xdata4 = -cb[:,2]/4. - cb[:,3]/4. - cb[:,4]/2.
-    model.test_ydata4 = cb[:,1] / (11. * 0.445) * 1000
-    
-    i = 4
-    cb = np.loadtxt("CB" + str(i+1) + ".txt", delimiter=';')
-    model.test_xdata5 = -cb[:,2]/4. - cb[:,3]/4. - cb[:,4]/2.
-    model.test_ydata5 = cb[:,1] / (11. * 0.445) * 1000
+    for i in range(5):
+        cb = np.loadtxt("CB" + str(i+1) + ".txt", delimiter=';')
+        model.test_xdata.append(-cb[:,2]/4. - cb[:,3]/4. - cb[:,4]/2.)
+        model.test_ydata.append(cb[:,1] / (11. * 0.445) * 1000)
     
     cb = CBView(model=model)
     cb.refresh()
     cb.configure_traits()
-    
-    # for i in range(5):
-    #     data = np.loadtxt("CB" + str(i+1) + ".txt", delimiter=';')
-    #     plt.plot(-data[:,2]/4. - data[:,3]/4. - data[:,4]/2.,data[:,1], lw=2, label="CB" + str(i+1))
-    # 
-    # plt.legend()
-    # plt.show()
     
 def TT():
     for i in range(5):
@@ -227,8 +200,8 @@ def simplified():
     plt.show()
 
 #simplified()
-valid()
-#CB()
+#valid()
+CB()
 #TT()
 plt.show()
 
