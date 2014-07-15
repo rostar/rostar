@@ -19,7 +19,7 @@ class AnalyticalFragmentLength(SFC_Hui):
 
     x_cbs = Property(depend_on='x')
     def _get_x_cbs(self):
-        return np.linspace(afl.x[0], 2 * afl.x[-1], 2 * len(self.x)-1)
+        return np.linspace(self.x[0], 2 * self.x[-1], 2 * len(self.x)-1)
 
     hui_pdf = Property(depends_on='s,x')
     @cached_property
