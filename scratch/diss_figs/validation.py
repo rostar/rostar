@@ -200,8 +200,8 @@ def simplified():
     plt.show()
 
 #simplified()
-#valid()
-CB()
+valid()
+#CB()
 #TT()
 plt.show()
 
