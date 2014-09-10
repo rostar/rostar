@@ -167,31 +167,31 @@ if __name__ == '__main__':
     tau_arr = cali.tau_arr
     tau_weights = cali.tau_weights
     
-    #valid(tau_arr, tau_weights, sV0, cali.m)
+    valid(tau_arr, tau_weights, sV0, cali.m)
 
-#     reinf = FiberBundle(r=3.5e-3,
-#                         tau=tau_arr,
-#                         tau_weights=tau_weights,
-#                         V_f=0.01,
-#                         E_f=200e3,
-#                         xi=fibers_MC(m=9.0, sV0=sV0),
-#                         label='carbon',)
-# 
-#     model = RandomBondCB(E_m=25e3,
-#                         reinforcement_lst=[reinf],
-#                         Ll=100000.,
-#                         Lr=100000.,
-#                         )
-# 
-#     ccb_view = CompositeCrackBridgeView(model=model)
-# 
+    reinf = FiberBundle(r=3.5e-3,
+                         tau=tau_arr,
+                         tau_weights=tau_weights,
+                         V_f=0.01,
+                         E_f=200e3,
+                         xi=fibers_MC(m=9.0, sV0=sV0),
+                         label='carbon',)
+ 
+    model = RandomBondCB(E_m=25e3,
+                         reinforcement_lst=[reinf],
+                         Ll=100000.,
+                         Lr=100000.,
+                         )
+ 
+    ccb_view = CompositeCrackBridgeView(model=model)
+ 
 #     def sigma_c_w(w_arr):
 #         sigma_c_arr, u_arr, damage_arr = ccb_view.sigma_c_arr(w_arr, damage=True, u=True)
 #         plt.plot(w_arr, sigma_c_arr, lw=2, color='black', label='w-sigma')
 #         plt.xlabel('w,u [mm]')
 #         plt.ylabel('$\sigma_c$ [MPa]')
 #         plt.legend(loc='best')
-# 
+#  
 #     w = np.linspace(0.0, 8., 200)
 #     sigma_c_w(w)
 
