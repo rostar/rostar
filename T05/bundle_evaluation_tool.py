@@ -115,7 +115,8 @@ if __name__ == '__main__':
         covar = out[1]
         scale = params[0]
         shape = params[1]
-        print scale, shape
+        print 'shape = ', shape
+        print 'scale = ', scale, 'MPa'
         shapeErr = np.sqrt( covar[0][0] )
         scaleErr = np.sqrt( covar[1][1] )
     
@@ -168,7 +169,7 @@ if __name__ == '__main__':
             logax.loglog( x, y, color = 'black', label = 'extrapolated filament strength', subsy = [2, 3, 4, 5, 6, 7, 8, 9] )
             logax.loglog( x, y*br, color = 'black', lw = 2, ls = 'dashed', label = 'theoretical bundle strength' )
 #            logax.loglog( pe.lengths, pe.strengths, 'k^', label = 'Filamenttests AR-Glas - Dresden' )
-            logax.loglog( pe.lengths[:2], pe.strengths[:2], 'k^', label = 'filament tests' )
+            logax.loglog( pe.lengths[:], pe.strengths[:], 'k^', label = 'filament tests' )
 #            logax.loglog( pe.lengths[2:], pe.strengths[2:], 'r^', label = 'Filamenttests - Dresden' )
             #glass
 #            logax.loglog( lengths_glass, strengths_glass_adapter, 'ko', label = 'Statimat 4U adapter' )

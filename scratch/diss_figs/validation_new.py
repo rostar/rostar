@@ -15,7 +15,7 @@ from matplotlib import pyplot as plt
 from quaducom.meso.homogenized_crack_bridge.elastic_matrix.hom_CB_elastic_mtrx import CompositeCrackBridge
 from quaducom.meso.homogenized_crack_bridge.elastic_matrix.hom_CB_elastic_mtrx_view import CompositeCrackBridgeView
 from quaducom.meso.homogenized_crack_bridge.elastic_matrix.reinforcement import Reinforcement, ContinuousFibers, FiberBundle
-from validation import TT
+#from validation import TT
 from stats.misc.random_field.random_field_1D import RandomField
 from quaducom.meso.scm.numerical.interdependent_fibers.scm_interdependent_fibers_model import SCM
 from quaducom.meso.scm.numerical.interdependent_fibers.scm_interdependent_fibers_view import SCMView

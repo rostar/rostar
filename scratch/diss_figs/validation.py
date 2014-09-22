@@ -199,9 +199,10 @@ def simplified():
     plt.ylim(0)
     plt.show()
 
-#simplified()
-valid()
-#CB()
-#TT()
-plt.show()
-
+if __name__ == '__main__':
+    #simplified()
+    valid()
+    #CB()
+    #TT()
+    plt.show()
+    
