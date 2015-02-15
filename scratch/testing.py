@@ -12,9 +12,9 @@ import numpy as np
 from matplotlib import pyplot as plt
 from quaducom.meso.scm.numerical.interdependent_fibers.scm_interdependent_fibers_model import SCM
 from quaducom.meso.scm.numerical.interdependent_fibers.scm_interdependent_fibers_view import SCMView
-from quaducom.meso.homogenized_crack_bridge.elastic_matrix.reinforcement import Reinforcement, ContinuousFibers
+from quaducom.meso.homogenized_crack_bridge.elastic_matrix.reinforcement_old import Reinforcement, ContinuousFibers
 from stats.pdistrib.weibull_fibers_composite_distr import WeibullFibers
-from quaducom.meso.homogenized_crack_bridge.elastic_matrix.hom_CB_elastic_mtrx import CompositeCrackBridge
+from quaducom.meso.homogenized_crack_bridge.elastic_matrix.hom_CB_elastic_mtrx_old import CompositeCrackBridge
 from quaducom.meso.homogenized_crack_bridge.elastic_matrix.hom_CB_elastic_mtrx_view import CompositeCrackBridgeView
 from os.path import join
 from matresdev.db import SimDB
