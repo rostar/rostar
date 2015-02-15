@@ -11,7 +11,7 @@ from skimage.draw import circle_perimeter
 import matplotlib.image as mpimg
 from skimage.filters import roberts, sobel, threshold_adaptive
 from skimage.restoration import denoise_bilateral
-from etsproxy.traits.api import HasTraits, Range, Str, Event, \
+from etsproxy.traits.api import HasTraits, Range, Str,  Event, \
                                 Property, Instance, \
                                 Bool, Button, Enum, Int
 from util.traits.editors.mpl_figure_editor import MPLFigureEditor
