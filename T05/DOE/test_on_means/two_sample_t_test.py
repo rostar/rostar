@@ -3,7 +3,7 @@ Created on May 16, 2012
 
 --- module for evaluation of the difference in means ---
 
-includes:   hypothesis testing, p-value evaluation,
+includes:   hypothesis testing2, p-value evaluation,
             confidence interval evaluation 
 
 general
@@ -78,7 +78,7 @@ class TwoSampleMeanTest(HasTraits):
                        (n2 - 1)*self.S2**2) / (n1 + n2 - 2) )
         t0 = (y1 - y2) / (Sp * np.sqrt(1./n1 + 1./n2))
 
-        # hypothesis testing
+        # hypothesis testing2
         H1a = t.ppf(1 - alpha/2., n1 + n2 -2) < np.abs(t0)
         H1b = t.ppf(1 - alpha, n1 + n2 -2) < t0
         H1c = t.ppf(alpha, n1 + n2 -2) > t0
@@ -94,7 +94,7 @@ class TwoSampleMeanTest(HasTraits):
     def different_stdev(self, alpha):
         t0 = (self.y1 - self.y2) / (np.sqrt(self.S1**2/self.n1 +
                                             self.S2**2/self.n2))
-        # hypothesis testing
+        # hypothesis testing2
         n1, n2, y1, y2, S1, S2 = self.n1, self.n2, self.y1, self.y2, self.S1, self.S2
         df = int((S1**2/n1+S2**2/n2)**2/((S1**2/n1)**2/(n1-1)+(S2**2/n2)**2/(n2-1)))
         H1a = t.ppf(1 - alpha/2., df) < np.abs(t0)
@@ -112,7 +112,7 @@ class TwoSampleMeanTest(HasTraits):
     def known_stdev(self, alpha, stdev1, stdev2):
         n1, n2, y1, y2 = self.n1, self.n2, self.y1, self.y2
         z0 = (y1 - y2) / (np.sqrt(stdev1 ** 2. / n1 + stdev2 ** 2. / n2))
-        # hypothesis testing
+        # hypothesis testing2
         H1a = norm.ppf(1 - alpha / 2.) < np.abs(z0)
         H1b = norm.ppf(1 - alpha) < z0
         H1c = norm.ppf(alpha) > z0
@@ -127,7 +127,7 @@ class TwoSampleMeanTest(HasTraits):
     # the case when stdevs of the samples differ and n, y, S are given explicitly
     def different_stdev_explicite(self, alpha, y1, y2, S1, S2, n1, n2):
         t0 = (y1 - y2) / (np.sqrt(S1 ** 2 / n1 + S2 ** 2 / n2))
-        # hypothesis testing
+        # hypothesis testing2
         df = int((S1**2/n1+S2**2/n2)**2/((S1**2/n1)**2/(n1-1)+(S2**2/n2)**2/(n2-1)))
         H1a = t.ppf(1 - alpha/2., df) < np.abs(t0)
         H1b = t.ppf(1 - alpha, df) < t0
@@ -148,7 +148,7 @@ class TwoSampleMeanTest(HasTraits):
         print 'probability of type I error for mu1 < mu2:', p1c
         print 'CI (%.1f%%) for mu1 - mu2:' %(100-100*alpha), CI, CI/y1
 
-    # evaluate the hypothesis testing
+    # evaluate the hypothesis testing2
     def evaluate(self, alpha, stdev='different'):
         ''' choices for stdev: 'equal','different'; 'known'
         confidence intervals: the minimum level of significance

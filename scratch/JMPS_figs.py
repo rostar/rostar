@@ -5,7 +5,7 @@ Created on 15. 7. 2014
 '''
 from quaducom.meso.homogenized_crack_bridge.elastic_matrix.hom_CB_elastic_mtrx_view import CompositeCrackBridge
 from matplotlib import pyplot as plt
-from quaducom.meso.homogenized_crack_bridge.elastic_matrix.reinforcement import Reinforcement, ContinuousFibers
+from quaducom.meso.homogenized_crack_bridge.elastic_matrix.reinforcement_old import Reinforcement, ContinuousFibers
 from stats.pdistrib.weibull_fibers_composite_distr import fibers_MC, WeibullFibers
 import numpy as np
 from spirrid.rv import RV

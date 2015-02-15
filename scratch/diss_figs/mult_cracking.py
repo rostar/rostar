@@ -4,14 +4,14 @@ Created on 5 Jan 2014
 @author: Q
 '''
 
-from quaducom.meso.homogenized_crack_bridge.elastic_matrix.reinforcement import ContinuousFibers
+from quaducom.meso.homogenized_crack_bridge.elastic_matrix.reinforcement_old import ContinuousFibers
 from stats.pdistrib.weibull_fibers_composite_distr import WeibullFibers, fibers_MC
 from stats.misc.random_field.random_field_1D import RandomField
 from matplotlib import pyplot as plt
 import numpy as np
 from quaducom.meso.scm.numerical.interdependent_fibers.scm_interdependent_fibers_model import SCM
 from quaducom.meso.scm.numerical.interdependent_fibers.scm_interdependent_fibers_view import SCMView
-from quaducom.meso.homogenized_crack_bridge.elastic_matrix.hom_CB_elastic_mtrx import CompositeCrackBridge
+from quaducom.meso.homogenized_crack_bridge.elastic_matrix.hom_CB_elastic_mtrx_old import CompositeCrackBridge
 from spirrid.rv import RV
 
 def acor_fn():

@@ -340,7 +340,7 @@ def short_fibers_CHOB():
                                   r=r,
                                   le=RV('uniform', scale=lf / 2., loc=0.0),
                                   phi=RV('sin2x', scale=1.0),
-                                  f=.87,
+                                  snub=.87,
                                   xi=20e10),
                   n_int=100
                   )

@@ -35,7 +35,7 @@ class BundleEvaluationTool( HasTraits ):
     def error_func( self, p ):
         return self.strengths - self.powerlaw( self.lengths, p[0], p[1] )
     
-    weibull_params = Property(depends_on = 'strengths, lengths' )
+    weibull_params = Property(depends_on = 'strengths, lengths')
     @cached_property
     def _get_weibull_params( self ):
         iparams = [1000., 3.0]
@@ -68,7 +68,6 @@ if __name__ == '__main__':
     # carbon tested at Textechno/ITA
     fil_lengths_carbon = np.array([25.,50.])
     fil_strengths_carbon = np.array([3557., 3243.])
-    Ecarbon = 200e3
     # AR-glass tested at Textechno/ITA
     fil_lengths_glass = np.array([20., 100.])
     fil_strengths_glass = np.array([2157., 1790.])
@@ -81,9 +80,9 @@ if __name__ == '__main__':
     strengths_glass_resin = fh
     
     # filament test carbon Dresden (50 and 100 mm) and ITA (25 and 49.99 mm)
-    fil_lengths_carbon = np.array([25., 49.99, 50., 100.])
+    fil_lengths_carbon = np.array([2.5, 5.0, 50., 100.])
     fil_strengths_carbon = np.array([3557., 3243., 3295., 2969.])
-    Ecarbon = 200e3
+    Ecarbon = 180e3
 
     # filament tests Basalt Dresden - tested in Textechno
     fil_lengths_basalt = np.array([50., 100.])
@@ -96,8 +95,8 @@ if __name__ == '__main__':
     # predicting the SE curve for a filament from bundle data
     bundle_tests = False
     if filament_tests:
-        pe = BundleEvaluationTool( lengths = np.array([25., 50., 100.]), 
-                                   strengths = np.array([3557., 3295., 2969.]),
+        pe = BundleEvaluationTool( lengths = fil_lengths_carbon[:2], 
+                                   strengths = fil_strengths_carbon[:2],
                                    Ef = Ecarbon
                                    )
         br = pe.bundle_reduction()
@@ -117,6 +116,7 @@ if __name__ == '__main__':
         shape = params[1]
         print 'shape = ', shape
         print 'scale = ', scale, 'MPa'
+        print 'scale sV0 with ref to volume 1mm3 = ', scale * (pi * 3.5e-3**2 * pe.ref_length)**(1./shape) / pe.Ef
         shapeErr = np.sqrt( covar[0][0] )
         scaleErr = np.sqrt( covar[1][1] )
     

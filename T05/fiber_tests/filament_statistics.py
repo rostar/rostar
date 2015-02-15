@@ -13,6 +13,7 @@ from scipy.special import gamma
 from matplotlib import pyplot as plt
 from scipy.stats import weibull_min
 from etsproxy.traits.api import HasTraits, Tuple, Float, Array
+from math import pi
 
 ####### TEST DATA #######
 # machine stiffness: 200 cN at strains 0,28%
@@ -61,6 +62,7 @@ class FilamentTestsEvaluation(HasTraits):
         params = fmin(self.moment_w, [10., np.mean(self.data)], args = (mean_, var_))
         print 'Weibull shape = ', params[0]
         print 'Weibull scale = ', params[1]
+        print 'scale sV0 = ', params[1] * (pi * 13.e-3**2 * self.length)**(1./params[0])
         if plot == True:
             # plot the Weibull fit based on the moment method
             e = np.linspace(0., 0.3 * (np.max(self.data) - np.min(self.data)) + np.max(self.data), 100)
@@ -75,9 +77,9 @@ class FilamentTestsEvaluation(HasTraits):
         r = abs(weibull.stats('m') - mean) + abs(weibull.stats('v') - var)
         return r
     
-    # helper method for the maximum likelihood evaluation
-    def maxlike(self, v, *args):
-        data = args
+    # log likelihood function
+    def maxlike(self, v):
+        data = self.data
         shape, scale = v
         r = np.sum(np.log(weibull_min.pdf(data, shape, scale = scale, loc = 0.)))
         return -r
@@ -85,13 +87,14 @@ class FilamentTestsEvaluation(HasTraits):
     # evaluates Weibull parameters using the maximum likelihood method
     def maximum_likelihood(self, plot = True):
         data = self.data
-        params = fmin(self.maxlike, [10, np.mean(data)], args = (data))
+        params = fmin(self.maxlike, np.array([10., np.mean(data)]))
         moments = weibull_min(params[0], scale = params[1], loc = 0.).stats('mv')
         print ' #### max likelihood #### '
         print 'mean = ', moments[0]
         print 'var = ', moments[1]
         print 'Weibull shape = ', params[0]
         print 'Weibull scale = ', params[1]
+        print 'scale sV0 = ', params[1] * (pi * 13.e-3**2 * self.length)**(1./params[0])
         if plot == True:
             # plot the Weibull fit according to maximum likelihood 
             e = np.linspace(0., 0.3 * (np.max(data) - np.min(data)) + np.max(data), 100)

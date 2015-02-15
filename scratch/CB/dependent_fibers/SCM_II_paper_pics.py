@@ -11,11 +11,11 @@ Created on Nov 19, 2012
 
 from etsproxy.mayavi import mlab as m
 import numpy as np
-from quaducom.meso.homogenized_crack_bridge.elastic_matrix.hom_CB_elastic_mtrx import CompositeCrackBridge
+from quaducom.meso.homogenized_crack_bridge.elastic_matrix.hom_CB_elastic_mtrx_old import CompositeCrackBridge
 from quaducom.meso.homogenized_crack_bridge.elastic_matrix.hom_CB_elastic_mtrx_view import CompositeCrackBridgeView
 from matplotlib import pyplot as plt
 from spirrid.rv import RV
-from quaducom.meso.homogenized_crack_bridge.elastic_matrix.reinforcement import Reinforcement, WeibullFibers, ContinuousFibers
+from quaducom.meso.homogenized_crack_bridge.elastic_matrix.reinforcement_old import Reinforcement, WeibullFibers, ContinuousFibers
 
 reinf = ContinuousFibers(r=0.01, tau=0.1, V_f=0.01, E_f=200e3, xi=1000., n_int=50)
 model = CompositeCrackBridge(E_m=25e3,

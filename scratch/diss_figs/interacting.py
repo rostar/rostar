@@ -19,7 +19,7 @@ from matplotlib import pyplot as plt
 from scipy.stats import weibull_min
 from stats.pdistrib.weibull_fibers_composite_distr import fibers_MC, fibers_CB_rigid, fibers_dry, fibers_CB_elast
 from math import pi
-from quaducom.meso.homogenized_crack_bridge.elastic_matrix.reinforcement import ContinuousFibers
+from quaducom.meso.homogenized_crack_bridge.elastic_matrix.reinforcement_old import ContinuousFibers
 from stats.pdistrib.weibull_fibers_composite_distr import WeibullFibers, fibers_MC
 from quaducom.meso.homogenized_crack_bridge.elastic_matrix.hom_CB_elastic_mtrx_view import CompositeCrackBridge, CompositeCrackBridgeView
 import copy

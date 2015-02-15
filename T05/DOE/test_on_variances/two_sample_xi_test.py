@@ -3,7 +3,7 @@ Created on May 16, 2012
 
 --- module for evaluation of the difference in variances ---
 
-includes:   hypothesis testing, p-value evaluation,
+includes:   hypothesis testing2, p-value evaluation,
             confidence interval evaluation 
 
 general
@@ -12,9 +12,9 @@ assumptions: 1) independent populations
 
 choices
 regarding
-the test:    1) testing the variance sigma against a threshold sigma_0
+the test:    1) testing2 the variance sigma against a threshold sigma_0
                 (xi^2 test)
-             2) testing two variances from two normal populations
+             2) testing2 two variances from two normal populations
                 (F-test)
 
 @author: rostar
@@ -76,7 +76,7 @@ class TwoSampleVarianceTest(HasTraits):
         SS = (self.n1 - 1)*self.S1
         chi20 = SS/self.var0
         n1 = self.n1
-        # hypothesis testing
+        # hypothesis testing2
         H1a = chi2.ppf(1 - alpha/2., n1 - 1) < chi20 or chi2.ppf(alpha/2., n1 - 1) > chi20
         H1b = chi2.ppf(alpha/2., n1 - 1) > chi20
         H1c = chi2.ppf(1 - alpha/2., n1 - 1) < chi20
@@ -95,7 +95,7 @@ class TwoSampleVarianceTest(HasTraits):
     def var_var(self, alpha):
         f0 = self.S1**2/self.S2**2
         n1, n2 = self.n1, self.n2
-        # hypothesis testing
+        # hypothesis testing2
         H1a = f.ppf(1 - alpha/2., n1 - 1, n2 - 1) < f0 or f.ppf(alpha/2., n1 - 1, n2 - 1) > f0
         H1b = f.ppf(alpha/2., n1 - 1, n2 - 1) < f0
         H1c = f.ppf(1 - alpha/2., n1 - 1, n2 - 1) > f0
@@ -110,7 +110,7 @@ class TwoSampleVarianceTest(HasTraits):
         c2 = self.S1**2/self.S1**2 * f.ppf(1 - alpha/2., n2 - 1, n1 - 1)     
         return H1a, H1b, H1c, p1a, p1b, p1c, (c1,c2)
         
-    # evaluate the hypothesis testing   
+    # evaluate the hypothesis testing2   
     def evaluate(self, alpha, compare = 'threshold'):
         ''' choices for the test: 'threshold','variance' '''
         print 'at the level of significance ', alpha, ':'
