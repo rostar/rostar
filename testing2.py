@@ -9,7 +9,7 @@ from scipy.stats import gamma
 from scipy import stats
 from matplotlib import pyplot as plt
 from scipy.special import gamma as gamma_func, gammainc
-from scipy.optimize import newton, roots
+from scipy.optimize import newton, root
 
 def params_calibration(distr):
     w_hat = 0.075
