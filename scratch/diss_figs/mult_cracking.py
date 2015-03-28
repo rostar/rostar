@@ -4,14 +4,14 @@ Created on 5 Jan 2014
 @author: Q
 '''
 
-from quaducom.meso.homogenized_crack_bridge.elastic_matrix.reinforcement_old import ContinuousFibers
+from quaducom.meso.homogenized_crack_bridge.elastic_matrix.reinforcement import ContinuousFibers
 from stats.pdistrib.weibull_fibers_composite_distr import WeibullFibers, fibers_MC
 from stats.misc.random_field.random_field_1D import RandomField
 from matplotlib import pyplot as plt
 import numpy as np
 from quaducom.meso.scm.numerical.interdependent_fibers.scm_interdependent_fibers_model import SCM
 from quaducom.meso.scm.numerical.interdependent_fibers.scm_interdependent_fibers_view import SCMView
-from quaducom.meso.homogenized_crack_bridge.elastic_matrix.hom_CB_elastic_mtrx_old import CompositeCrackBridge
+from quaducom.meso.homogenized_crack_bridge.elastic_matrix.hom_CB_elastic_mtrx import CompositeCrackBridge
 from spirrid.rv import RV
 
 def acor_fn():
@@ -27,7 +27,7 @@ def random_field():
     rf = RandomField(lacor=3.,
                      length=500.,
                      nx=500,
-                     distribution='Weibull',
+                     distr_type='Weibull',
                      shape=12.,
                      scale=5.0,
                      loc=0.0)
@@ -48,7 +48,7 @@ def mtrx_shape():
                                loc=.0,
                                shape=8.,
                                scale=3.2,
-                               distribution='Weibull'
+                               distr_type='Weibull'
                                )
     plt.plot(random_field.xgrid, random_field.random_field, lw=1, color='black')
     plt.ylim(0)
@@ -231,5 +231,5 @@ if __name__ == '__main__':
     #mtrx_shape()
     #mtrx_lacor()
     #p_tau()
-    strength()
+    #strength()
     plt.show()

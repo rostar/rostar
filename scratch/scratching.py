@@ -1,10 +1,11 @@
 from scipy.stats import gamma, weibull_min
-from matplotlib import pyplot as plt
-from scipy.special import gamma as gamma_func
 import numpy as np
 
-data = weibull_min(5., scale=2.).ppf(np.random.rand(20))
+var = gamma(0.051, scale=2.28).var()
+mean = gamma(0.051, scale=2.28).mean()
+print 'stdev = ', np.sqrt(var)
+print 'mean = ', mean
+print 'CoV = ', np.sqrt(var)/mean
 
-def likel(m, s, D):
-    return np.prod(weibull_min(m, scale=s).pdf(D))
-
+print weibull_min(8.81, scale=0.0134).mean()
+print weibull_min(200, scale=0.01267).mean()

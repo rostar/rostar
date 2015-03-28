@@ -5,7 +5,6 @@ Created on 16 Feb 2014
 '''
 
 import numpy as np
-from matplotlib import pyplot as plt
 from quaducom.meso.homogenized_crack_bridge.rigid_matrix.CB_view import CBView, Model
 from spirrid.rv import RV
 from stats.misc.random_field.random_field_1D import RandomField
@@ -16,6 +15,7 @@ from quaducom.micro.resp_func.CB_clamped_rand_xi import CBClampedRandXi
 from spirrid.spirrid import SPIRRID
 from scipy.optimize import minimize_scalar
 from scipy.interpolate import interp1d
+from matplotlib import pyplot as plt
 
 def CB():
     model = Model(w_min=0.0, w_max=8.0, w_pts=100,
@@ -35,10 +35,11 @@ def CB():
 def TT():
     for i in range(5):
         file_i = np.loadtxt("TT-4C-0" + str(i+1) + ".txt", delimiter=';')
-        plt.plot(-file_i[:,2]/2./250. - file_i[:,3]/2./250.,file_i[:,1]/2., lw=1, color='blue')
+        plt.plot(-file_i[:,2]/2./250. - file_i[:,3]/2./250.,file_i[:,1]/2. * 20. * 100. / 1000., lw=1, color='blue')
         file_i2 = np.loadtxt("TT-6C-0" + str(i+1) + ".txt", delimiter=';')
-        plt.plot(-file_i2[:,2]/2./250. - file_i2[:,3]/2./250.,file_i2[:,1]/2., lw=1, color='red')
+        plt.plot(-file_i2[:,2]/2./250. - file_i2[:,3]/2./250.,file_i2[:,1]/2. * 20. * 100. / 1000., lw=1, color='red')
     plt.legend(loc='best')
+    plt.xlim(0)
 
 
 def valid():
@@ -47,13 +48,13 @@ def valid():
     from stats.pdistrib.weibull_fibers_composite_distr import fibers_MC
     length = 500.
     nx = 5000
-    tau_scale =.415
-    tau_shape = 0.144
+    tau_scale =2.276
+    tau_shape = 0.0505
     tau_loc = 0.00
-    xi_shape = 7.1
-    xi_scale = 0.007
-    E_f = 180e3
-    n_CB = 20
+    xi_shape = 8.806
+    xi_scale = .0134
+    E_f = 182e3
+    n_CB = 15
     ld = True
     w_width = False
     w_density = False
@@ -64,8 +65,8 @@ def valid():
                                nx=900,
                                nsim=1,
                                loc=.0,
-                               shape=50.,
-                               scale=3.2,
+                               shape=45.,
+                               scale=3.6,
                                distr_type='Weibull'
                                )
  
@@ -102,8 +103,8 @@ def valid():
                                nx=700,
                                nsim=1,
                                loc=.0,
-                               shape=50.,
-                               scale=1.3 * 3.2,
+                               shape=45.,
+                               scale=4.384,
                                distr_type='Weibull'
                                )
          
@@ -135,12 +136,12 @@ def valid():
 
 
     if ld == True:
-        plt.plot(eps1, sigma1, color='black', lw=2,
+        plt.plot(eps1, sigma1 * 20. * 100. / 1000., color='black', lw=2,
                 label='Vf=1.0, crack spacing = ' + str(length/float(len(cr_lst1))))
-        plt.plot(interp1(np.array(cr_lst1)), cr_lst1, 'ro')
-        plt.plot(eps2, sigma2, color='brown', lw=2,
+        #plt.plot(interp1(np.array(cr_lst1)), cr_lst1, 'ro')
+        plt.plot(eps2, sigma2 * 20. * 100. / 1000., color='brown', lw=2,
                  label='Vf=1.5, crack spacing = ' + str(length/float(len(cr_lst2))))
-        plt.plot(interp2(np.array(cr_lst2)), cr_lst2, 'bo')
+        #plt.plot(interp2(np.array(cr_lst2)), cr_lst2, 'bo')
         plt.xlabel('composite strain [-]')
         plt.ylabel('composite stress [MPa]')
         plt.legend(loc='best')
@@ -154,7 +155,7 @@ def valid():
          
     if w_density == True:
         plt.figure()
-        plt.plot(scm_view1.model.load_sigma_c_arr, scm_view1.w_density)
+        plt.plot(scm_view1.model.load_sigma_c_arr , scm_view1.w_density)
 #         plt.plot(scm_view2.model.load_sigma_c_arr, scm_view2.w_density)
     plt.show() 
 
