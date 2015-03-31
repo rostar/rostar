@@ -101,8 +101,8 @@ from spirrid.spirrid import SPIRRID
 from spirrid.rv import RV
 
 def mechanisms():
-    m = 9.5
-    sV0 = 0.01108
+    m = 5.15004407
+    sV0 = 0.00915595
     r = 3.5e-3
     Ef = 181e3
 
@@ -115,7 +115,7 @@ def mechanisms():
                                       V_f=1.0,
                                       r=r,
                                       m=m,
-                                      tau=RV('gamma', shape=0.073, scale=1.1, loc=0.0),
+                                      tau=RV('gamma', shape=0.03684979, scale=3.75278102, loc=0.0),
                                       lm=1000.),
                       n_int=100,
                       )
@@ -124,12 +124,12 @@ def mechanisms():
     sigma_u_hommech = []
     for lm_i in lm_arr:
         spirrid.theta_vars['lm'] = lm_i
-        max_w = min(10., lm_i * 0.03)
+        max_w = min(30., lm_i * 0.07)
         w_arr = np.linspace(0.0, max_w, 200)
-        spirrid.eps_vars = dict(w=w_arr) 
+        spirrid.eps_vars = dict(w=w_arr)
         sig_w = spirrid.mu_q_arr / r ** 2
-        #plt.plot(w_arr, sig_w)
-        #plt.show()
+        plt.plot(w_arr, sig_w)
+        plt.show()
         sigma_u_hommech.append(np.max(sig_w))
     sigma_u_hommech = np.array(sigma_u_hommech)
     plt.plot(lm_arr, sigma_u_hommech)#/np.min(sigma_u_hommech))
