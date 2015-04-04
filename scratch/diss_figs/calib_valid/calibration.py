@@ -10,6 +10,7 @@ from scipy.optimize import minimize
 from spirrid.i_rf import IRF
 from spirrid.rf import RF
 from math import pi, e
+from scipy.special._ufuncs import gamma
 
 def H(x):
     return x >= 0.0
@@ -52,8 +53,6 @@ class CBClampedRandXi(RF):
     y_label = Str('composite stress [MPa]')
 
     C_code = Str('')
-
-    pullout = Bool(True)
     
     def __call__(self, w, tau, E_f, V_f, r, m, sV0):
         '''free and fixed fibers combined
@@ -66,6 +65,8 @@ class CBClampedRandXi(RF):
         ef0cb = k*np.sqrt(w)  
         s = ((T * (m+1) * sV0**m)/(2. * E_f * pi * r ** 2))**(1./(m+1))
         Gxi_deb = 1 - np.exp(-(ef0cb/s)**(m+1))
+        #a0 = ef0cb*E_f/T
+        #print np.sum(a0>500.)/float(np.sum(a0>-0.1))
         return ef0cb * (1-Gxi_deb) * E_f * V_f * r**2
         
         
@@ -92,9 +93,13 @@ class Model(HasTraits):
                         bounds_error=False, fill_value=0.0)
         return interp(self.w)
 
-    def model_free(self, tau_shape, tau_scale, xi_shape, xi_scale):
-        #xi_scale = 2092. / (182e3 * (pi * 3.5e-3 **2 * 70. * e)**(-1./xi_shape))
-        tau_loc=0.0
+    def model_free(self, tau_loc, tau_shape, xi_shape):
+        xi_scale = 3243. / (182e3 * (pi * 3.5e-3 **2 * 50.)**(-1./xi_shape)*gamma(1+1./xi_shape))
+        #xi_scale = 1578. / (182e3 * (pi * 3.5e-3 **2 * 500. * e)**(-1./xi_shape))
+        CS=9.
+        mu_tau = 1.3 * self.r * 3.6 * (1.-0.01) / (2. * 0.01 * CS)
+        tau_scale = (mu_tau - tau_loc)/tau_shape
+        #tau_loc=0.0
         cb = CBClampedRandXi(pullout=False)
         spirrid = SPIRRID(q=cb, sampling_type='LHS')
         tau = RV('gamma', shape=tau_shape, scale=tau_scale, loc=tau_loc)
@@ -102,7 +107,7 @@ class Model(HasTraits):
         spirrid.eps_vars = dict(w=w)
         spirrid.theta_vars = dict(tau=tau, E_f=self.Ef, V_f=self.V_f,
                                   r=self.r, m=xi_shape, sV0=xi_scale)
-        spirrid.n_int = 500
+        spirrid.n_int = 5000
         sigma_c = spirrid.mu_q_arr / self.r ** 2
         plt.plot(w, sigma_c)
         return sigma_c
@@ -110,37 +115,39 @@ class Model(HasTraits):
     lack = 1e10
    
     def lack_of_fit(self, params):
-        #tau_loc = params[0]
-        tau_shape = params[0]
-        tau_scale = params[1]
+        tau_loc = params[0]
+        tau_shape = params[1]
         xi_shape = params[2]
-        xi_scale = params[3]
+        #xi_scale = params[3]
         print params
-        lack = np.sum((self.model_free(tau_shape, tau_scale, xi_shape, xi_scale) - self.interpolate_experiment) ** 2)
+        lack = np.sum((self.model_free(tau_loc, tau_shape, xi_shape) - self.interpolate_experiment) ** 2)
         print 'params = ', params
-        print 'relative lack of fit', lack/np.trapz(self.interpolate_experiment**2,self.w)
-        if lack < self.lack:
-            print 'DRAW'
-            self.lack = lack
-            plt.ion()
-            plt.cla()
-            plt.plot(self.w, self.interpolate_experiment, color='black')
-            plt.plot(self.w, self.model_free(tau_shape, tau_scale, xi_shape, xi_scale), color='red', lw=2)
-            plt.draw()
-            plt.show()
+#         print 'relative lack of fit', np.sqrt(lack)/np.sum(self.interpolate_experiment)
+#         if lack < self.lack:
+#             print 'DRAW'
+#             self.lack = lack
+#             plt.ion()
+#             plt.cla()
+#             plt.plot(self.w, self.interpolate_experiment, color='black')
+#             plt.plot(self.w, self.model_free(tau_loc, tau_shape, xi_shape), color='red', lw=2)
+#             plt.draw()
+#             plt.show()
+            
         return lack
 
     def eval_params(self):
-        params = minimize(self.lack_of_fit, np.array([1.66955758e-01, 2.70710428e-01, 1.20000000e+01, 7.73963278e-03]),
-                          method='L-BFGS-B', bounds=((0.03, 2.), (0.1, 5.), (4., 200.), (0.003, 0.02)))
+        params = minimize(self.lack_of_fit, np.array([  1.23223954e-06 ,  1.24752674e-01 ,  3.82485448e+01]),
+                          method='L-BFGS-B', bounds=((0.0, .01), (0.01, 1.), (3., 150.)))
         return params
 
 if __name__ == '__main__':
     from matplotlib import pyplot as plt
+    plt.figure()
+
     home_dir = get_home_directory()
     
     model = Model(w_min=0.0,
-                      w_max=.4,
+                      w_max=.50,
                       w_pts=100)
     
     def average_exp():
@@ -162,45 +169,35 @@ if __name__ == '__main__':
 
 
     def calibrate():
-        model.w_max = 0.5
-        model.test_ydata = average_exp()
-        model.test_xdata = model.w
-        params = model.eval_params().x
-        print 'identified parameters: ', params
-        #param_sets = []
-        #for w_i in np.linspace(0.6, 3.0, 7):
-        #    model.w_max = w_i
-        #    model.test_ydata = average_exp()
-        #    model.test_xdata = model.w
-        #    params = model.eval_params().x
-        #    print 'identified parameters: ', params
-        #    param_sets.append(params)
-        #print 'for the ws from ', np.linspace(0.6, 3.0, 7)
-        #print 'identified params_sets: ', param_sets
-        #tau_loc, tau_shape, tau_scale, xi_shape = params
-        #plt.figure()
-        #plt.plot(model.w, model.interpolate_experiment, color='black', lw=1, label='experiment')
-        #plt.plot(model.w, model.model_free(tau_loc, tau_shape, tau_scale, xi_shape), color='blue', lw=2, label='model')
-        #plt.show()
+        for w_max_i in [0.7]:#np.linspace(0.3,1.0,7):
+            model.w_max = w_max_i
+            model.test_ydata = average_exp()            
+            model.test_xdata = model.w
+            params = model.eval_params().x
+            print 'identified parameters: ', params
+            plt.figure()
+            plt.plot(model.w, average_exp(), color='black', lw=1, label='test average')
+            tau_loc, tau_shape, xi_shape = params
+            plt.plot(model.w, model.model_free(tau_loc, tau_shape, xi_shape), lw=2, label='w='+str(w_max_i))
+            plt.title('params: tau_loc = %.6f, tau_shape = %.4f, xi_shape = %.4f' % (tau_loc, tau_shape, xi_shape))
+            plt.savefig('calibration_figsCS9/w_max%.1f.png'%w_max_i)
         
     def plot_experiments():
-#         w_max = [0.6, 1., 1.4,  1.8,  2.2,  2.6,  3. ]
-#         params_sets = np.array([[  9.76544019e-04,   1.04450297e-01,   4.75852525e-01,
-#          1.12973124e+01], [  1.11997268e-03,   6.35727176e-02,   1.07691150e+00,
-#          7.21863097e+00], [  1.06153607e-03,   1.03314782e-01,   4.75234392e-01,
-#          1.13240343e+01], [  8.36155276e-04,   9.70497391e-02,   5.31003536e-01,
-#          9.74947034e+00], [  1.95276197e-03,   2.49629657e-01,   1.01939318e-01,
-#          1.00000000e+02], [  4.85766607e-04,   1.01294954e-01,   4.85650168e-01,
-#          8.73975564e+00], [  5.04024488e-04,   9.00381081e-02,   4.96583046e-01,
-#          7.81837633e+00]])
-#         #model.w_max = w_max[0]
-#         #model.model_free(*params_sets[0])
-#         #for i, w_i in enumerate(w_max):
-#         #    model.w_max = 10.0
+        model.w_max=1.
         plt.plot(model.w, average_exp(), color='black', lw=1, label='test average')
-#         #    plt.plot(model.w, model.model_free(*params_sets[i]), lw=2, label=str(i))
-#         #for i in range(4):
-        plt.plot(model.w, model.model_free(1.43142054e-03, 9.19221066e-02, 5.26535371e-01, 6.87906460), lw=2, label='model')
+        # calibration of tau_shape, tau_scale, tau_loc=0, xi_shape, xi_scale; free deb
+        #plt.plot(model.w, model.model_free(3.564e-02,  4.734,   92.17, 4.802e-02), lw=2, label='w=1.5')
+        #plt.plot(model.w, model.model_free(4.53967802e-02,  2.9216601,   47.7523345, 3.53100782e-02), lw=2, label='w=1.0')
+        #plt.plot(model.w, model.model_free(0.03398613 , 4.95999973 , 9.99003639 , 0.0221401 ), lw=2, label='w=0.5')
+        # summary: very high strength in SCM for all cases, already at w_max=0.5, about 75% of fibers a>500mm
+        ############################
+        # calibration of tau_loc, tau_shape, tau_scale, xi_shape, xi_scale=f(xi_shape, L=70mm); free deb
+        #plt.plot(model.w, model.model_free(6.84560881e-04, 1.34477906e-01, 3.29691498e-01, 1.13608995e+01), lw=2, label='w=0.5')
+        #plt.plot(model.w, model.model_free(1.44074517e-03, 1.14672028e-01, 3.80366585e-01 ,1.14766610e+01), lw=2, label='w=1.0')
+        #plt.plot(model.w, model.model_free(1.27918439e-03 ,  1.20090699e-01 ,  3.55571794e-01,   1.14373865e+01), lw=2, label='w=1.5')
+        # summary: one crack in SCM, nonunique calibration
+        # calibration of tau_loc, tau_sape, xi_shape, the remaining parameters computed from filament strength and crack spacing
+        plt.plot(model.w, model.model_free(2.26522109e-04 ,  1.17730960e-01 ,  1.50000000e+02), lw=2, label='w=%.2f'%model.w_max)
         plt.legend(loc='best')
         plt.xlabel('crack opening [mm]')
         plt.ylabel('fiber stress [MPa]')
