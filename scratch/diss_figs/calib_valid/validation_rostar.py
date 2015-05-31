@@ -35,18 +35,27 @@ def CB():
     cb.configure_traits()
     
 def TT():
+    sigmumu1 = [2.75, 2.57, 2.54, 2.79, 3.12]
     for i in range(5):
-        file_i = np.loadtxt("TT-4C-0" + str(i+1) + ".txt", delimiter=';')
-        plt.plot(-file_i[:,2]/2./250. - file_i[:,3]/2./250.,file_i[:,1]/2., lw=1, color='blue')
-        file_i2 = np.loadtxt("TT-6C-0" + str(i+1) + ".txt", delimiter=';')
-        plt.plot(-file_i2[:,2]/2./250. - file_i2[:,3]/2./250.,file_i2[:,1]/2., lw=1, color='red')
+        if True:
+            #file_i = np.loadtxt("TT-4C-0" + str(i+1) + ".txt", delimiter=';')
+            #plt.plot(-file_i[:,2]/2./250. - file_i[:,3]/2./250.,file_i[:,1]/2., lw=1, color='blue')
+            #plt.plot(- file_i[:,2]/250.,file_i[:,1]/2., lw=1, color='blue')
+            #plt.plot(- file_i[:,3]/250.,file_i[:,1]/2., lw=1, color='blue')
+            file_i2 = np.loadtxt("TT-6C-0" + str(i+1) + ".txt", delimiter=';')
+            #plt.plot(- file_i2[:,3]/250., file_i2[:,1]/2., lw=1, color='blue')
+            plt.plot([0.0,0.0005], [0.0,0.0005*(182e3 * 0.015 + 25e3*0.985)], color='black')
+            #plt.plot(- file_i2[:,2]/250., file_i2[:,1]/2., lw=1, color='blue')
+            strain = -file_i2[:,2]/2./250. - file_i2[:,3]/2./250.
+            stress = file_i2[:,1]/2.
+            plt.plot(strain - strain[0], stress - stress[0], lw=1, label=str(i))
     plt.legend(loc='best')
     plt.xlim(0)
 
 
 def valid(CS, param_set, w_max):
     plt.figure()
-    #TT()
+    TT()
     from quaducom.meso.homogenized_crack_bridge.elastic_matrix.reinforcement import ContinuousFibers
     from stats.pdistrib.weibull_fibers_composite_distr import fibers_MC
     length = 250.
@@ -232,64 +241,8 @@ if __name__ == '__main__':
     #simplified()
     #valid()
     #CB()
-    #TT()
-    cs15 = [[1e-6,0.12263, 45.27],
-            [0.,0.1099, 14.35],
-            [1e-6,0.1039, 10.89],
-            [0.,0.119, 29.07],
-            [1.13e-4,0.1229, 150.],
-            [1.46e-4,0.1213, 150.],
-            [1.89e-4,0.1193, 150],
-            [2.27e-4,0.117, 150.],]
-    cs14 = [[0.,0.1217, 41.19],
-            [0.,0.1203, 42.59],
-            [0.,0.1203, 42.55],
-            [76e-6,0.1155, 43.30],
-            [22.5e-6,0.11, 52.61],
-            [26.7e-6,0.1062, 40.74],
-            [30.1e-6,0.105, 40.74],
-            [33.3e-6,0.104, 41.61],]
-    cs13 = [[0.0, 0.1184, 44.14],
-            [0.,0.1180, 44.7],
-            [0.0, 0.1185, 43.51],
-            [2.94e-4, 0.0935, 17.88],
-            [4.60e-4,0.0887, 17.43],
-            [4.75e-4,0.0883, 17.51],
-            [4.98e-4,0.0887, 17.51],
-            [5.19e-4,0.0873, 17.71],]
-    cs12 = [[0.,0.1154, 47.0],
-            [0.,0.1159, 49.8],
-            [146e-6,0.0888, 11.41],
-            [612e-6,0.0756, 10.54],
-            [763.e-6,0.0726, 10.47],
-            [756.e-6,0.0727, 10.50],
-            [761.e-6,0.0726, 10.49],
-            [768.e-6,0.0726, 10.56],]
-    cs11 = [[0.,0.1122, 49.3],
-            [0.,0.1137, 48.74],
-            [0., 0.1151, 47.65],
-            [986e-6,0.0610, 7.28],
-            [1107e-6,0.0592, 7.30],
-            [1074e-6,0.0597, 7.30],
-            [1060e-6,0.0599, 7.28],
-            [1049e-6,0.0601, 7.30],]
-    cs10 = [[0.,0.1068, 52.49],
-            [1e-6, 0.0792, 6.25],
-            [923e-6, 0.0549, 5.50],
-            [1374e-6, 0.0493, 5.51],
-            [1459e-6, 0.0483, 5.53],
-            [1403e-6, 0.0490, 5.51],
-            [1369e-6, 0.0493, 5.47],
-            [1343e-6, 0.0496, 5.47],]
-    cs9 = [[0., 0.1068, 55.15],
-            [367e-6, 0.0571, 4.45],
-            [1528e-6, 0.0418, 4.36],
-            [1807e-6, 0.0394, 4.42],
-            [1589e-6, 0.0495, 6.82],
-            [1743e-6, 0.0399, 4.39],
-            [1679e-6, 0.0404, 4.35],
-            [1634e-6, 0.0407, 3.31],]
-    CS=9.
-    w_max = np.linspace(0.3,1.0,8)
-    for i, param_set in enumerate(cs9):
-        valid(CS, param_set,w_max[i])
+    TT()
+    plt.show()
+    #w_max = np.linspace(0.3,1.0,8)
+    #for i, param_set in enumerate(cs9):
+    #    valid(CS, param_set,w_max[i])

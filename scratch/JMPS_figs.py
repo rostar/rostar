@@ -13,6 +13,25 @@ from stats.misc.random_field.random_field_1D import RandomField
 import matplotlib.pyplot as plt
 from scipy.special import gamma
 
+def Gf_study():
+    plt.plot([0.001, 0.05, 0.08, 0.1, 0.11, 0.12, 0.13], np.array([12., 12., 13., 13., 18., 23., 36.]) / 250., 'ro')
+    plt.plot([0.001, 0.05, 0.08, 0.1, 0.11, 0.12, 0.13], np.array([12., 12., 13., 13., 18., 23., 36.]) / 250., color='red', lw=2, label='SCM 1.0%')
+    plt.plot([0.001, 0.05, 0.08, 0.1, 0.11, 0.12], np.array([20., 20., 21., 23., 35., 40.]) / 250., 'bo')
+    plt.plot([0.001, 0.05, 0.08, 0.1, 0.11, 0.12], np.array([20., 20., 21., 23., 35., 40.]) / 250., color='blue', lw=2, label='SCM 1.5%')
+    plt.plot([0.0,0.2], np.array([0.075,0.075]),ls='dashed', color='red', label='DURAPACT < 2mm; Vf=1.0% c', lw=2)
+    plt.plot([0.0,0.2], np.array([0.098,0.098]),ls='dashed', color='blue', label='DURAPACT < 2mm; Vf=1.5% c', lw=2)
+    plt.text(0.025, 0.022, r'TRC < 0.4mm')
+    plt.plot([0.03,0.05],[.02,.02],lw=2, color='black')
+    plt.text(0.14, 0.022, r'normal concrete')
+    plt.plot([0.12,0.2],[.02,.02],lw=2, color='black')
+    plt.text(0.085, 0.01, r'mortar < 4mm')
+    plt.plot([0.064,0.134],[.008,.008],lw=2, color='black')
+    plt.legend(loc='best')
+    plt.xlabel('Gf [N/mm]')
+    plt.ylabel('final crack spacing [mm]')
+    plt.ylim(0, 0.2)
+    plt.show()
+
 def sigmamu_shape_study():
     length = 2000.
     nx = 3000
