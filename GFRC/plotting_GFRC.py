@@ -10,6 +10,7 @@ import numpy as np
 from quaducom.micro.resp_func.cb_short_fiber import CBShortFiber
 from math import pi
 from spirrid.rv import RV
+from scipy.stats import uniform
 
 def random_tau():
     w_arr = np.linspace(0.,.3,200)
@@ -20,7 +21,7 @@ def random_tau():
                       r=8e-3, Vf=.00020, N_fil=100,
                       Ef=70e3, snub=0.5, xi=1e15,
                       tau = RV('uniform', loc=0.1, scale=0.7),
-                      w_arr=w_arr)
+                      spall = 0.5, w_arr=w_arr, phi=0.0)
     mean_resp, var_resp = macro.CB_response_asymptotic
     mean_N_fib = macro.N_fib_bridging.mean()
     
@@ -65,4 +66,18 @@ def multiple_phi():
     plt.legend(loc='best')
     plt.show()
 
-random_tau()
+def variancePb():
+    points = 0.0
+    for i in range(100):
+        le = uniform(0.0,9.0).rvs(1)
+        w_arr = np.array([0.1])
+        micro = GFRCMicro(resp_func=CBShortFiber)
+        meso = GFRCMeso(micro_model=micro)
+        theta_dict = dict(tau=RV('uniform', loc=0.1, scale=0.7),
+                          r=8e-3, E_f=70e3, le=le,
+                          phi=0.0, snub=0.5, xi=1e15,
+                          spall = 0.5)
+        points += meso.get_MC_response(w_arr, theta_dict, N_fil=20)**2 - meso.get_asymptotic_response(w_arr, theta_dict)[0]**2
+    print var
+    
+variancePb()
