@@ -4,9 +4,9 @@ Created on 21. 10. 2014
 @author: admin
 '''
 
-from etsproxy.traits.api import HasTraits, Array, Dict, Bool, Float, Int, \
-                                Property, cached_property, Function, List, \
-                                Instance
+from traits.api import HasTraits, Array, Bool, Float, Int, \
+                        Property, cached_property, Function, List, \
+                        Instance
 import numpy as np
 import pymc
 from matplotlib import pyplot as plt

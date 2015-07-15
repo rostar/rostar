@@ -3,20 +3,20 @@ import numpy as np
 from scipy.optimize import minimize_scalar
 from matplotlib import pyplot as plt
 from scipy.stats import uniform, norm, expon
-
+ 
 def expon_likelihood(y, nu, x, beta):
     y = y[np.newaxis,:]
     nu = nu[np.newaxis,:]
     beta = beta[:, np.newaxis]
     L = np.exp(np.sum(nu*x*beta, axis=1)) * np.exp(-np.sum(y*np.exp(x*beta), axis=1))
     return L
- 
+  
 def prior(beta):
     return norm(0.5, 1).pdf(beta)
- 
+  
 def posterior(y, nu, x, beta):
     return expon_likelihood(y, nu, x, beta) * prior(beta)
- 
+  
 if __name__ == '__main__':
     n = 300
     x = 2.
@@ -24,7 +24,7 @@ if __name__ == '__main__':
     y = expon(scale=1./np.exp(x * beta0)).rvs(n)
     time = np.linspace(0.,5.,1000)
     nu = 1. * (y < time[-1])
- 
+  
     beta_arr = np.linspace(-1, 1, 500)
     beta_guess = np.trapz(posterior(y, nu, x, beta_arr) * beta_arr / np.trapz(posterior(y, nu, x, beta_arr), beta_arr), beta_arr)
 #     plt.plot(time, 1 - np.sum(time[np.newaxis, :] > np.sort(y)[:, np.newaxis], axis=0)/float(len(y)))
@@ -37,21 +37,21 @@ if __name__ == '__main__':
     # Import relevant modules
     import pymc
     import numpy as np
-    
+     
     # Some data
     n = 5*np.ones(4,dtype=int)
     x = np.array([-.86,-.3,-.05,.73])
-    
+     
     # Priors on unknown parameters
     alpha = pymc.Normal('alpha',mu=0,tau=.01)
     beta = pymc.Normal('beta',mu=0,tau=.01)
-    
+     
     # Arbitrary deterministic function of parameters
     @pymc.deterministic
     def theta(a=alpha, b=beta):
         """theta = logit^{-1}(a+b)"""
         return pymc.invlogit(a+b*x)
-    
+     
     # Binomial likelihood for data
     d = pymc.Binomial('d', n=n, p=theta, value=np.array([0.,1.,3.,5.]),\
                       observed=True)
@@ -60,4 +60,4 @@ if __name__ == '__main__':
     S.sample(iter=10000, burn=5000, thin=2)
     pymc.Matplot.plot(S)
     plt.show()
-    
+     
