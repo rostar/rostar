@@ -66,7 +66,7 @@ if __name__ == '__main__':
     # predicting the SE curve for a bundle from filament data
     filament_tests = True
     # carbon tested at Textechno/ITA
-    fil_lengths_carbon = np.array([25.,50.])
+    fil_lengths_carbon = np.array([2.5,5.0])
     fil_strengths_carbon = np.array([3557., 3243.])
     # AR-glass tested at Textechno/ITA
     fil_lengths_glass = np.array([20., 100.])
@@ -79,10 +79,10 @@ if __name__ == '__main__':
     strengths_glass_adapter = fa
     strengths_glass_resin = fh
     
-    # filament test carbon Dresden (50 and 100 mm) and ITA (25 and 49.99 mm)
-    fil_lengths_carbon = np.array([2.5, 5.0, 50., 100.])
-    fil_strengths_carbon = np.array([3557., 3243., 3295., 2969.])
-    Ecarbon = 180e3
+    # filament test carbon Dresden (50 and 100 mm) and ITA (2.5 and 5.0 mm)
+    fil_lengths_carbon = np.array([50., 100.])
+    fil_strengths_carbon = np.array([3295., 2969.])
+    Ecarbon = 182e3
 
     # filament tests Basalt Dresden - tested in Textechno
     fil_lengths_basalt = np.array([50., 100.])

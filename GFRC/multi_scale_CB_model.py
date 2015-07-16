@@ -37,7 +37,7 @@ class GFRCMicro(HasTraits):
         self.spirrid_filament.eps_vars = dict(w=w_arr)
         self.spirrid_filament.theta_vars = theta_dict
         self.spirrid_filament.sampling_type = 'LHS'
-        self.spirrid_filament.n_int = 300
+        self.spirrid_filament.n_int = 5
         mu = self.spirrid_filament.mu_q_arr
         return mu * theta_dict['E_f'] * theta_dict['r']**2 * pi
     
@@ -45,7 +45,7 @@ class GFRCMicro(HasTraits):
         self.spirrid_filament.eps_vars = dict(w=w_arr)
         self.spirrid_filament.theta_vars = theta_dict
         self.spirrid_filament.sampling_type = 'LHS'
-        self.spirrid_filament.n_int = 300
+        self.spirrid_filament.n_int = 5
         var = self.spirrid_filament.var_q_arr
         return var * (theta_dict['E_f'] * theta_dict['r']**2 * pi) **2
 
@@ -74,7 +74,7 @@ class GFRCMeso(HasTraits):
         self.spirrid_filament.eps_vars = dict(w=w_arr)
         self.spirrid_filament.theta_vars = theta_dict
         self.spirrid_filament.sampling_type = 'LHS'
-        self.spirrid_filament.n_int = 50
+        self.spirrid_filament.n_int = 100
         mu = self.spirrid_filament.mu_q_arr
         return mu * theta_dict['E_f'] * theta_dict['r']**2 * pi * self.N_fil
      
@@ -99,14 +99,6 @@ class GFRCMacro(HasTraits):
     L = Float(params=True)
     Vf = Float(params=True)
     Lf = Float(params=True)
-    r = Float(params=True)
-    N_fil = Int(params=True)
-    snub = Float(params=True)
-    spall = Float(params=True)
-    Ef = Float(params=True)
-    xi = Float(params=True)
-    tau = Any(params=True)
-    phi = Any(params=True)
      
     N_fib_tot = Property(depends_on='W, H, L, r, Lf, Vf')
     @cached_property
@@ -135,55 +127,102 @@ class GFRCMacro(HasTraits):
         returns the (binomial) distribution of number of crack bridging fibers
         '''
         return binom(self.N_fib_tot, self.p_intersection)
-             
-    CB_response_asymptotic = Property(depends_on='+params')
-    @cached_property
-    def _get_CB_response_asymptotic(self):
+        
+    def mean_response(self, w_arr, theta_dict):
+        mean_N_fib = self.N_fib_bridging.mean()
+        meso = self.meso_model
+        mean_bundle = meso.mean_response(self.w_arr, theta_dict)
+        mean_crack_bridge = mean_N_fib * mean_bundle
+        return mean_crack_bridge
+    
+    def var_response(self, w_arr, theta_dict):
         mean_N_fib = self.N_fib_bridging.mean()
         var_N_fib = self.N_fib_bridging.var()
         meso = self.meso_model
-        theta_dict = dict(tau=self.tau,
-                          phi=self.phi,
-                          le=6.,#RV('uniform', loc=0.0, scale=self.Lf/2.),
-                          r=self.r,
-                          E_f=self.Ef,
-                          snub=self.snub,
-                          xi=self.xi,
-                          spall=self.spall)
         mean_bundle = meso.mean_response(self.w_arr, theta_dict)
-        mean_crack_bridge = mean_N_fib * mean_bundle
-        var_bundle = 1.0
+        var_bundle = meso.var_response(self.w_arr, theta_dict) 
         var_crack_bridge = mean_N_fib * var_bundle + var_N_fib * mean_bundle**2
-        return mean_crack_bridge, var_crack_bridge
+        return var_crack_bridge
     
 
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
-    w_arr = np.linspace(0.,9.,200)
-    micro = GFRCMicro(FilamentCB=CBShortFiber)
-    theta_dict = dict(tau=RV('uniform', loc=0.001, scale=0.5),
+    from scipy.stats import uniform, weibull_min
+    def single_determ_filament():
+        # SINGLE DETERMINISTIC FILAMENT
+        w_arr = np.linspace(0.,.5,500)
+        micro = GFRCMicro(FilamentCB=CBShortFiber)
+        theta_dict = dict(tau=0.2,
                           r=3.5e-3, E_f=70e3, le=9.0,
-                          phi=0.0, snub=0.5,
-                          xi=RV('weibull_min',shape=5., scale=0.02),
-                          spall = 0.5)
-    mean_resp = micro.mean_response(w_arr, theta_dict)
-    var_resp = micro.var_response(w_arr, theta_dict)
-    plt.plot(w_arr, mean_resp, lw=2)
-    plt.plot(w_arr, mean_resp + np.sqrt(var_resp), lw=2, ls='dashed')
-    plt.plot(w_arr, mean_resp - np.sqrt(var_resp), lw=2, ls='dashed')
-    plt.show()
-#     meso = GFRCMeso(micro_model=micro)
-#     macro = GFRCMacro(meso_model=meso,
-#                        W=40., H=40., L=200., Lf=18.,
-#                       r=8e-3, Vf=.001, N_fil=100,
-#                       E_f=70e3, snub=0.5, xi=1e15,
-#                       tau = RV('uniform', loc=0.1, scale=0.7),
-#                       spall = 0.5, w_arr=w_arr, phi=0.0)
-#     mean_r, var_r = macro.CB_response_asymptotic
-#     plt.plot(w_arr, mean_r, lw=2, label='tau $\sim$ $\mathcal{U}(0.1,0.8)$')
-#     plt.plot(w_arr, mean_r + np.sqrt(var_r), lw=2)
-#     plt.plot(w_arr, mean_r - np.sqrt(var_r), lw=2)
-#     plt.xlabel('crack opening w [mm]')
-#     plt.ylabel('force [N]')
-#     plt.legend(loc='best')
-#     plt.show()
+                          phi=1.0, snub=0.5,
+                          xi=1e10, spall = 0.5)
+        for i in range(10):
+            tau_i = uniform(loc=0.001,scale=.4).rvs(1)
+            xi_i = weibull_min(5.,scale=.025).rvs(1)
+            theta_dict['xi'] = float(xi_i)
+            theta_dict['tau'] = float(tau_i)
+            mean_resp = micro.mean_response(w_arr, theta_dict)
+            plt.plot(w_arr, mean_resp, lw=1)
+        plt.show()
+
+    def mean_filament():
+        w_arr = np.linspace(0.,.5,200)
+        micro = GFRCMicro(FilamentCB=CBShortFiber)
+        theta_dict = dict(tau=RV('uniform', loc=0.01, scale=0.4),
+                              r=3.5e-3, E_f=70e3, le=9.0,
+                              phi=1.0, snub=0.5,
+                              xi=RV('weibull_min',shape=5., scale=0.025),
+                              spall = 0.5)
+        mean_resp = micro.mean_response(w_arr, theta_dict)
+        var_resp = micro.var_response(w_arr, theta_dict)
+        plt.plot(w_arr, mean_resp, lw=2)
+        plt.plot(w_arr, mean_resp + np.sqrt(var_resp), lw=2, ls='dashed')
+        plt.plot(w_arr, mean_resp - np.sqrt(var_resp), lw=2, ls='dashed')
+        plt.show()
+
+    def mean_bundle():
+        w_arr = np.linspace(0.,.5,150)
+        micro = GFRCMicro(FilamentCB=CBShortFiber)
+        meso = GFRCMeso(micro_model=micro, N_fil=100)
+        theta_dict = dict(tau=RV('uniform', loc=0.01, scale=0.4),
+                              r=3.5e-3, E_f=70e3, le=RV('uniform', loc=0.0, scale=9.0),
+                              phi=RV('sin2x', scale=1.0), snub=0.5,
+                              xi=RV('weibull_min', shape=5., scale=0.025),
+                              spall = 0.5)
+#         mean_resp = meso.mean_response(w_arr, theta_dict)
+#         plt.plot(w_arr, mean_resp, lw=2, color='black')
+        for j in range(3):
+            print j
+            mean_resp = 0.0
+            for i in range(100):
+                phic_i = sin2x(scale=1).rvs(1)
+                le_i = uniform(loc=0.0,scale=9.).rvs(1)
+                theta_dict['phi'] = float(phic_i)
+                theta_dict['le'] = float(le_i)
+                mean_resp_i = meso.mean_response(w_arr, theta_dict)
+                mean_resp += mean_resp_i/100.
+            plt.plot(w_arr, mean_resp, lw=1)
+        plt.show()
+        
+    def mean_CB():
+        w_arr = np.linspace(0.,.5,200)
+        micro = GFRCMicro(FilamentCB=CBShortFiber)
+        meso = GFRCMeso(micro_model=micro, N_fil=100)
+        macro = GFRCMacro(meso_model=meso,
+                           W=40., H=40., L=200., Lf=18.,
+                           Vf=.001)
+        theta_dict = dict(tau=RV('uniform', loc=0.001, scale=0.4),
+                              r=3.5e-3, E_f=70e3, le=9.0,
+                              phi=0.0, snub=0.5,
+                              xi=RV('weibull_min',shape=5., scale=0.025),
+                              spall = 0.5)
+        mean_r, var_r = macro.mean_response(w_arr, theta_dict)
+        plt.plot(w_arr, mean_r, lw=2, label='tau $\sim$ $\mathcal{U}(0.1,0.8)$')
+        plt.plot(w_arr, mean_r + np.sqrt(var_r), lw=2)
+        plt.plot(w_arr, mean_r - np.sqrt(var_r), lw=2)
+        plt.xlabel('crack opening w [mm]')
+        plt.ylabel('force [N]')
+        plt.legend(loc='best')
+        plt.show()
+        
+    mean_bundle()
