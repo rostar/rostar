@@ -94,7 +94,7 @@ class FilamentTestsEvaluation(HasTraits):
         print 'var = ', moments[1]
         print 'Weibull shape = ', params[0]
         print 'Weibull scale = ', params[1]
-        print 'scale sV0 = ', params[1] * (pi * 13.e-3**2 * self.length)**(1./params[0])
+        #print 'scale sV0 = ', params[1] * (pi * 13.e-3**2 * self.length)**(1./params[0])
         if plot == True:
             # plot the Weibull fit according to maximum likelihood 
             e = np.linspace(0., 0.3 * (np.max(data) - np.min(data)) + np.max(data), 100)

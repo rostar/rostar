@@ -14,6 +14,7 @@ import numpy as np
 from math import e
 from mathkit.mfn.mfn_line.mfn_line import MFnLineArray
 from scipy.integrate.quadrature import cumtrapz
+from scipy.stats import weibull_min
 
 
 def data_generator(inspection_times, n, pressure, mr):
@@ -26,25 +27,26 @@ def data_generator(inspection_times, n, pressure, mr):
     mr_line = MFnLineArray(xdata=aux_times, ydata=aux_mr)
     pressures_t = p_line.get_values(t_arr)
     mr_t = mr_line.get_values(t_arr)
-    beta_pressure = 1.3
-    beta_mr = 2.8
-    s_efr, s_ifr, s_wo, m_efr, m_ifr, m_wo =  1.3e26, 639.1, 15.94, 0.093, 1.302, 9.902
+    beta_pressure = 0.7
+    beta_mr = 0.5
+    s_efr, s_ifr, s_wo, m_efr, m_ifr, m_wo =  1.3e26, 7.1, 15.94, 0.093, 1.3, 9.902
     h_efr = m_efr / s_efr * (t_arr/s_efr)**(m_efr-1)
     h_ifr = m_ifr / s_ifr * (t_arr/s_ifr)**(m_ifr-1)
     h_wo = m_wo / s_wo * (t_arr/s_wo)**(m_wo-1)
     h = (h_efr + h_ifr + h_wo) * np.exp(beta_pressure * pressures_t + beta_mr * mr_t)
-    H = cumtrapz(h,t_arr)
-    F = np.hstack((0.0,1 - np.exp(-H),1.0))
+    H = cumtrapz(h,t_arr, initial=0.0)
+    F = np.hstack((1 - np.exp(-H), 1.0))
     PPF_line = MFnLineArray(ydata=np.hstack((t_arr,t_arr[-1]*1.1)),xdata=F)
     p = np.random.rand(n)
     np.sort(p)
     p = p[p<F[-2]] 
     samples = PPF_line.get_values(p)
-#     hist = np.histogram(samples, np.hstack((0.0,inspection_times)))
-#     plt.plot(np.hstack((t_arr,t_arr[-1]*1.1)),F)
-#     plt.plot(inspection_times, np.cumsum(hist[0])/1000., color='red')
-#     plt.plot(samples, p, 'ro')
-#     plt.show()
+    
+    #hist = np.histogram(samples, np.hstack((0.0,inspection_times)))
+    #plt.plot(np.hstack((t_arr,t_arr[-1]*1.1)),F)
+    #plt.plot(inspection_times, np.cumsum(hist[0])/float(n), color='red')
+    #plt.plot(samples, p, 'ro')
+    #plt.show()
     return samples
 
 
@@ -89,8 +91,8 @@ class RegressionModel(HasTraits):
     def _get_samples(self):
         '''set the Markov chain Monte Carlo with specified
         No. of iterations, burn-in length and thinning'''
-        iterations=30000
-        burn_in=10000
+        iterations=100000
+        burn_in=50000
         thinning=10
         sampling_engine = pymc.MCMC(self.model)
         samples = sampling_engine.sample(iter=iterations, burn=burn_in, thin=thinning)
@@ -102,20 +104,20 @@ class RegressionModel(HasTraits):
         plt.show()
     
 if __name__ == '__main__':
-    inspection_times = np.array([1.,3.,4.,7.,9.])
-    n = 1000
-    pressures=np.array([1.4,1.,3.,2.,1.])
-    mr = np.array([.7,.5,.8,.6,.9])
+    inspection_times = np.linspace(1.,9.,50)
+    n = 1000000
+    pressures=np.random.rand(50) * 3.
+    mr = np.random.rand(50) * 1.6
     generated_cont_failure_times = data_generator(inspection_times, n, pressures, mr)
     censored_failures = np.histogram(generated_cont_failure_times, np.hstack((0.0,inspection_times)))[0]
     
-    prior_beta_pressure = pymc.Normal('beta_p', mu=1.3, tau=1.)
+    prior_beta_pressure = pymc.Normal('beta_p', mu=1., tau=.5)
     prior_beta_mixture_ratio = pymc.Normal('beta_mr', mu=3., tau=1.1)
     prior_beta_s_efr = pymc.Normal('beta_s_efr', mu=1.5e26, tau=1e5)
-    prior_beta_s_ifr = pymc.Normal('beta_s_ifr', mu=1000., tau=50.)
-    prior_beta_s_wo = pymc.Normal('beta_s_wo', mu=20., tau=5.)
+    prior_beta_s_ifr = pymc.Uniform('beta_s_ifr', lower=2., upper=20.)
+    prior_beta_s_wo = pymc.Normal('beta_s_wo', mu=10., tau=5.)
     prior_beta_m_efr = pymc.Normal('beta_m_efr', mu=.15, tau=.05)
-    prior_beta_m_ifr = pymc.Normal('beta_m_ifr', mu=1., tau=.2)
+    prior_beta_m_ifr = pymc.Uniform('beta_m_ifr', lower=0.0, upper=3.)
     prior_beta_m_wo = pymc.Normal('beta_m_wo', mu=8., tau=2.1)
      
     rm = RegressionModel(inspection_times = inspection_times,
@@ -123,19 +125,18 @@ if __name__ == '__main__':
                          pressure = pressures,
                          mixture_ratio = mr,
                          n = n,
-                         priors = [prior_beta_pressure, prior_beta_mixture_ratio, prior_beta_s_efr,
-                                   prior_beta_s_ifr, prior_beta_s_wo, prior_beta_m_efr, prior_beta_m_ifr,
-                                   prior_beta_m_wo]
+                         priors = [prior_beta_s_efr, prior_beta_s_ifr, prior_beta_s_wo,
+                                   prior_beta_m_efr, prior_beta_m_ifr, prior_beta_m_wo,
+                                   prior_beta_pressure, prior_beta_mixture_ratio]
                          )
      
     def parametric_likelihood(value=rm.failures, beta=rm.priors):
         s_efr, s_ifr, s_wo, m_efr, m_ifr, m_wo, p_beta, mr_beta = beta
-        t_intervals = rm.time_intervals
-        H = np.cumsum(((t_intervals/s_efr)**m_efr + (t_intervals/s_ifr)**m_ifr + (t_intervals/s_wo)**m_wo)
-                      * e**(p_beta * rm.pressure + mr_beta * rm.mixture_ratio) * rm.time_intervals)
-        n = rm.n
-        k = n - np.sum(rm.failures)
-        loglike = (n-k) * (-H[-1]) + np.sum(rm.failures * np.log(np.hstack((-np.exp(H[0]),-np.diff(np.exp(H))))))
+        H0 = np.hstack((0.0,(rm.inspection_times/s_efr)**m_efr + (rm.inspection_times/s_ifr)**m_ifr + (rm.inspection_times/s_wo)**m_wo ))
+        H = np.cumsum(np.diff(H0) * e ** (p_beta * rm.pressure + mr_beta * rm.mixture_ratio))
+        k = np.sum(value)
+        S = np.exp(-H)
+        loglike = (rm.n-k) * (-H[-1]) + np.sum( value * np.log(-np.diff(np.hstack((1.0,S)))))
         return loglike
      
     rm.log_likelihood = parametric_likelihood
