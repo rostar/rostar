@@ -6,34 +6,8 @@ from matplotlib import pyplot as plt
 import numpy as np
 from scipy.integrate import cumtrapz
 import os
+# 10% 4.5s
 
-
-# def data_generator(campaigns):
-#     '''
-#     reads the TCXX_campaign_XX.txt files and performs a virtual test
-#
-#     iput:   string - campaign combination file name
-#
-#     output: (2D array, 1D array) - (test parameters and number of cracks,
-#                                     chamber parameters)
-#     '''
-#     campaign_data_lst = []
-#     chamber_data_lst = []
-#     for campaign in campaigns:
-#         home_folder = '/home/rostislav/'  # the home location is to be adapted
-#         sim_dam_path = home_folder + 'Documents/MATLAB/data_pack/sim_dam.m'
-#         basedir = os.path.dirname(os.path.abspath(__file__))
-#         os.chdir('/home/rostislav/Documents/MATLAB/data_pack/')
-#         os.system('matlab -nodisplay -nojvm -nosplash <' + sim_dam_path)
-#         # loading the output file as a numpy array
-#         campaign_data = np.loadtxt(
-#             home_folder + 'Documents/MATLAB/data_pack/TC_campaign_combinations/' + campaign + '.txt', skiprows=8)
-#         campaign_data_lst.append(campaign_data)
-#         chamber_data = np.loadtxt(
-#             home_folder + 'Documents/MATLAB/data_pack/TCs/' + campaign[0:4] + '.txt', skiprows=13)
-#         chamber_data_lst.append(chamber_data)
-#         os.chdir(basedir)
-#     return campaign_data_lst, chamber_data_lst
 
 def data_reader(campaigns):
     '''
@@ -47,18 +21,14 @@ def data_reader(campaigns):
     campaign_data_lst = []
     chamber_data_lst = []
     for campaign in campaigns:
-        home_folder = '/home/rostislav/'  # the home location is to be adapted
-        basedir = os.path.dirname(os.path.abspath(__file__))
-        os.chdir('/home/rostislav/Documents/MATLAB/data_pack/')
         # loading the output file as a numpy array
+        data_pack_dir = '/home/rostislav/Documents/MATLAB/data_pack/'
         campaign_data = np.loadtxt(
-            home_folder + 'Documents/MATLAB/data_pack/TC_campaign_combinations/' + campaign + '.txt', skiprows=8)
+            data_pack_dir + 'TC_campaign_combinations/' + campaign + '.txt', skiprows=8)
         campaign_data_lst.append(campaign_data)
-
         chamber_data = np.loadtxt(
-            home_folder + 'Documents/MATLAB/data_pack/TCs/' + campaign[0:4] + '.txt', skiprows=13)
+            data_pack_dir + 'TCs/' + campaign[0:4] + '.txt', skiprows=13)
         chamber_data_lst.append(chamber_data)
-        os.chdir(basedir)
     return campaign_data_lst, chamber_data_lst
 
 
@@ -118,8 +88,9 @@ class RegressionModel(HasTraits):
         return cracks_lst
 
     # auxiliary array of indices of inspection times
-    inspection_idxs = Property(depends_on='campaign_data')
+    inspection_idxs = Property(List(Int), depends_on='campaign_data')
 
+    @cached_property
     def _get_inspection_idxs(self):
         indices_lst = []
         for campaign in self.campaign_data:
@@ -131,17 +102,17 @@ class RegressionModel(HasTraits):
             indices_lst.append(indices.astype(int))
         return indices_lst
 
-    inspection_times = Property(List(Array))
+    inspection_times = Property(List(Array), depends_on='campaign_data')
 
+    @cached_property
     def _get_inspection_times(self):
-        inspection_times_lst = []
-        for i in range(len(self.campaign_data)):
-            inspection_times_lst.append(
-                self.cumulative_test_times[i][self.inspection_idxs[i]])
+        inspection_times_lst = [self.cumulative_test_times[i][
+            self.inspection_idxs[i]] for i in range(len(self.campaign_data))]
         return inspection_times_lst
 
-    inspected_cracks = Property(Array)
+    inspected_cracks = Property(Array, depens_on='campaign_data')
 
+    @cached_property
     def _get_inspected_cracks(self):
         inspected_cracks_1D = np.array([])
         for i in range(len(self.campaign_data)):
@@ -151,6 +122,7 @@ class RegressionModel(HasTraits):
 
     inspected_cracks_list = Property(List(Array), depends_on='campaign_data')
 
+    @cached_property
     def _get_inspected_cracks_list(self):
         inspected_cracks_lst = []
         for i in range(len(self.campaign_data)):
@@ -159,36 +131,35 @@ class RegressionModel(HasTraits):
         return inspected_cracks_lst
 
 # global chamber parameters
-    chamber_params = Tuple
-    Rm = Property(Array, depends_on='chamber_data')
+    Rm = Property(List(Array), depends_on='chamber_data')
 
     @cached_property
     def _get_Rm(self):
-        return self.chamber_params[0]
+        return [chamber[0] for chamber in self.chamber_data]
 
-    sRm = Property(Array, depends_on='chamber_data')
+    sRm = Property(List(Array), depends_on='chamber_data')
 
     @cached_property
     def _get_sRm(self):
-        return self.chamber_params[1]
+        return [chamber[1] for chamber in self.chamber_data]
 
-    A = Property(Array, depends_on='chamber_data')
+    A = Property(List(Array), depends_on='chamber_data')
 
     @cached_property
     def _get_A(self):
-        return self.chamber_params[2]
+        return [chamber[2] for chamber in self.chamber_data]
 
-    sA = Property(Array, depends_on='chamber_data')
+    sA = Property(List(Array), depends_on='chamber_data')
 
     @cached_property
     def _get_sA(self):
-        return self.chamber_params[3]
+        return [chamber[3] for chamber in self.chamber_data]
 
-    CD = Property(Array, depends_on='chamber_data')
+    CD = Property(List(Array), depends_on='chamber_data')
 
     @cached_property
     def _get_CD(self):
-        return self.chamber_params[4]
+        return [chamber[4] for chamber in self.chamber_data]
 
     n_channels = Int  # number of individuals (cooling channels)
 
@@ -249,12 +220,12 @@ def survival_probability_model_MCMC(rm, model, process):
     p_coeff_samples = rm.samples.trace('beta_pressure')[:][np.newaxis, :]
     mr_coeff_samples = rm.samples.trace('beta_mix_ratio')[:][np.newaxis, :]
     ft_coeff_samples = rm.samples.trace('beta_firing_times')[:][np.newaxis, :]
-#     Rm_coeff_samples = rm.samples.trace('beta_Rm')[:][np.newaxis, :]
-#     sRm_coeff_samples = rm.samples.trace('beta_sRm')[:][np.newaxis, :]
-#     A_coeff_samples = rm.samples.trace('beta_A')[:][np.newaxis, :]
-#     sA_coeff_samples = rm.samples.trace('beta_sA')[:][np.newaxis, :]
-#     CD_coeff_samples = rm.samples.trace('beta_CD')[:][np.newaxis, :]
     cycle_coeff_samples = rm.samples.trace('beta_cycle')[:][np.newaxis, :]
+    Rm_coeff_samples = rm.samples.trace('beta_Rm')[:][np.newaxis, :]
+    sRm_coeff_samples = rm.samples.trace('beta_sRm')[:][np.newaxis, :]
+    A_coeff_samples = rm.samples.trace('beta_A')[:][np.newaxis, :]
+    sA_coeff_samples = rm.samples.trace('beta_sA')[:][np.newaxis, :]
+    CD_coeff_samples = rm.samples.trace('beta_CD')[:][np.newaxis, :]
 
     ### EVALUATION OF THE MEAN CDF FUNCTION ###
     # Due to thinning, the weakly dependent MCMC samples become close to independent.
@@ -271,14 +242,13 @@ def survival_probability_model_MCMC(rm, model, process):
         jth_covar_effect = np.exp(p_coeff_samples * jth_pressure[:, np.newaxis] +
                                   mr_coeff_samples * jth_mix_ratio[:, np.newaxis] +
                                   ft_coeff_samples * jth_firing_times[:, np.newaxis] +
-                                  cycle_coeff_samples * jth_cycle[:, np.newaxis])
+                                  cycle_coeff_samples * jth_cycle[:, np.newaxis] +
+                                  Rm_coeff_samples * rm.Rm[j] + sRm_coeff_samples * rm.sRm[j] +
+                                  A_coeff_samples * rm.A[j] + sA_coeff_samples * rm.sA[j] +
+                                  CD_coeff_samples * rm.CD[j]
+                                  )
         jth_time_variable = np.hstack(
             (1e-5, rm.cumulative_test_times[j]))[:, np.newaxis]
-
-        # Rm_coeff_samples * rm.Rm + sRm_coeff_samples * rm.sRm +
-        # A_coeff_samples * rm.A + sA_coeff_samples * rm.sA +
-        # CD_coeff_samples * rm.CD)  # + cycle_coeff_samples * cycle[:,
-        # np.newaxis])
 
         if model == 'PH':
             baseline_hazard = m_ifr_samples / s_ifr_samples * (jth_time_variable /
@@ -318,7 +288,7 @@ def survival_probability_model_MCMC(rm, model, process):
 
         elif process == 'validation':
             plt.plot(jth_time_variable, CDF_mean,
-                     color='red', lw=2, label='4')
+                     color='red', lw=2, label='prediction')
             lower_idx = np.rint(N_samples * 0.05)
             upper_idx = np.rint(N_samples * 0.95)
             survival_sorted = np.sort(survival)
@@ -342,13 +312,13 @@ def survival_probability_model_MCMC(rm, model, process):
 def run_example(model, regression_campaigns, validation_campaign):
     # generate data
     #generated_data = data_generator(regression_campaigns)
-    data = data_reader(regression_campaigns)
+    campaign_data, chamber_data = data_reader(regression_campaigns)
     n_channels = 300
-    rm = RegressionModel(campaign_data=data[0],
-                         chamber_data=data[1],
+    rm = RegressionModel(campaign_data=campaign_data,
+                         chamber_data=chamber_data,
                          n_channels=n_channels,
                          mcmc_iterations=30000,
-                         mcmc_burn_in=10000,
+                         mcmc_burn_in=25000,
                          mcmc_thinning=10,
                          )
 
@@ -357,35 +327,31 @@ def run_example(model, regression_campaigns, validation_campaign):
     # or pymc.Normal('distribution_name', mu=Float, tau=Float), where mu
     # and tau are the central moments.
     #### MODEL PARAMETERS ####
-    prior_m_ifr = pymc.Uniform('m_ifr', lower=.1, upper=50.)
+    prior_m_ifr = pymc.Uniform('m_ifr', lower=.1, upper=10.)
     prior_s_ifr = pymc.Uniform(
-        's_ifr', lower=100., upper=1000000.)
+        's_ifr', lower=100., upper=10000000.)
     #### COVARIATES COEFFICIENTS ####
     prior_beta_pressure = pymc.Uniform(
-        'beta_pressure', lower=0.0, upper=.2)
+        'beta_pressure', lower=0.0, upper=.5)
     prior_beta_mix_ratio = pymc.Uniform(
-        'beta_mix_ratio', lower=-2., upper=1.)
+        'beta_mix_ratio', lower=0.0, upper=5.)
     prior_beta_firing_time = pymc.Uniform(
-        'beta_firing_times', lower=0.0, upper=1.)
-#     prior_beta_Rm = pymc.Uniform('beta_Rm', lower=-0.1, upper=0.1)
-#     prior_beta_sRm = pymc.Uniform('beta_sRm', lower=-0.1, upper=0.1)
-#     prior_beta_A = pymc.Uniform('beta_A', lower=-0.1, upper=0.1)
-#     prior_beta_sA = pymc.Uniform('beta_sA', lower=-0.1, upper=0.1)
-#     prior_beta_CD = pymc.Uniform('beta_CD', lower=-0.1, upper=0.1)
+        'beta_firing_times', lower=0.0, upper=.5)
     prior_beta_cycle = pymc.Uniform(
-        'beta_cycle', lower=-10.0, upper=10.)
+        'beta_cycle', lower=0.0, upper=10.)
+    prior_beta_Rm = pymc.Uniform('beta_Rm', lower=-15., upper=0.5)
+    prior_beta_sRm = pymc.Uniform('beta_sRm', lower=-30., upper=30.)
+    prior_beta_A = pymc.Uniform('beta_A', lower=-15., upper=0.5)
+    prior_beta_sA = pymc.Uniform('beta_sA', lower=-0.5, upper=100.)
+    prior_beta_CD = pymc.Uniform('beta_CD', lower=-.001, upper=.001)
     rm.priors = [prior_m_ifr, prior_s_ifr, prior_beta_pressure, prior_beta_mix_ratio,
-                 prior_beta_firing_time, prior_beta_cycle]
-
-    #prior_beta_Rm, prior_beta_sRm, prior_beta_A, prior_beta_sA, prior_beta_CD,
-    # prior_beta_cycle]
-
-    # aux array that eliminates zeros in log
+                 prior_beta_firing_time, prior_beta_cycle, prior_beta_Rm, prior_beta_sRm,
+                 prior_beta_A, prior_beta_sA, prior_beta_CD]
 
     def likelihood(value=rm.inspected_cracks, beta=rm.priors):
         prior_m_ifr, prior_s_ifr, prior_beta_pressure, prior_beta_mix_ratio,\
-            prior_beta_firing_time, prior_beta_cycle = beta  # prior_beta_Rm, prior_beta_sRm,\
-        #prior_beta_A, prior_beta_sA, prior_beta_CD, prior_beta_cycle = priors
+            prior_beta_firing_time, prior_beta_cycle, prior_beta_Rm, prior_beta_sRm,\
+            prior_beta_A, prior_beta_sA, prior_beta_CD = beta
         loglike = 0.0
         for i in range(len(rm.campaign_data)):
             ith_value = rm.inspected_cracks_list[i]
@@ -393,10 +359,10 @@ def run_example(model, regression_campaigns, validation_campaign):
             ith_covar_effect = np.exp(prior_beta_pressure * rm.pressures[i] +
                                       prior_beta_mix_ratio * rm.mix_ratios[i] +
                                       prior_beta_firing_time * rm.firing_times[i] +
-                                      prior_beta_cycle * rm.cycles[i])  # +
-            # prior_beta_Rm * rm.Rm + prior_beta_sRm * rm.sRm +
-            # prior_beta_A * rm.A + prior_beta_sA * rm.sA + prior_beta_CD * rm.CD)  # +
-      #                            prior_beta_cycle * rm.cycle)
+                                      prior_beta_cycle * rm.cycles[i] +
+                                      prior_beta_Rm * rm.Rm[i] + prior_beta_sRm * rm.sRm[i] +
+                                      prior_beta_A * rm.A[i] + prior_beta_sA * rm.sA[i] +
+                                      prior_beta_CD * rm.CD[i])
 
             # loglikelihood function for parameter inference - PH model
             if model == 'PH':
@@ -428,7 +394,7 @@ def run_example(model, regression_campaigns, validation_campaign):
     print 'mean_pressure_coeff = ', np.mean(rm.samples.trace('beta_pressure')[:])
     print 'mean_firing_times_coeff = ', np.mean(rm.samples.trace('beta_firing_times')[:])
     print 'mean_cycles_coeff = ', np.mean(rm.samples.trace('beta_cycle')[:])
-    rm.plotting()
+    # rm.plotting()
 
     ####################################
     #### REGRESSIONG POSTPROCESSING ####
@@ -454,5 +420,6 @@ def run_example(model, regression_campaigns, validation_campaign):
 ### MAIN ###
 if __name__ == '__main__':
     run_example(
-        model='AFT', regression_campaigns=['TC30_campaign_01'],
-        validation_campaign=['TC30_campaign_10'])
+        # , 'TC33_campaign_10', 'TC30_campaign_09', 'TC31_campaign_08'],
+        model='PH', regression_campaigns=['TC32_campaign_10', 'TC33_campaign_10', 'TC30_campaign_10'],
+        validation_campaign=['TC35_campaign_10'])
