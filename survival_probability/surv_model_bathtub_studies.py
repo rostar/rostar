@@ -453,7 +453,7 @@ if __name__ == '__main__':
       for camp in campaigns_number:
 	campaigns_lst.append('TC'+tc+'_campaign_'+camp)
     shuffle(campaigns_lst)
-    for i in range(50):
+    for i in [0,3,30]:
 	ith_CDF_err, ith_scatter = run_example(
         model='PH', regression_campaigns=campaigns_lst[0:i+1],
         validation_campaign=['TC30_campaign_10'])
