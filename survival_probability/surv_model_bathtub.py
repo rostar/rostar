@@ -9,7 +9,7 @@ import os
 # 10% 4.5s
 
 
-def data_reader(campaigns):
+def data_reader(campaigns, replicates=False):
     '''
     reads the TCXX_campaign_XX.txt files and returns numpy arrays
 
@@ -18,18 +18,37 @@ def data_reader(campaigns):
     output: (2D array, 1D array) - (test parameters and number of cracks,
                                     chamber parameters)
     '''
-    campaign_data_lst = []
-    chamber_data_lst = []
-    for campaign in campaigns:
+    if replicates == True:
+
         # loading the output file as a numpy array
         data_pack_dir = '/home/rostislav/Documents/MATLAB/data_pack/'
-        campaign_data = np.loadtxt(
-            data_pack_dir + 'TC_campaign_combinations/' + campaign + '.txt', skiprows=8)
-        campaign_data_lst.append(campaign_data)
+        cracks = np.zeros((17, 80))
+        for i in range(80):
+            if i < 9:
+                i = str(0) + str(i + 1)
+            else:
+                i = str(i + 1)
+            campaign_data = np.loadtxt(
+                data_pack_dir + 'rep80xTC30/' + 'TC30_rep' + i + '_campaign_10.txt', skiprows=8)
+            cracks[:, int(i) - 1] = campaign_data[:, 4]
+
         chamber_data = np.loadtxt(
-            data_pack_dir + 'TCs/' + campaign[0:4] + '.txt', skiprows=13)
-        chamber_data_lst.append(chamber_data)
-    return campaign_data_lst, chamber_data_lst
+            data_pack_dir + 'rep80xTC30/TC30_rep01.txt', skiprows=13)
+        return [campaign_data], [chamber_data], cracks
+
+    else:
+        campaign_data_lst = []
+        chamber_data_lst = []
+        for campaign in campaigns:
+            # loading the output file as a numpy array
+            data_pack_dir = '/home/rostislav/Documents/MATLAB/data_pack/'
+            campaign_data = np.loadtxt(
+                data_pack_dir + 'TC_campaign_combinations/' + campaign + '.txt', skiprows=8)
+            campaign_data_lst.append(campaign_data)
+            chamber_data = np.loadtxt(
+                data_pack_dir + 'TCs/' + campaign[0:4] + '.txt', skiprows=13)
+            chamber_data_lst.append(chamber_data)
+        return campaign_data_lst, chamber_data_lst
 
 
 class RegressionModel(HasTraits):
@@ -196,6 +215,8 @@ class RegressionModel(HasTraits):
         iterations = self.mcmc_iterations
         burn_in = self.mcmc_burn_in
         thinning = self.mcmc_thinning
+        #map_ = pymc.MAP(self.model)
+        # map_.fit()
         sampling_engine = pymc.MCMC(self.model)
         sampling_engine.sample(iter=iterations, burn=burn_in, thin=thinning)
         return sampling_engine
@@ -207,7 +228,7 @@ class RegressionModel(HasTraits):
         plt.show()
 
 
-def survival_probability_model_MCMC(rm, model, process):
+def survival_probability_model_MCMC(rm, model, process, statistics=None):
     '''postprocessor for MCMC samples
     rm: instance of a RegressionModel class
     model: string 'PH' or 'AFT'
@@ -292,12 +313,19 @@ def survival_probability_model_MCMC(rm, model, process):
             lower_idx = np.rint(N_samples * 0.05)
             upper_idx = np.rint(N_samples * 0.95)
             survival_sorted = np.sort(survival)
+            if statistics is not None:
+                for g in range(statistics.shape[1]):
+                    plt.plot(
+                        rm.inspection_times[j], statistics[:, g] / rm.n_channels, color='grey')
+                plt.plot(rm.inspection_times[j], np.mean(statistics, axis=1) /
+                         rm.n_channels, 'ro')
+            else:
+                plt.plot(rm.inspection_times[j], rm.inspected_cracks_list[j] /
+                         rm.n_channels, 'ro')
             plt.plot(jth_time_variable, 1 -
                      survival_sorted[:, lower_idx], color='red', lw=2, ls='dashed')
             plt.plot(jth_time_variable, 1 - survival_sorted[:, upper_idx], color='red',
                      lw=2, ls='dashed')
-            plt.plot(rm.inspection_times[j], rm.inspected_cracks_list[j] /
-                     rm.n_channels, 'ro')
 
     plt.legend(loc='best')
     plt.xlabel('time [s]')
@@ -319,8 +347,8 @@ def run_example(model, regression_campaigns, validation_campaign):
     rm = RegressionModel(campaign_data=campaign_data,
                          chamber_data=chamber_data,
                          n_channels=n_channels,
-                         mcmc_iterations=30000,
-                         mcmc_burn_in=25000,
+                         mcmc_iterations=10000,
+                         mcmc_burn_in=5000,
                          mcmc_thinning=10,
                          )
 
@@ -410,12 +438,12 @@ def run_example(model, regression_campaigns, validation_campaign):
     ### PREDICTION AND VALIDATION ###
     #################################
     validation_test_campaign = data_reader(
-        validation_campaign)
+        validation_campaign, replicates=True)
     rm.campaign_data = validation_test_campaign[0]
     rm.chamber_data = validation_test_campaign[1]
 
     survival_probability_model_MCMC(
-        rm=rm, model=model, process='validation')
+        rm=rm, model=model, process='validation', statistics=validation_test_campaign[2])
     plt.show()
 
 

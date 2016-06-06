@@ -1,25 +1,33 @@
-from stats.misc.random_field.random_field_nD import RandomField
 import numpy as np
 import matplotlib
 matplotlib.use('WxAgg')
 import matplotlib.pyplot as plt
+from scipy.stats import norm
+
+loc_arr = np.linspace(0.1, 50, 1000)
+std = 3.
 
 
-
-m = 4.
-n_sim = 10
-lrho = 5.0
-L_arr = np.arange(10)[1:]*lrho
-
-for Li in L_arr:
-    rf = RandomField(seed=False,
-                     distr_type='Weibull',
-                     lacor_arr=np.array([lrho]),
-                     nDgrid=[np.linspace(0.0, Li, int(Li/lrho*100))]
-                    )
-    print rf.nDgrid
-    reevaluate=True
-    for sim in np.arange(n_sim):
-        rf.reevaluate = True
-        plt.plot(rf.nDgrid[0], rf.random_field)
+def L(loc_arr, std, D):
+    likelihood = 1.0
+    for d in D:
+        ith_likelihood = norm(loc=loc_arr, scale=std).pdf(d)
+        likelihood *= ith_likelihood
+        plt.plot(loc_arr, ith_likelihood)
     plt.show()
+    return likelihood
+
+D = norm(loc=10., scale=std).rvs(10)
+D = np.hstack((D, norm(loc=20., scale=std).rvs(10)))
+
+likeli = L(loc_arr, std, D)
+c = np.trapz(likeli, loc_arr)
+posterior = likeli / c
+
+mean = np.trapz(posterior * loc_arr, loc_arr)
+stdev = np.sqrt(np.trapz(posterior * loc_arr**2, loc_arr) - mean**2)
+
+print mean, stdev
+
+plt.plot(loc_arr, posterior)
+plt.show()
