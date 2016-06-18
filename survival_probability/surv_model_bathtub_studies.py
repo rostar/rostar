@@ -222,11 +222,6 @@ def survival_probability_model_MCMC(rm, model, process):
     mr_coeff_samples = rm.samples.trace('beta_mix_ratio')[:][np.newaxis, :]
     ft_coeff_samples = rm.samples.trace('beta_firing_times')[:][np.newaxis, :]
     cycle_coeff_samples = rm.samples.trace('beta_cycle')[:][np.newaxis, :]
-    Rm_coeff_samples = rm.samples.trace('beta_Rm')[:][np.newaxis, :]
-    sRm_coeff_samples = rm.samples.trace('beta_sRm')[:][np.newaxis, :]
-    A_coeff_samples = rm.samples.trace('beta_A')[:][np.newaxis, :]
-    sA_coeff_samples = rm.samples.trace('beta_sA')[:][np.newaxis, :]
-    CD_coeff_samples = rm.samples.trace('beta_CD')[:][np.newaxis, :]
 
     ### EVALUATION OF THE MEAN CDF FUNCTION ###
     # Due to thinning, the weakly dependent MCMC samples become close to independent.
@@ -243,10 +238,8 @@ def survival_probability_model_MCMC(rm, model, process):
         jth_covar_effect = np.exp(p_coeff_samples * jth_pressure[:, np.newaxis] +
                                   mr_coeff_samples * jth_mix_ratio[:, np.newaxis] +
                                   ft_coeff_samples * jth_firing_times[:, np.newaxis] +
-                                  cycle_coeff_samples * jth_cycle[:, np.newaxis] +
-                                  Rm_coeff_samples * rm.Rm[j] + sRm_coeff_samples * rm.sRm[j] +
-                                  A_coeff_samples * rm.A[j] + sA_coeff_samples * rm.sA[j] +
-                                  CD_coeff_samples * rm.CD[j]
+                                  cycle_coeff_samples *
+                                  jth_cycle[:, np.newaxis]
                                   )
         jth_time_variable = np.hstack(
             (1e-5, rm.cumulative_test_times[j]))[:, np.newaxis]
@@ -269,57 +262,48 @@ def survival_probability_model_MCMC(rm, model, process):
 
         # Monte Carlo mean
         CDF_mean = np.sum(1 - survival, axis=1) / N_samples
-
         lower_idx = np.rint(N_samples * 0.05)
         upper_idx = np.rint(N_samples * 0.95)
         survival_sorted = np.sort(survival)
-        fract5 = 1 - survival_sorted[:, lower_idx]
-        fract95 = 1 - survival_sorted[:, upper_idx]
 
         ### plotting ###
-        # if process == 'regression':
-        # for i in np.arange(N_samples):
-        #    plt.plot(
-        # jth_time_variable, 1 - survival[:, i], lw=0.5, color='grey')
-        # plt.plot(jth_time_variable, CDF_mean,
-        #         lw=1, color='black')
-        # plt.plot(rm.inspection_times[j], rm.inspected_cracks_list[j] /
-        #         rm.n_channels, 'bo')
-        #lower_idx = np.rint(N_samples * 0.05)
-        #upper_idx = np.rint(N_samples * 0.95)
-        #survival_sorted = np.sort(survival)
-        # plt.plot(jth_time_variable, 1 -
-        #         survival_sorted[:, lower_idx], color='black', lw=2, ls='dashed')
-        # plt.plot(jth_time_variable, 1 - survival_sorted[:, upper_idx], color='black',
-        #         lw=2, ls='dashed')
+        if process == 'regression':
+            #             for i in np.arange(N_samples):
+            #                 plt.plot(
+            # jth_time_variable, 1 - survival[:, i], lw=0.5, color='grey')
+            plt.plot(jth_time_variable, CDF_mean,
+                     lw=1, color='black')
+            plt.plot(rm.inspection_times[j], rm.inspected_cracks_list[j] /
+                     rm.n_channels, 'bo')
+#             plt.plot(jth_time_variable, 1 -
+#                      survival_sorted[:, lower_idx], color='black', lw=2, ls='dashed')
+#             plt.plot(jth_time_variable, 1 - survival_sorted[:, upper_idx], color='black',
+#                      lw=2, ls='dashed')
 
-        # elif process == 'validation':
-        # plt.plot(jth_time_variable, CDF_mean,
-        #         color='red', lw=2, label='prediction')
-        #lower_idx = np.rint(N_samples * 0.05)
-        #upper_idx = np.rint(N_samples * 0.95)
-        #survival_sorted = np.sort(survival)
-        # plt.plot(jth_time_variable, 1 -
-        #         survival_sorted[:, lower_idx], color='red', lw=2, ls='dashed')
-        # plt.plot(jth_time_variable, 1 - survival_sorted[:, upper_idx], color='red',
-        #         lw=2, ls='dashed')
-        # plt.plot(rm.inspection_times[j], rm.inspected_cracks_list[j] /
-        #         rm.n_channels, 'ro')
+        elif process == 'validation':
+            plt.plot(jth_time_variable, CDF_mean,
+                     color='red', lw=2, label='prediction')
+            plt.plot(jth_time_variable, 1 -
+                     survival_sorted[:, lower_idx], color='red', lw=2, ls='dashed')
+            plt.plot(jth_time_variable, 1 - survival_sorted[:, upper_idx], color='red',
+                     lw=2, ls='dashed')
+            plt.plot(rm.inspection_times[j], rm.inspected_cracks_list[j] /
+                     rm.n_channels, 'ro')
 
-    # plt.legend(loc='best')
-    #plt.xlabel('time [s]')
-    #plt.ylabel('failure probability [-]')
-    # if model == 'PH':
-    #    title = 'Survival Analysis - PH model'
-    # elif model == 'AFT':
-    #    title = 'Survival Analysis - AFT model'
-    #plt.ylim(0, 1)
-    # plt.title(title)
+        plt.legend(loc='best')
+        plt.xlabel('time [s]')
+        plt.ylabel('failure probability [-]')
+        if model == 'PH':
+            title = 'Survival Analysis - PH model'
+        elif model == 'AFT':
+            title = 'Survival Analysis - AFT model'
+        plt.ylim(0, 1)
+        plt.title(title)
 
-    sq_err_CDF = np.sum(
-        (CDF_mean[rm.inspection_idxs] - rm.inspected_cracks_list[j] / rm.n_channels)**2)
-    sq_err_scatter = np.sum((CDF_mean - fract5)**2 + (CDF_mean - fract95)**2)
-    return sq_err_CDF, sq_err_scatter
+    # sq_err_CDF = np.sum(
+    #    (CDF_mean[rm.inspection_idxs] - rm.inspected_cracks_list[j] / rm.n_channels)**2)
+    #sq_err_scatter = np.sum((CDF_mean - fract5)**2 + (CDF_mean - fract95)**2)
+    return 1, 1  # sq_err_CDF, sq_err_scatter
 
 
 def run_example(model, regression_campaigns, validation_campaign):
@@ -330,8 +314,8 @@ def run_example(model, regression_campaigns, validation_campaign):
     rm = RegressionModel(campaign_data=campaign_data,
                          chamber_data=chamber_data,
                          n_channels=n_channels,
-                         mcmc_iterations=30000,
-                         mcmc_burn_in=25000,
+                         mcmc_iterations=20000,
+                         mcmc_burn_in=10000,
                          mcmc_thinning=10,
                          )
 
@@ -352,19 +336,12 @@ def run_example(model, regression_campaigns, validation_campaign):
         'beta_firing_times', lower=0.0, upper=.5)
     prior_beta_cycle = pymc.Uniform(
         'beta_cycle', lower=0.0, upper=50.)
-    prior_beta_Rm = pymc.Uniform('beta_Rm', lower=-15., upper=15.)
-    prior_beta_sRm = pymc.Uniform('beta_sRm', lower=-30., upper=30.)
-    prior_beta_A = pymc.Uniform('beta_A', lower=-15., upper=15.)
-    prior_beta_sA = pymc.Uniform('beta_sA', lower=-100., upper=100.)
-    prior_beta_CD = pymc.Uniform('beta_CD', lower=-10., upper=10.)
     rm.priors = [prior_m_ifr, prior_s_ifr, prior_beta_pressure, prior_beta_mix_ratio,
-                 prior_beta_firing_time, prior_beta_cycle, prior_beta_Rm, prior_beta_sRm,
-                 prior_beta_A, prior_beta_sA, prior_beta_CD]
+                 prior_beta_firing_time, prior_beta_cycle]
 
     def likelihood(value=rm.inspected_cracks, beta=rm.priors):
         prior_m_ifr, prior_s_ifr, prior_beta_pressure, prior_beta_mix_ratio,\
-            prior_beta_firing_time, prior_beta_cycle, prior_beta_Rm, prior_beta_sRm,\
-            prior_beta_A, prior_beta_sA, prior_beta_CD = beta
+            prior_beta_firing_time, prior_beta_cycle = beta
         loglike = 0.0
         for i in range(len(rm.campaign_data)):
             ith_value = rm.inspected_cracks_list[i]
@@ -372,10 +349,7 @@ def run_example(model, regression_campaigns, validation_campaign):
             ith_covar_effect = np.exp(prior_beta_pressure * rm.pressures[i] +
                                       prior_beta_mix_ratio * rm.mix_ratios[i] +
                                       prior_beta_firing_time * rm.firing_times[i] +
-                                      prior_beta_cycle * rm.cycles[i] +
-                                      prior_beta_Rm * rm.Rm[i] + prior_beta_sRm * rm.sRm[i] +
-                                      prior_beta_A * rm.A[i] + prior_beta_sA * rm.sA[i] +
-                                      prior_beta_CD * rm.CD[i])
+                                      prior_beta_cycle * rm.cycles[i])
 
             # loglikelihood function for parameter inference - PH model
             if model == 'PH':
@@ -407,15 +381,15 @@ def run_example(model, regression_campaigns, validation_campaign):
     print 'mean_pressure_coeff = ', np.mean(rm.samples.trace('beta_pressure')[:])
     print 'mean_firing_times_coeff = ', np.mean(rm.samples.trace('beta_firing_times')[:])
     print 'mean_cycles_coeff = ', np.mean(rm.samples.trace('beta_cycle')[:])
-    rm.plotting()
+    # rm.plotting()
 
     ####################################
     #### REGRESSION POSTPROCESSING ####
     ####################################
 
-    # plt.figure()
-    # survival_probability_model_MCMC(
-    #    rm=rm, model=model, process='regression')
+    plt.figure()
+    survival_probability_model_MCMC(
+        rm=rm, model=model, process='regression')
 
     #################################
     ### PREDICTION AND VALIDATION ###
@@ -432,8 +406,6 @@ def run_example(model, regression_campaigns, validation_campaign):
 ### MAIN ###
 if __name__ == '__main__':
     from random import shuffle
-    CDF_err = []
-    scatter = []
 
     TC_number = []
     for i in range(80):
@@ -456,18 +428,10 @@ if __name__ == '__main__':
         for camp in campaigns_number:
             campaigns_lst.append('TC' + tc + '_campaign_' + camp)
     shuffle(campaigns_lst)
-    for i in [0, 4]:
+    campaigns_lst = [
+        'TC30_campaign_09', 'TC30_campaign_06', 'TC30_campaign_03']
+    for i in [2]:
+        print campaigns_lst[0:i + 1]
         ith_CDF_err, ith_scatter = run_example(
-            model='PH', regression_campaigns=campaigns_lst[0:i + 1],
-            validation_campaign=['TC30_campaign_10'])
-        CDF_err.append(ith_CDF_err)
-        scatter.append(ith_scatter)
-    plt.plot(np.array(CDF_err) / np.max(np.array(CDF_err)),
-             label='CDF error', lw=2, color='black')
-    plt.plot(np.array(scatter) / np.max(np.array(scatter)),
-             label='scatter', lw=2, color='black', ls='dashed')
-    plt.xlabel('number of regression campaigns')
-    plt.ylabel('normalized CDF_error and scatter')
-    plt.legend(loc='best')
-    plt.title('learning by campaigns 8,9,10')
+            model='PH', regression_campaigns=campaigns_lst[0:i + 1], validation_campaign=['TC30_campaign_10'])
     plt.show()
