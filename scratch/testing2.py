@@ -1,530 +1,282 @@
-from traits.api import HasTraits, Array, Int, \
-    Property, cached_property, Function, List, \
-    Instance, Tuple
-import pymc
 from matplotlib import pyplot as plt
 import numpy as np
-from scipy.integrate import cumtrapz
-import os
 
-def data_reader(campaigns, replicates=False):
-    data_pack_dir = '/Users/rostislavrypl/git/rostar/survival_probability/data_pack/'
-    if replicates == True:
+def data_reader(campaigns):
+    '''
+    reads the TCXX_campaign_XX.txt files and returns numpy arrays
+
+    iput:   string - campaign combination file name  
+
+    output: (2D array, 1D array) - (test parameters and number of cracks,
+                                    chamber parameters)
+    '''
+    campaign_data_lst = []
+    chamber_data_lst = []
+    for campaign in campaigns:
         # loading the output file as a numpy array
-        cracks = np.zeros((17, 80))
-        for i in range(80):
-            if i < 9:
-                i = str(0) + str(i + 1)
-            else:
-                i = str(i + 1)
-            campaign_data = np.loadtxt(
-                data_pack_dir + 'rep80xTC30/' + 'TC30_rep' + i + '_campaign_10.txt', skiprows=8)
-            cracks[:, int(i) - 1] = campaign_data[:, 4]
-
+        # 'data_pack/'
+        data_pack_dir = '/Users/rostislavrypl/git/rostar/survival_probability/data_pack/'
+        campaign_data = np.loadtxt(
+            data_pack_dir + 'TC_campaign_combinations/' + campaign + '.txt', skiprows=8)
+        campaign_data_lst.append(campaign_data)
         chamber_data = np.loadtxt(
-            data_pack_dir + 'rep80xTC30/TC30_rep01.txt', skiprows=13)
-        return [campaign_data], [chamber_data], cracks
-
-    else:
-        campaign_data_lst = []
-        chamber_data_lst = []
-        for campaign in campaigns:
-            # loading the output file as a numpy array
-            campaign_data = np.loadtxt(
-                data_pack_dir + 'TC_campaign_combinations/' + campaign + '.txt', skiprows=8)
-            campaign_data_lst.append(campaign_data)
-            chamber_data = np.loadtxt(
-                data_pack_dir + 'TCs/' + campaign[0:4] + '.txt', skiprows=13)
-            chamber_data_lst.append(chamber_data)
-        return campaign_data_lst, chamber_data_lst
-
-
-
-class RegressionModel(HasTraits):
-    '''
-    Bayesian inference of model parameters for
-    liquid fuel rocket engine reliability analysis
-    '''
-
-    # tested or virtually generated data
-    campaign_data = List(Array)
-    chamber_data = List(Array)
-
-    cycles = Property(Array, depends_on='campaign_data')
-
-    @cached_property
-    def _get_cycles(self):
-        cycles_lst = [np.hstack((1, np.diff(campaign[:, 0])))
-                      for campaign in self.campaign_data]
-        return cycles_lst
-
-    firing_times = Property(Array, depends_on='campaign_data')
-
-    @cached_property
-    def _get_firing_times(self):
-        firing_times_lst = [campaign[:, 1] for campaign in self.campaign_data]
-        return firing_times_lst
-
-    cumulative_test_times = Property(List(Array), depends_on='campaign_data')
-
-    @cached_property
-    def _get_cumulative_test_times(self):
-        return [np.cumsum(firing_times) for firing_times in self.firing_times]
-
-    # extracting pressure values from the campaign_data array
-    pressures = Property(List(Array), depends_on='campaign_data')
-
-    @cached_property
-    def _get_pressures(self):
-        pressure_lst = [campaign[:, 2] for campaign in self.campaign_data]
-        return pressure_lst
-
-    # extracting mix ratio values from the campaign_data array
-    mix_ratios = Property(List(Array), depends_on='campaign_data')
-
-    @cached_property
-    def _get_mix_ratios(self):
-        mix_ratio_lst = [campaign[:, 3] for campaign in self.campaign_data]
-        return mix_ratio_lst
-
-    # number of cracks per time interval
-    cumulative_cracks = Property(List(Array), depends_on='campaign_data')
-
-    @cached_property
-    def _get_cumulative_cracks(self):
-        cracks_lst = [campaign[:, 4] for campaign in self.campaign_data]
-        return cracks_lst
-
-    # auxiliary array of indices of inspection times
-    inspection_idxs = Property(List(Int), depends_on='campaign_data')
-
-    @cached_property
-    def _get_inspection_idxs(self):
-        indices_lst = []
-        for campaign in self.campaign_data:
-            cycles = campaign[-1, 0]
-            indices = np.zeros(cycles)
-            for test_i in np.arange(cycles):
-                indices[test_i] = np.where(
-                    campaign[:, 0] == test_i + 1)[0][-1]
-            indices_lst.append(indices.astype(int))
-        return indices_lst
-
-    inspection_times = Property(List(Array), depends_on='campaign_data')
-
-    @cached_property
-    def _get_inspection_times(self):
-        inspection_times_lst = [self.cumulative_test_times[i][
-            self.inspection_idxs[i]] for i in range(len(self.campaign_data))]
-        return inspection_times_lst
-
-    inspected_cracks = Property(Array, depens_on='campaign_data')
-
-    @cached_property
-    def _get_inspected_cracks(self):
-        inspected_cracks_1D = np.array([])
-        for i in range(len(self.campaign_data)):
-            inspected_cracks_1D = np.hstack(
-                (inspected_cracks_1D, self.cumulative_cracks[i][self.inspection_idxs[i]]))
-        return inspected_cracks_1D
-
-    inspected_cracks_list = Property(List(Array), depends_on='campaign_data')
-
-    @cached_property
-    def _get_inspected_cracks_list(self):
-        inspected_cracks_lst = []
-        for i in range(len(self.campaign_data)):
-            inspected_cracks_lst.append(
-                self.cumulative_cracks[i][self.inspection_idxs[i]])
-        return inspected_cracks_lst
-
-# global chamber parameters
-    Rm = Property(List(Array), depends_on='chamber_data')
-
-    @cached_property
-    def _get_Rm(self):
-        return [chamber[0] for chamber in self.chamber_data]
-
-    sRm = Property(List(Array), depends_on='chamber_data')
-
-    @cached_property
-    def _get_sRm(self):
-        return [chamber[1] for chamber in self.chamber_data]
-
-    A = Property(List(Array), depends_on='chamber_data')
-
-    @cached_property
-    def _get_A(self):
-        return [chamber[2] for chamber in self.chamber_data]
-
-    sA = Property(List(Array), depends_on='chamber_data')
-
-    @cached_property
-    def _get_sA(self):
-        return [chamber[3] for chamber in self.chamber_data]
-
-    CD = Property(List(Array), depends_on='chamber_data')
-
-    @cached_property
-    def _get_CD(self):
-        return [chamber[4] for chamber in self.chamber_data]
-
-    n_channels = Int  # number of individuals (cooling channels)
-
-    # parameters for the MCMC algorithm
-    mcmc_iterations = Int
-    mcmc_burn_in = Int
-    mcmc_thinning = Int
-
-    # Bayesian inference components
-    priors = List
-    log_likelihood = Function
-
-    # log likelihood function for model parameters given observed data
-    pymc_log_likelihood = Property()
-
-    def _get_pymc_log_likelihood(self):
-        f = pymc.stochastic(self.log_likelihood, observed=True)
-        return f
-
-    # instance of the inference model class "pymc.Model"
-    model = Property(Instance(pymc.Model))
-
-    @cached_property
-    def _get_model(self):
-        return pymc.Model(self.pymc_log_likelihood, self.priors)
-
-    samples = Property(depends_on='priors,log_likelihood,mcmc_iterations,\
-                                mcmc_thinning,mcmc_burn_in')
-
-    @cached_property
-    def _get_samples(self):
-        '''set the Markov chain Monte Carlo with specified
-        No. of iterations, burn-in length and thinning'''
-        iterations = self.mcmc_iterations
-        burn_in = self.mcmc_burn_in
-        thinning = self.mcmc_thinning
-        map_ = pymc.MAP(self.model)
-        map_.fit()
-        sampling_engine = pymc.MCMC(self.model)
-        sampling_engine.sample(iter=iterations, burn=burn_in, thin=thinning)
-        return sampling_engine
-
-    def plotting(self):
-        '''plot the results of the sampling procedure'''
-        plt.gca().get_xaxis().get_major_formatter().set_useOffset(False)
-        pymc.Matplot.plot(self.samples)
-        plt.show()
-
-
-def survival_probability_model_MCMC(rm, model, process, statistics=None, no_of_regression_campaigns=None):
-    '''postprocessor for MCMC samples
-    rm: instance of a RegressionModel class
-    model: string 'PH' or 'AFT'
-    process: string 'regression' or 'validation' - affects the plotting '''
-
-    N_samples = len(rm.samples.trace('beta_pressure')[:])
-
-    m_ifr_samples = rm.samples.trace('m_ifr')[:][np.newaxis, :]
-    s_ifr_samples = rm.samples.trace('s_ifr')[:][np.newaxis, :]
-    m_wo_samples = rm.samples.trace('m_wo')[:][np.newaxis, :]
-    s_wo_samples = rm.samples.trace('s_wo')[:][np.newaxis, :]
-    p_coeff_samples = rm.samples.trace('beta_pressure')[:][np.newaxis, :]
-    mr_coeff_samples = rm.samples.trace('beta_mix_ratio')[:][np.newaxis, :]
-    ft_coeff_samples = rm.samples.trace('beta_firing_times')[:][np.newaxis, :]
-    cycle_coeff_samples = rm.samples.trace('beta_cycle')[:][np.newaxis, :]
-    Rm_coeff_samples = rm.samples.trace('beta_Rm')[:][np.newaxis, :]
-    sRm_coeff_samples = rm.samples.trace('beta_sRm')[:][np.newaxis, :]
-    A_coeff_samples = rm.samples.trace('beta_A')[:][np.newaxis, :]
-    sA_coeff_samples = rm.samples.trace('beta_sA')[:][np.newaxis, :]
-    CD_coeff_samples = rm.samples.trace('beta_CD')[:][np.newaxis, :]
-
-    ### EVALUATION OF THE MEAN CDF FUNCTION ###
-    # Due to thinning, the weakly dependent MCMC samples become close to independent.
-    # Therefore, the Monte Carlo method can be directly applied for the
-    # estimation of the CDF mean value
-
-    # adding covariate values at time 0 and reshaping the arrays
-    for j in range(len(rm.campaign_data)):
-        jth_pressure = np.hstack((rm.pressures[j][0], rm.pressures[j]))
-        jth_mix_ratio = np.hstack((rm.mix_ratios[j][0], rm.mix_ratios[j]))
-        jth_firing_times = np.hstack(
-            (rm.firing_times[j][0], rm.firing_times[j]))
-        jth_cycle = np.hstack((rm.cycles[j][0], rm.cycles[j]))
-        jth_covar_effect = np.exp(p_coeff_samples * jth_pressure[:, np.newaxis] +
-                                  mr_coeff_samples * jth_mix_ratio[:, np.newaxis] +
-                                  ft_coeff_samples * jth_firing_times[:, np.newaxis] +
-                                  cycle_coeff_samples * jth_cycle[:, np.newaxis] +
-                                  Rm_coeff_samples * rm.Rm[j] + sRm_coeff_samples * rm.sRm[j] +
-                                  A_coeff_samples * rm.A[j] + sA_coeff_samples * rm.sA[j] +
-                                  CD_coeff_samples * rm.CD[j]
-                                  )
-        jth_time_variable = np.hstack(
-            (1e-5, rm.cumulative_test_times[j]))[:, np.newaxis]
-
-        if model == 'PH':
-            baseline_hazard = m_ifr_samples / s_ifr_samples * (jth_time_variable /
-                                                               s_ifr_samples) ** (m_ifr_samples - 1) + \
-                            m_wo_samples / s_wo_samples * (jth_time_variable /
-                                                               s_wo_samples) ** (m_wo_samples - 1)
-            hazard = baseline_hazard * jth_covar_effect
-            cumhazard = cumtrapz(
-                hazard, jth_time_variable, initial=0.0, axis=0)
-
-        if model == 'AFT':
-            time_variable_aux = np.hstack(
-                (1e-5, 1e-5, rm.cumulative_test_times[j]))[:, np.newaxis]
-            accel_time = np.cumsum(
-                jth_covar_effect * np.diff(time_variable_aux, axis=0), axis=0)
-            cumhazard = (accel_time / s_ifr_samples)**m_ifr_samples + (accel_time / s_wo_samples)**m_wo_samples
-
-        survival = np.exp(-cumhazard)
-
-        # Monte Carlo mean
-        CDF_mean = np.sum(1 - survival, axis=1) / N_samples
-        
-        lower_idx = np.rint(N_samples * 0.05)
-        upper_idx = np.rint(N_samples * 0.95)
-        survival_sorted = np.sort(survival)
-        fract5 = 1 - survival_sorted[:, lower_idx]
-        fract95 = 1 - survival_sorted[:, upper_idx]
-
-
-    if process == 'validation':
-        plt.figure()
-        if statistics is not None:
-            for g in range(statistics.shape[1]):
-                if g == 0:
-                    plt.plot(rm.inspection_times[j], statistics[:, g] / rm.n_channels, marker='.', color='grey', lw=0, label='individual experiments')
-                else:
-                    plt.plot(rm.inspection_times[j], statistics[:, g] / rm.n_channels, marker='.', color='grey', lw=0,)
-            plt.plot(rm.inspection_times[j], np.mean(statistics, axis=1) / rm.n_channels, color='black', marker = 'o', lw=0, label='mean experiment data')
-                
-            plt.plot(jth_time_variable, 1 - survival_sorted[:, lower_idx], color='red', lw=2, ls='dashed')
-            plt.plot(jth_time_variable, 1 - survival_sorted[:, upper_idx], color='red', lw=2, ls='dashed', label = '0.05 and 0.95 fractiles')
-        plt.plot(jth_time_variable, CDF_mean, color='red', lw=2, label='prediction')
-        plt.xlabel('time [s]')
-        plt.ylabel('fraction of failed channels')
-        plt.title(str(no_of_regression_campaigns) + ' regression campaigns')
-        plt.legend(loc='best')
-        plt.draw()
-   
-    sq_err_CDF = np.sum((CDF_mean[rm.inspection_idxs] - np.mean(statistics, axis=1)/rm.n_channels)**2)
-    sq_err_scatter = np.sum((CDF_mean - fract5)**2 + (CDF_mean - fract95)**2)
-    return sq_err_CDF, sq_err_scatter, rm
-
-def run_example(model, regression_campaigns, validation_campaign):
-    # generate data
-    #generated_data = data_generator(regression_campaigns)
-    campaign_data, chamber_data = data_reader(regression_campaigns)
-    n_channels = 300
-    rm = RegressionModel(campaign_data=campaign_data,
-                         chamber_data=chamber_data,
-                         n_channels=n_channels,
-                         mcmc_iterations=30000,
-                         mcmc_burn_in=25000,
-                         mcmc_thinning=10,
-                         )
-
-    # Define prior distribution instances from the pymc module.
-    # e.g. pymc.Uniform('distribution_name', lower=Float, upper=Float)
-    # or pymc.Normal('distribution_name', mu=Float, tau=Float), where mu
-    # and tau are the central moments.
-    #### MODEL PARAMETERS ####
-    prior_m_ifr = pymc.Uniform('m_ifr', lower=.1, upper=10.)
-    prior_s_ifr = pymc.Uniform(
-        's_ifr', lower=100., upper=10000000.)
-    prior_m_wo = pymc.Uniform('m_wo', lower=10., upper=100.)
-    prior_s_wo = pymc.Uniform(
-        's_wo', lower=100., upper=10000000.)
-    #### COVARIATES COEFFICIENTS ####
-    prior_beta_pressure = pymc.Uniform(
-        'beta_pressure', lower=0.0, upper=.5)
-    prior_beta_mix_ratio = pymc.Uniform(
-        'beta_mix_ratio', lower=0.0, upper=5.)
-    prior_beta_firing_time = pymc.Uniform(
-        'beta_firing_times', lower=0.0, upper=.5)
-    prior_beta_cycle = pymc.Uniform(
-        'beta_cycle', lower=0.0, upper=10.)
-    prior_beta_Rm = pymc.Uniform('beta_Rm', lower=-15., upper=15.)
-    prior_beta_sRm = pymc.Uniform('beta_sRm', lower=-30., upper=30.)
-    prior_beta_A = pymc.Uniform('beta_A', lower=-15., upper=0.5)
-    prior_beta_sA = pymc.Uniform('beta_sA', lower=-0.5, upper=100.)
-    prior_beta_CD = pymc.Uniform('beta_CD', lower=-.001, upper=.001)
-    rm.priors = [prior_m_ifr, prior_s_ifr, prior_m_wo, prior_s_wo, prior_beta_pressure, prior_beta_mix_ratio,
-                 prior_beta_firing_time, prior_beta_cycle, prior_beta_Rm, prior_beta_sRm,
-                 prior_beta_A, prior_beta_sA, prior_beta_CD]
-
-    def likelihood(value=rm.inspected_cracks, beta=rm.priors):
-        prior_m_ifr, prior_s_ifr, prior_m_wo, prior_s_wo, prior_beta_pressure, prior_beta_mix_ratio,\
-            prior_beta_firing_time, prior_beta_cycle, prior_beta_Rm, prior_beta_sRm,\
-            prior_beta_A, prior_beta_sA, prior_beta_CD = beta
-        loglike = 0.0
-        for i in range(len(rm.campaign_data)):
-            ith_value = rm.inspected_cracks_list[i]
-            ith_time_variable = np.hstack((1e-5, rm.cumulative_test_times[i]))
-            ith_covar_effect = np.exp(prior_beta_pressure * rm.pressures[i] +
-                                      prior_beta_mix_ratio * rm.mix_ratios[i] +
-                                      prior_beta_firing_time * rm.firing_times[i] +
-                                      prior_beta_cycle * rm.cycles[i] +
-                                      prior_beta_Rm * rm.Rm[i] + prior_beta_sRm * rm.sRm[i] +
-                                      prior_beta_A * rm.A[i] + prior_beta_sA * rm.sA[i] +
-                                      prior_beta_CD * rm.CD[i])
-
-            # loglikelihood function for parameter inference - PH model
-            if model == 'PH':
-                baseline_hazard = (prior_m_ifr / prior_s_ifr) * (ith_time_variable /
-                                prior_s_ifr)**(prior_m_ifr - 1) + (prior_m_wo / prior_s_wo) * (ith_time_variable / prior_s_wo)**(prior_m_wo - 1)
-                hazard = baseline_hazard * \
-                    np.hstack((ith_covar_effect[0], ith_covar_effect))
-                cumhazard = cumtrapz(hazard, ith_time_variable, initial=0.)
-            # loglikelihood function for parameter inference - ATF model
-            elif model == 'AFT':
-                accel_time = np.hstack(
-                    (0.0, np.cumsum(ith_covar_effect * np.diff(ith_time_variable))))
-                cumhazard = (accel_time / prior_s_ifr)**prior_m_ifr + (accel_time / prior_s_wo)**prior_m_wo
-            survival = np.exp(-cumhazard)
-            k = ith_value[-1]
-            aux = 1e-10 * np.ones_like(rm.inspection_idxs[i])
-            ith_loglike = (rm.n_channels - k) * (-cumhazard[-1]) + np.sum(
-                np.diff(np.hstack((0.0, ith_value))) * np.log(aux - np.diff(np.hstack((1.0, survival[1:][rm.inspection_idxs[i]])))))
-            if np.isinf(ith_loglike):
-                ith_loglike = np.nan_to_num(ith_loglike) / 10.
-            loglike += ith_loglike
-        return loglike
-
-    rm.log_likelihood = likelihood
-
-    print 'mean_m_ifr = ', np.mean(rm.samples.trace('m_ifr')[:])
-    print 'mean_s_ifr = ', np.mean(rm.samples.trace('s_ifr')[:])
-    print 'mean_m_wo = ', np.mean(rm.samples.trace('m_wo')[:])
-    print 'mean_s_wo = ', np.mean(rm.samples.trace('s_wo')[:])
-    print 'mean_mix_ratio_coeff = ', np.mean(rm.samples.trace('beta_mix_ratio')[:])
-    print 'mean_pressure_coeff = ', np.mean(rm.samples.trace('beta_pressure')[:])
-    print 'mean_firing_times_coeff = ', np.mean(rm.samples.trace('beta_firing_times')[:])
-    print 'mean_cycles_coeff = ', np.mean(rm.samples.trace('beta_cycle')[:])
-    #rm.plotting()
-
-    ####################################
-    #### REGRESSION POSTPROCESSING ####
-    ####################################
-
-    #plt.figure()
-    #survival_probability_model_MCMC(
-    #    rm=rm, model=model, process='regression')
-
-    #################################
-    ### PREDICTION AND VALIDATION ###
-    #################################
-    validation_test_campaign = data_reader(
-        validation_campaign, replicates=True)
+            data_pack_dir + 'TCs/' + campaign[0:4] + '.txt', skiprows=13)
+        chamber_data_lst.append(chamber_data)
+    return campaign_data_lst
+
+data = data_reader(['TC30_campaign_01', 'TC30_campaign_02', 'TC30_campaign_03', 'TC30_campaign_04', 'TC30_campaign_05',
+                   'TC30_campaign_06', 'TC30_campaign_07', 'TC30_campaign_08', 'TC30_campaign_09','TC30_campaign_10'])
+
+camps = np.arange(9) + 1
+
+m = np.array([4.8,5.26,9.82,9.85,9.89,5.64,5.8,5.14,5.09])
+s = np.array([4500, 6825, 8350, 9267,8032,7816,8433,9034,9487])
+mr= np.array([-0.023,0.041,-0.031,-0.136,0.35,-0.45,-0.43,-0.43,-0.486])
+p = np.array([0.002, 0.0025,-0.057, 0.0160, 0.025,-0.027,-0.074,-0.028,-0.029])
+ft = np.array([-0.085,0.0082,-0.024, -0.019,-0.028,-0.026,-0.029,-0.026,-0.008])
+cyc =np.array([3.1,4.07,3.55,2.88,4.12,0.334,0.36,0.19,0.227])
+p2 = np.array([-0.0001, -0.00036, 0.00041, -0.00041, -0.00044, 0.00046,-0.00017, -3.66e-5,5.88e-5])
+mr2 = np.array([0.001,-0.0051,0.012,0.0295,0.0193,-0.0156,0.0066,0.0445,0.021])
+ft2 = np.array([-0.00035, -4.37e-5, 0.00018, 0.00019, 0.000265, -1.83e-5, -1.94e-5, -1.9e-5, -2.13e-5])
+pmr = np.array([-0.0069, 0.002, 0.0060, 0.0091, 0.00142, 0.0008, 0.0095, 0.0094, 0.0095])
+pft = np.array([0.00073, 0.00026, -0.00045, 0.00041, 0.00022, 0.000028, 0.00039, 0.00028, 0.00015])
+mrft = np.array([-0.00076, -0.0054, 0.001, -0.017, -0.015, 0.0076, -0.00082, 0.00079, 0.0003])
+
+camp_sets = []
+ft_effect = []
+minft = []
+maxft = []
+yft = []
+p_effect = []
+minp = []
+maxp = []
+yp = []
+mr_effect = []
+minmr = []
+maxmr = []
+ymr = []
+p2_effect = []
+minp2 = []
+maxp2 = []
+yp2 = []
+ft2_effect = []
+minft2 = []
+maxft2 = []
+yft2 = []
+mr2_effect = []
+minmr2 = []
+maxmr2 = []
+ymr2 = []
+
+pft_effect = []
+minpft = []
+maxpft = []
+ypft = []
+ftmr_effect = []
+minftmr = []
+maxftmr = []
+yftmr = []
+mrp_effect = []
+minmrp = []
+maxmrp = []
+ymrp = []
+
+
+for i, camp in enumerate(data[:-1]):
+    ft_data = np.array([])
+    p_data = np.array([])
+    mr_data = np.array([])
+    for j in range(i+1):
+        ft_data = np.hstack((ft_data,data[j][:,1]))
+        p_data = np.hstack((p_data,data[j][:,2]))
+        mr_data = np.hstack((mr_data,data[j][:,3]))
+    ft_effect.append(np.exp(ft_data*ft[i]))
+    p_effect.append(np.exp(p_data*p[i]))
+    mr_effect.append(np.exp(mr_data*mr[i]))
+    p2_effect.append(np.exp(p_data**2*p2[i]))
+    ft2_effect.append(np.exp(ft_data**2*ft2[i]))
+    mr2_effect.append(np.exp(mr_data**2*mr2[i]))
+    pft_effect.append(np.exp(p_data*ft_data*pft[i]))
+    ftmr_effect.append(np.exp(ft_data*mr_data*mrft[i]))
+    mrp_effect.append(np.exp(mr_data*p_data*pmr[i]))
+ 
+full_ft = []
+full_p = []
+full_mr = []
+full_ft2 = []
+full_p2 = []
+full_mr2 = []
+full_mrp = []
+full_pft = []
+full_ftmr = []
+for i, camp in enumerate(data[:-1]):
+    yft.append(np.mean(ft_effect[i]))
+    minft.append(np.min(ft_effect[i]))
+    maxft.append(np.max(ft_effect[i]))
+
+    yp.append(np.mean(p_effect[i]))
+    minp.append(np.min(p_effect[i]))
+    maxp.append(np.max(p_effect[i]))
     
-    rm.campaign_data = validation_test_campaign[0]
-    rm.chamber_data = validation_test_campaign[1]
+    ymr.append(np.mean(mr_effect[i]))
+    minmr.append(np.min(mr_effect[i]))
+    maxmr.append(np.max(mr_effect[i]))
 
-    return survival_probability_model_MCMC(
-        rm=rm, model=model, process='validation', statistics=validation_test_campaign[2], no_of_regression_campaigns=len(regression_campaigns)-1)
-  
+    yft2.append(np.mean(ft2_effect[i]))
+    minft2.append(np.min(ft2_effect[i]))
+    maxft2.append(np.max(ft2_effect[i]))
 
-### MAIN ###
-if __name__ == '__main__':
-    from random import shuffle
-    #from random import seed
-    #seed(True)
+    yp2.append(np.mean(p2_effect[i]))
+    minp2.append(np.min(p2_effect[i]))
+    maxp2.append(np.max(p2_effect[i]))
     
-    TC_number = []
-    for i in range(80):
-        if i<9:
-            TC_number.append(str(0) + str(i+1))
-        else:
-            TC_number.append(str(i+1))
+    ymr2.append(np.mean(mr2_effect[i]))
+    minmr2.append(np.min(mr2_effect[i]))
+    maxmr2.append(np.max(mr2_effect[i]))
 
-    campaigns_number = []
-    for j in range(10):
-        if j<9 and j>6:
-            campaigns_number.append(str(0) + str(j+1))
-        elif j==10:
-            campaigns_number.append(str(j+1))
+    ypft.append(np.mean(pft_effect[i]))
+    minpft.append(np.min(pft_effect[i]))
+    maxpft.append(np.max(pft_effect[i]))
 
-    campaigns_lst = []
-    for tc in TC_number:
-        for camp in campaigns_number:
-            campaigns_lst.append('TC'+tc+'_campaign_'+camp)
-    shuffle(campaigns_lst)
+    ymrp.append(np.mean(mrp_effect[i]))
+    minmrp.append(np.min(mrp_effect[i]))
+    maxmrp.append(np.max(mrp_effect[i]))
     
-    CDF_err = []
-    scatter = []
-    
-    m_ifr_lst = []
-    s_ifr_lst = []
-    m_wo_lst = []
-    s_wo_lst = []
-    beta_pressure_lst = []
-    beta_mix_ratio_lst = []
-    beta_firing_time_lst = []
-    beta_cycle_lst = []
-    beta_Rm_lst = []
-    beta_sRm_lst = []
-    beta_A_lst = []
-    beta_sA_lst = []
-    beta_CD_lst = []
-    
-    regression_campaigns = [1,2,3,10,30]
-    for i in regression_campaigns:
-        ith_CDF_err, ith_scatter, rm = run_example(
-        model='PH', regression_campaigns=campaigns_lst[0:i+1],
-        validation_campaign=['TC30_campaign_10'])
-        CDF_err.append(ith_CDF_err)
-        scatter.append(ith_scatter)
-        samples = rm.samples
-        m_ifr_lst.append(samples.trace('m_ifr')[:])
-        s_ifr_lst.append(samples.trace('s_ifr')[:])
-        m_wo_lst.append(samples.trace('m_wo')[:])
-        s_wo_lst.append(samples.trace('s_wo')[:])
-        beta_pressure_lst.append(samples.trace('beta_pressure')[:])
-        beta_mix_ratio_lst.append(samples.trace('beta_mix_ratio')[:])
-        beta_firing_time_lst.append(samples.trace('beta_firing_times')[:])
-        beta_cycle_lst.append(samples.trace('beta_cycle')[:])
-        beta_Rm_lst.append(samples.trace('beta_Rm')[:])
-        beta_sRm_lst.append(samples.trace('beta_sRm')[:])
-        beta_A_lst.append(samples.trace('beta_A')[:])
-        beta_sA_lst.append(samples.trace('beta_sA')[:])
-        beta_CD_lst.append(samples.trace('beta_CD')[:])
+    yftmr.append(np.mean(ftmr_effect[i]))
+    minftmr.append(np.min(ftmr_effect[i]))
+    maxftmr.append(np.max(ftmr_effect[i]))
 
-    plt.figure()
-    plt.plot(regression_campaigns, np.array(CDF_err)/np.max(np.array(CDF_err)),label='CDF error',lw=2,color='black')
-    plt.plot(regression_campaigns, np.array(scatter)/np.max(np.array(scatter)),label='scatter',lw=2,color='black', ls='dashed')
-    plt.xlabel('number of regression campaigns')
-    plt.ylabel('normalized CDF_error and scatter')
-    plt.legend(loc='best')
-    plt.title('learning by campaigns 8,9,10')
-    
-    coefficients_lst = [m_ifr_lst, s_ifr_lst, m_wo_lst, s_wo_lst, beta_pressure_lst, beta_mix_ratio_lst, beta_firing_time_lst,
-                        beta_cycle_lst, beta_Rm_lst, beta_sRm_lst, beta_A_lst, beta_sA_lst, beta_CD_lst]
-    #initial values
-    plt.figure()
-    plot_container = []
-    initial_var = []
-    for prior in rm.priors:
-        upper = prior._parents['upper']
-        lower = prior._parents['lower']
-        var = (upper - lower)**2/12.
-        initial_var.append(var)
-    initial_var = np.array(initial_var)
-    plot_container.append(initial_var)
+    full_ft.append(ft_effect[i])
+    full_p.append(p_effect[i])
+    full_mr.append(mr_effect[i])
+    full_ft2.append(ft2_effect[i])
+    full_p2.append(p2_effect[i])
+    full_mr2.append(mr2_effect[i])
+    full_mrp.append(mrp_effect[i])
+    full_pft.append(pft_effect[i])
+    full_ftmr.append(ftmr_effect[i])
 
-    for i in range(len(regression_campaigns)):
-        var = []
-        for coefficient in coefficients_lst:
-            ith_trace = coefficient[i]
-            var.append(np.var(ith_trace))
-        var = np.array(var)/initial_var
-        plot_container.append(var)
+x = np.linspace(1,9,9)
+# if True:
+#     plt.plot(x,yp, lw=2, label='pressure', color='green')
+#     #plt.fill_between(x, minp, maxp, alpha=0.3, color='green')
+#     plt.plot(x,,yft, lw=2, label='firing times', color='blue')
+#     #plt.fill_between(x, minft, maxft, alpha=0.3, color='blue')
+#     plt.plot(x,ymr, lw=2, label='mixture ratio', color='red')
+#     #plt.fill_between(x, minmr, maxmr, alpha=0.3, color='red')
+# 
+# if True:
+#     plt.plot(x,yp2, lw=2, label='pressure2', color='yellow')
+#     #plt.fill_between(x, minp2, maxp2, alpha=0.3, color='yellow')
+#     plt.plot(x,yft2, lw=2, label='firing times2', color='magenta')
+#     #plt.fill_between(x, minft2, maxft2, alpha=0.3, color='magenta')
+#     plt.plot(x,ymr2, lw=2, label='mixture ratio2', color='brown')
+#     #plt.fill_between(x, minmr2, maxmr2, alpha=0.3, color='brown')
+# 
+# if True:
+#     plt.plot(x,ypft, lw=2, label='p_mr', color='cyan')
+#     #plt.fill_between(x, minpft, maxpft, alpha=0.3, color='cyan')
+#     plt.plot(x,yftmr, lw=2, label='ft_mr', color='black')
+#     #plt.fill_between(x, minftmr, maxftmr, alpha=0.3, color='black')
+#     plt.plot(x,ymrp, lw=2, label='mr_p', color='orange') 
+#     #plt.fill_between(x, minmrp, maxmrp, alpha=0.3, color='orange')
 
-    plot_container[0] = np.ones_like(initial_var)
-    plt.plot([0] + regression_campaigns, plot_container)
-    plt.legend([prior.__name__ for prior in rm.priors])
-    plt.title('standardized variance of coefficients')
-    plt.xlabel('number of campaigns')
-    plt.ylabel('standardized variance')
-    plt.show()
+
+plt.plot(np.ones_like(full_p[-1]),full_p[-1], lw=0, marker='.', color='green', alpha=0.3)
+plt.plot(1, yp[-1], label='pressure', color='green', marker='o', ms=8)
+
+plt.plot(2*np.ones_like(full_ft[-1]),full_ft[-1], lw=0, marker='.', color='blue', alpha=0.3)
+plt.plot(2, yft[-1], label='firing times', color='blue', marker='o', ms=8)
+
+plt.plot(3*np.ones_like(full_mr[-1]),full_mr[-1], lw=0, marker='.', color='red', alpha=0.3)
+plt.plot(3, ymr[-1], label='mix ratio', color='red', marker='o', ms=8)
+
+plt.plot(4*np.ones_like(full_p2[-1]),full_p2[-1], lw=0, marker='.', color='green', alpha=0.3)
+plt.plot(4, yp2[-1], label='pressure$^2$', color='green', marker='o', ms=8)
+
+plt.plot(5*np.ones_like(full_ft2[-1]),full_ft2[-1], lw=0, marker='.', color='blue', alpha=0.3)
+plt.plot(5, yft2[-1], label='firing times$^2$', color='blue', marker='o', ms=8)
+
+plt.plot(6*np.ones_like(full_mr2[-1]),full_mr2[-1], lw=0, marker='.', color='red', alpha=0.3)
+plt.plot(6, ymr2[-1], label='mix ratio$^2$', color='red', marker='o', ms=8)
+
+plt.plot(7*np.ones_like(full_pft[-1]),full_pft[-1], lw=0, marker='.', color='green', alpha=0.3)
+plt.plot(7, yp2[-1], label='pft', color='green', marker='o', ms=8)
+
+plt.plot(8*np.ones_like(full_mrp[-1]),full_mrp[-1]/100., lw=0, marker='.', color='blue', alpha=0.3)
+plt.plot(8, ymrp[-1]/100., label='mrp', color='blue', marker='o', ms=8)
+
+plt.plot(9*np.ones_like(full_ftmr[-1]),full_ftmr[-1], lw=0, marker='.', color='red', alpha=0.3)
+plt.plot(9, yftmr[-1], label='mix ratio$^2$', color='red', marker='o', ms=8)
+
+# 
+# if True:
+#     plt.plot(x,yp2, lw=2, label='pressure2', color='yellow')
+#     #plt.fill_between(x, minp2, maxp2, alpha=0.3, color='yellow')
+#     plt.plot(x,yft2, lw=2, label='firing times2', color='magenta')
+#     #plt.fill_between(x, minft2, maxft2, alpha=0.3, color='magenta')
+#     plt.plot(x,ymr2, lw=2, label='mixture ratio2', color='brown')
+#     #plt.fill_between(x, minmr2, maxmr2, alpha=0.3, color='brown')
+# 
+# if True:
+#     plt.plot(x,ypft, lw=2, label='p_mr', color='cyan')
+#     #plt.fill_between(x, minpft, maxpft, alpha=0.3, color='cyan')
+#     plt.plot(x,yftmr, lw=2, label='ft_mr', color='black')
+#     #plt.fill_between(x, minftmr, maxftmr, alpha=0.3, color='black')
+#     plt.plot(x,ymrp, lw=2, label='mr_p', color='orange') 
+#     #plt.fill_between(x, minmrp, maxmrp, alpha=0.3, color='orange')
+
+plt.xticks([1,2,3,4,5,6,7,8,9], ['pressure$\,$','firing times$\,$','mix ratio$\,$',
+                                 'pressure$^2$','firing times$^2$','mix ratio$^2$',
+                                 'p$\\times$ft','p $\\times$ mr / 100','mr$\\times$ft'],)
+plt.xticks(rotation = 45)
+plt.ylabel('failure rate factor = $h/{h_0}$')
+#plt.legend(loc='best')
+plt.xlim(0,10)
+plt.ylim(0,5)
+plt.title('covariates influence on failure rate')
+
+from mayavi import mlab
+
+
+def p_ft_func(p_array,ft_array):
+    print p_array
+    print ft_array
+    surface = np.exp(p_array*p[-1] + ft_array*ft[-1] + p_array**2*p2[-1] + ft_array**2*ft2[-1] + p_array*ft_array*pft[-1])
+    surface -= np.min(surface)
+    return surface/np.max(np.abs(surface))
+
+def p_mr_func(p_array,mr_array):
+    print p_array
+    print mr_array
+    surface = np.exp(p_array*p[-1] + mr_array*mr[-1] + p_array**2*p2[-1] + mr_array**2*mr2[-1] + p_array*mr_array*pmr[-1])
+    surface -= np.min(surface)
+    return surface/np.max(np.abs(surface))
+
+
+#p_grid, ft_grid = np.mgrid[0:130.:10, 0:600:10]
+#mlab.surf(p_grid/130.,ft_grid/600.,p_ft_func)
+
+
+p_grid, mr_grid = np.mgrid[0:130.:2, 0:7.:1]
+mlab.surf(p_grid/130.,mr_grid/7.,p_mr_func)
+
+mlab.show()
+
+
+plt.figure()
+ft_arr = np.linspace(0,600,100)
+p_arr = np.linspace(0,130,100)
+mr_arr = np.linspace(0,6,100)
+
+plt.plot(ft_arr/ft_arr[-1], np.exp(ft_arr*ft[-1] + ft_arr**2*ft2[-1]))
+plt.plot(p_arr/p_arr[-1], np.exp(p_arr*p[-1] + p_arr**2*p2[-1]))
+plt.plot(mr_arr/mr_arr[-1], np.exp(mr_arr*mr[-1] + mr_arr**2*mr2[-1]))
+plt.title('cavariates_effect')
+
+plt.figure()
+plt.title('baseline failure rate')
+plt.xlabel('time [s]')
+plt.ylabel('failure rate')
+plt.plot(np.linspace(0,6000,500), m[-1]/s[-1]*(np.linspace(0,6000,500)/s[-1])**(m[-1]-1), color = 'black', lw=2)
+plt.show()
